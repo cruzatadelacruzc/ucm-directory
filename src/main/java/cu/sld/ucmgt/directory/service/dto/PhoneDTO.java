@@ -1,0 +1,47 @@
+package cu.sld.ucmgt.directory.service.dto;
+
+import lombok.Data;
+
+import javax.validation.constraints.Min;
+import java.io.Serializable;
+import java.util.UUID;
+
+/**
+ * A DTO for the {@link cu.sld.ucmgt.directory.domain.Phone} entity.
+ */
+@Data
+public class PhoneDTO implements Serializable {
+
+    private UUID id;
+    @Min(value = 1)
+    private Integer number;
+    private Boolean active;
+    private String description;
+    private UUID employeeId;
+    private UUID workPlaceId;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof PhoneDTO)) return false;
+
+        return id != null && id.equals(((PhoneDTO) o).id);
+    }
+
+    @Override
+    public int hashCode() {
+        return 31;
+    }
+
+    @Override
+    public String toString() {
+        return "PhoneDTO{" +
+                "uid=" + id +
+                ", number=" + number +
+                ", active=" + active +
+                ", description='" + description + '\'' +
+                ", employeeId=" + employeeId +
+                ", workPlaceId=" + workPlaceId +
+                '}';
+    }
+}
