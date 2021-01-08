@@ -10,6 +10,7 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 import java.io.Serializable;
+import java.time.LocalDate;
 import java.util.UUID;
 
 /**
@@ -35,6 +36,7 @@ public abstract class PersonDTO implements Serializable {
     @NotBlank
     protected String race;
     protected UUID districtId;
+    protected LocalDate birthdate;
 
     @Override
     public boolean equals(Object o) {

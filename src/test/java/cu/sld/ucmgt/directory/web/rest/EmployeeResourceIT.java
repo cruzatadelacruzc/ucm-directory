@@ -18,12 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
+import java.time.*;
 import java.util.UUID;
 import java.util.List;
-import java.time.ZoneId;
-import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import javax.persistence.EntityManager;
 import static org.hamcrest.Matchers.hasItem;
 
@@ -84,6 +81,7 @@ public class EmployeeResourceIT extends PersonIT {
         employee.setGender(DEFAULT_GENDER);
         employee.setAddress(DEFAULT_ADDRESS);
         employee.setEndDate(DEFAULT_END_DATE);
+        employee.setBirthdate(DEFAULT_BIRTHDATE);
         employee.setStartDate(DEFAULT_START_DATE);
         employee.setServiceYears(DEFAULT_SERVICE_YEAR);
         employee.setGraduateYears(DEFAULT_GRADUATE_YEAR);
@@ -116,6 +114,7 @@ public class EmployeeResourceIT extends PersonIT {
         assertThat(testEmployee.getGender()).isEqualTo(DEFAULT_GENDER);
         assertThat(testEmployee.getAddress()).isEqualTo(DEFAULT_ADDRESS);
         assertThat(testEmployee.getEndDate()).isEqualTo(DEFAULT_END_DATE);
+        assertThat(testEmployee.getBirthdate()).isEqualTo(DEFAULT_BIRTHDATE);
         assertThat(testEmployee.getStartDate()).isEqualTo(DEFAULT_START_DATE);
         assertThat(testEmployee.getServiceYears()).isEqualTo(DEFAULT_SERVICE_YEAR);
         assertThat(testEmployee.getGraduateYears()).isEqualTo(DEFAULT_GRADUATE_YEAR);
@@ -376,6 +375,7 @@ public class EmployeeResourceIT extends PersonIT {
         updatedEmployee.setGender(UPDATE_GENDER);
         updatedEmployee.setAddress(UPDATE_ADDRESS);
         updatedEmployee.setEndDate(UPDATE_END_DATE);
+        updatedEmployee.setBirthdate(UPDATE_BIRTHDATE);
         updatedEmployee.setStartDate(UPDATE_START_DATE);
         updatedEmployee.setServiceYears(UPDATE_SERVICE_YEAR);
         updatedEmployee.setGraduateYears(UPDATE_GRADUATE_YEAR);
@@ -404,6 +404,7 @@ public class EmployeeResourceIT extends PersonIT {
         assertThat(testEmployee.getGender()).isEqualTo(UPDATE_GENDER);
         assertThat(testEmployee.getAddress()).isEqualTo(UPDATE_ADDRESS);
         assertThat(testEmployee.getEndDate()).isEqualTo(UPDATE_END_DATE);
+        assertThat(testEmployee.getBirthdate()).isEqualTo(UPDATE_BIRTHDATE);
         assertThat(testEmployee.getStartDate()).isEqualTo(UPDATE_START_DATE);
         assertThat(testEmployee.getServiceYears()).isEqualTo(UPDATE_SERVICE_YEAR);
         assertThat(testEmployee.getGraduateYears()).isEqualTo(UPDATE_GRADUATE_YEAR);
@@ -478,6 +479,7 @@ public class EmployeeResourceIT extends PersonIT {
                 .andExpect(jsonPath("$.secondLastName").value(DEFAULT_SECOND_LAST_NAME))
                 .andExpect(jsonPath("$.professionalNumber").value(DEFAULT_PROFESSIONAL_NUMBER))
                 .andExpect(jsonPath("$.endDate").value(TestUtil.sameInstant(DEFAULT_END_DATE)))
+                .andExpect(jsonPath("$.birthdate").value(DEFAULT_BIRTHDATE.toString()))
                 .andExpect(jsonPath("$.isGraduatedBySector").value(DEFAULT_IS_GRADUATE_BY_SECTOR))
                 .andExpect(jsonPath("$.startDate").value(TestUtil.sameInstant(DEFAULT_START_DATE)));
     }
@@ -508,6 +510,7 @@ public class EmployeeResourceIT extends PersonIT {
                 .andExpect(jsonPath("$.[*].race").value(hasItem(DEFAULT_RACE)))
                 .andExpect(jsonPath("$.[*].email").value(hasItem(DEFAULT_EMAIL)))
                 .andExpect(jsonPath("$.[*].address").value(hasItem(DEFAULT_ADDRESS)))
+                .andExpect(jsonPath("$.[*].birthdate").value(hasItem(DEFAULT_BIRTHDATE.toString())))
                 .andExpect(jsonPath("$.[*].gender").value(hasItem(DEFAULT_GENDER.toString())))
                 .andExpect(jsonPath("$.[*].serviceYears").value(hasItem(DEFAULT_SERVICE_YEAR)))
                 .andExpect(jsonPath("$.[*].graduateYears").value(hasItem(DEFAULT_GRADUATE_YEAR)))

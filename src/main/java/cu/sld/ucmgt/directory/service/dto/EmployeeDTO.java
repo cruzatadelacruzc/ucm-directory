@@ -71,6 +71,7 @@ public class EmployeeDTO extends PersonDTO {
                 ", email='" + email + '\'' +
                 ", gender=" + gender +
                 ", age=" + age +
+                ", birthdate=" + birthdate +
                 ", race='" + race + '\'' +
                 ", registerNumber='" + registerNumber + '\'' +
                 ", professionalNumber='" + professionalNumber + '\'' +

@@ -45,10 +45,6 @@ public class Employee extends Person implements Serializable {
     private WorkPlace workPlace;
 
     @ManyToOne
-    @JsonIgnoreProperties(value = "employeesSpecialty")
-    private Nomenclature specialty;
-
-    @ManyToOne
     @JsonIgnoreProperties(value = "employeesCategory")
     private Nomenclature category;
 

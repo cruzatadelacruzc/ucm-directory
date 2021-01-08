@@ -1,15 +1,13 @@
 package cu.sld.ucmgt.directory.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.springframework.data.elasticsearch.annotations.Document;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
+import javax.persistence.*;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import java.io.Serializable;
@@ -28,6 +26,14 @@ public class Student extends Person implements Serializable {
 
     @NotBlank
     private String residence;
+
+    @ManyToOne
+    @JsonIgnoreProperties(value = "studentsCareer")
+    protected Nomenclature career;
+
+    @ManyToOne
+    @JsonIgnoreProperties(value = "studentsKind")
+    protected Nomenclature kind;
 
     @Override
     public boolean equals(Object o) {

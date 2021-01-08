@@ -44,7 +44,13 @@ public class Nomenclature implements Serializable {
     private Set<Employee> employeesCategory = new HashSet<>();
 
     @OneToMany(mappedBy = "specialty")
-    private Set<Employee> employeesSpecialty = new HashSet<>();
+    private Set<Person> peopleSpecialty = new HashSet<>();
+
+    @OneToMany(mappedBy = "career")
+    private Set<Student> studentCareer = new HashSet<>();
+
+    @OneToMany(mappedBy = "kind")
+    private Set<Student> studentsKind = new HashSet<>();
 
     @OneToMany(mappedBy = "scientificDegree")
     private Set<Employee> employeesScientificDegree = new HashSet<>();

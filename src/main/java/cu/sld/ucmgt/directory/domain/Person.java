@@ -11,6 +11,7 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 import java.io.Serializable;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Data
@@ -48,6 +49,8 @@ public class Person extends AbstractAuditingEntity implements Serializable {
     @Min(value = 1)
     protected Integer age;
 
+    protected LocalDate birthdate;
+
     /**
      * {@docRoot Black or White race = Black or White people}
      */
@@ -57,6 +60,10 @@ public class Person extends AbstractAuditingEntity implements Serializable {
     @ManyToOne
     @JsonIgnoreProperties(value = "personsDistrict")
     protected Nomenclature district;
+
+    @ManyToOne
+    @JsonIgnoreProperties(value = "peopleSpecialty")
+    protected Nomenclature specialty;
 
     @Override
     public boolean equals(Object o) {
@@ -83,6 +90,8 @@ public class Person extends AbstractAuditingEntity implements Serializable {
                 ", secondLastName='" + secondLastName + '\'' +
                 ", gender=" + gender +
                 ", age=" + age +
+                ", birthdate=" + birthdate +
+                ", specialty=" + specialty +
                 ", race='" + race + '\'' +
                 '}';
     }

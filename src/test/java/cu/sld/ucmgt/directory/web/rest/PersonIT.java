@@ -2,6 +2,9 @@ package cu.sld.ucmgt.directory.web.rest;
 
 import cu.sld.ucmgt.directory.domain.Gender;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+
 public class PersonIT {
 
     public static final Integer UPDATE_AGE = 29;
@@ -30,4 +33,7 @@ public class PersonIT {
 
     public static final String UPDATE_ADDRESS = " FANGO AL PECHO";
     public static final String DEFAULT_ADDRESS = "DIENTE Y CAJA DE MUELAS";
+
+    public static final LocalDate UPDATE_BIRTHDATE = LocalDate.now(ZoneId.systemDefault());
+    public static final LocalDate DEFAULT_BIRTHDATE = LocalDate.ofEpochDay(0L);
 }

@@ -44,6 +44,7 @@ public class StudentDTO extends PersonDTO {
                 ", email='" + email + '\'' +
                 ", gender=" + gender +
                 ", age=" + age +
+                ", birthdate=" + birthdate +
                 ", race='" + race + '\'' +
                 ", districtId=" + districtId +
                 '}';

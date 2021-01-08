@@ -22,6 +22,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -71,6 +73,7 @@ public class StudentResourceIT extends PersonIT {
         student.setEmail(DEFAULT_EMAIL);
         student.setGender(DEFAULT_GENDER);
         student.setAddress(DEFAULT_ADDRESS);
+        student.setBirthdate(DEFAULT_BIRTHDATE);
         student.setResidence(DEFAULT_RESIDENCE);
         student.setClassRoom(DEFAULT_CLASSROOM);
         student.setFirstLastName(DEFAULT_FIRST_LAST_NAME);
@@ -110,6 +113,7 @@ public class StudentResourceIT extends PersonIT {
         assertThat(testStudent.getGender()).isEqualTo(DEFAULT_GENDER);
         assertThat(testStudent.getAddress()).isEqualTo(DEFAULT_ADDRESS);
         assertThat(testStudent.getResidence()).isEqualTo(DEFAULT_RESIDENCE);
+        assertThat(testStudent.getBirthdate()).isEqualTo(DEFAULT_BIRTHDATE);
         assertThat(testStudent.getClassRoom()).isEqualTo(DEFAULT_CLASSROOM);
         assertThat(testStudent.getFirstLastName()).isEqualTo(DEFAULT_FIRST_LAST_NAME);
         assertThat(testStudent.getUniversityYear()).isEqualTo(DEFAULT_UNIVERSITY_YEAR);
@@ -327,6 +331,7 @@ public class StudentResourceIT extends PersonIT {
         updatedStudent.setGender(UPDATE_GENDER);
         updatedStudent.setAddress(UPDATE_ADDRESS);
         updatedStudent.setResidence(UPDATE_RESIDENCE);
+        updatedStudent.setBirthdate(UPDATE_BIRTHDATE);
         updatedStudent.setClassRoom(UPDATE_CLASSROOM);
         updatedStudent.setFirstLastName(UPDATE_FIRST_LAST_NAME);
         updatedStudent.setUniversityYear(UPDATE_UNIVERSITY_YEAR);
@@ -349,6 +354,7 @@ public class StudentResourceIT extends PersonIT {
         assertThat(testStudent.getRace()).isEqualTo(UPDATE_RACE);
         assertThat(testStudent.getEmail()).isEqualTo(UPDATE_EMAIL);
         assertThat(testStudent.getGender()).isEqualTo(UPDATE_GENDER);
+        assertThat(testStudent.getBirthdate()).isEqualTo(UPDATE_BIRTHDATE);
         assertThat(testStudent.getAddress()).isEqualTo(UPDATE_ADDRESS);
         assertThat(testStudent.getResidence()).isEqualTo(UPDATE_RESIDENCE);
         assertThat(testStudent.getClassRoom()).isEqualTo(UPDATE_CLASSROOM);
@@ -413,6 +419,7 @@ public class StudentResourceIT extends PersonIT {
                 .andExpect(jsonPath("$.race").value(DEFAULT_RACE))
                 .andExpect(jsonPath("$.email").value(DEFAULT_EMAIL))
                 .andExpect(jsonPath("$.address").value(DEFAULT_ADDRESS))
+                .andExpect(jsonPath("$.birthdate").value(DEFAULT_BIRTHDATE.toString()))
                 .andExpect(jsonPath("$.gender").value(DEFAULT_GENDER.toString()))
                 .andExpect(jsonPath("$.firstLastName").value(DEFAULT_FIRST_LAST_NAME))
                 .andExpect(jsonPath("$.secondLastName").value(DEFAULT_SECOND_LAST_NAME));
@@ -443,6 +450,7 @@ public class StudentResourceIT extends PersonIT {
                 .andExpect(jsonPath("$.[*].name").value(hasItem(DEFAULT_NAME)))
                 .andExpect(jsonPath("$.[*].race").value(hasItem(DEFAULT_RACE)))
                 .andExpect(jsonPath("$.[*].email").value(hasItem(DEFAULT_EMAIL)))
+                .andExpect(jsonPath("$.[*].birthdate").value(hasItem(DEFAULT_BIRTHDATE.toString())))
                 .andExpect(jsonPath("$.[*].address").value(hasItem(DEFAULT_ADDRESS)))
                 .andExpect(jsonPath("$.[*].gender").value(hasItem(DEFAULT_GENDER.toString())))
                 .andExpect(jsonPath("$.[*].firstLastName").value(hasItem(DEFAULT_FIRST_LAST_NAME)))

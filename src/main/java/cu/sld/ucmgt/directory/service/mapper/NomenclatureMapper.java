@@ -13,7 +13,9 @@ import java.util.UUID;
 @Mapper(componentModel = "spring")
 public interface NomenclatureMapper extends EntityMapper<NomenclatureDTO, Nomenclature> {
 
-    @Mapping(target = "employeesSpecialty", ignore = true)
+    @Mapping(target = "peopleSpecialty", ignore = true)
+    @Mapping(target = "studentCareer", ignore = true)
+    @Mapping(target = "studentsKind", ignore = true)
     @Mapping(target = "employeesCategory", ignore = true)
     @Mapping(target = "employeesScientificDegree", ignore = true)
     @Mapping(target = "employeesTeachingCategory", ignore = true)
