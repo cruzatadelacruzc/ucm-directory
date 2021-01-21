@@ -6,6 +6,8 @@ import cu.sld.ucmgt.directory.domain.WorkPlace;
 import cu.sld.ucmgt.directory.repository.EmployeeRepository;
 import cu.sld.ucmgt.directory.repository.PhoneRepository;
 import cu.sld.ucmgt.directory.repository.WorkPlaceRepository;
+import cu.sld.ucmgt.directory.repository.search.EmployeeSearchRepository;
+import cu.sld.ucmgt.directory.repository.search.PhoneSearchRepository;
 import cu.sld.ucmgt.directory.repository.search.WorkPlaceSearchRepository;
 import cu.sld.ucmgt.directory.service.dto.WorkPlaceDTO;
 import cu.sld.ucmgt.directory.service.mapper.WorkPlaceMapper;
@@ -26,9 +28,10 @@ public class WorkPlaceService {
 
     private final WorkPlaceMapper mapper;
     private final WorkPlaceRepository repository;
-    private final PhoneRepository phoneRepository;
     private final EmployeeRepository employeeRepository;
     private final WorkPlaceSearchRepository searchRepository;
+    private final PhoneSearchRepository phoneSearchRepository;
+    private final EmployeeSearchRepository employeeSearchRepository;
 
     /**
      * Save a workplace.
@@ -39,17 +42,31 @@ public class WorkPlaceService {
     public WorkPlaceDTO save(WorkPlaceDTO workPlaceDTO) {
         log.debug("Request to save WorkPlace : {}", workPlaceDTO);
         WorkPlace workPlace = mapper.toEntity(workPlaceDTO);
-        repository.save(workPlace);
-        WorkPlaceDTO result = mapper.toDto(workPlace);
-        // find all employees and phones to save in elasticsearch
-        if (!workPlaceDTO.getEmployees().isEmpty()){
-            Set<Employee> employees = new HashSet<>(employeeRepository.findAllById(workPlaceDTO.getEmployees()));
+        // find all employees to save in elasticsearch
+        if (workPlaceDTO.getEmployees() != null) {
+            Set<Employee> employees = workPlaceDTO.getEmployees().stream()
+                    .map(employeeRepository::findById)
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .collect(Collectors.toSet());
             workPlace.setEmployees(employees);
         }
-        if (!workPlaceDTO.getPhones().isEmpty()){
-            Set<Phone> phones = new HashSet<>(phoneRepository.findAllById(workPlaceDTO.getPhones()));
-            workPlace.setPhones(phones);
+        repository.save(workPlace);
+        // updating the workplace belonging to phones and employees
+        if (workPlaceDTO.getId() != null) {
+            List<Phone> updatedWorkplacePhones = phoneSearchRepository.findAllByWorkPlace_Id(workPlaceDTO.getId()).stream()
+                    .peek(phone -> phone.setWorkPlace(workPlace)).collect(Collectors.toList());
+            if (!updatedWorkplacePhones.isEmpty()) {
+                phoneSearchRepository.saveAll(updatedWorkplacePhones);
+            }
+
+            List<Employee> updatedWorkplaceEmployees = employeeSearchRepository.findAllByWorkPlace_Id(workPlaceDTO.getId())
+                    .stream().peek(employee -> employee.setWorkPlace(workPlace)).collect(Collectors.toList());
+            if (!updatedWorkplaceEmployees.isEmpty()) {
+                employeeSearchRepository.saveAll(updatedWorkplaceEmployees);
+            }
         }
+        WorkPlaceDTO result = mapper.toDto(workPlace);
         searchRepository.save(workPlace);
         return result;
     }

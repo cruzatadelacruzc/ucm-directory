@@ -1,8 +1,16 @@
 package cu.sld.ucmgt.directory.domain;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import lombok.Data;
+import org.springframework.data.elasticsearch.annotations.DateFormat;
 import org.springframework.data.elasticsearch.annotations.Document;
+import org.springframework.data.elasticsearch.annotations.Field;
+import org.springframework.data.elasticsearch.annotations.FieldType;
 
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
@@ -11,6 +19,7 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -21,9 +30,17 @@ import java.util.Set;
 public class Employee extends Person implements Serializable {
 
     @NotNull
-    private ZonedDateTime startDate;
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
+    @JsonSerialize(using = LocalDateTimeSerializer.class)
+    @JsonDeserialize(using = LocalDateTimeDeserializer.class)
+    @Field(format = DateFormat.date_time)
+    private LocalDateTime startDate;
 
-    private ZonedDateTime endDate;
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
+    @JsonSerialize(using = LocalDateTimeSerializer.class)
+    @JsonDeserialize(using = LocalDateTimeDeserializer.class)
+    @Field(format = DateFormat.date_time)
+    private LocalDateTime endDate;
 
     @Min(value = 0)
     private Integer graduateYears;

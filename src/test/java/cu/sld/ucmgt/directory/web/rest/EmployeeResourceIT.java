@@ -53,11 +53,11 @@ public class EmployeeResourceIT extends PersonIT {
     private static final Boolean DEFAULT_IS_GRADUATE_BY_SECTOR = true;
     private static final Boolean UPDATE_IS_GRADUATE_BY_SECTOR = false;
 
-    private static final ZonedDateTime UPDATE_END_DATE = ZonedDateTime.now(ZoneId.systemDefault()).withNano(0);
-    private static final ZonedDateTime DEFAULT_END_DATE = ZonedDateTime.ofInstant(Instant.ofEpochMilli(0L), ZoneOffset.UTC);
+    private static final LocalDateTime UPDATE_END_DATE = LocalDateTime.now(ZoneId.systemDefault()).withNano(0);
+    private static final LocalDateTime DEFAULT_END_DATE = LocalDateTime.ofInstant(Instant.ofEpochMilli(1L), ZoneOffset.UTC);
 
-    private static final ZonedDateTime UPDATE_START_DATE = ZonedDateTime.now(ZoneId.systemDefault()).withNano(0);
-    private static final ZonedDateTime DEFAULT_START_DATE = ZonedDateTime.ofInstant(Instant.ofEpochMilli(0L), ZoneOffset.UTC);
+    private static final LocalDateTime UPDATE_START_DATE = LocalDateTime.now(ZoneId.systemDefault()).withNano(0);
+    private static final LocalDateTime DEFAULT_START_DATE = LocalDateTime.ofInstant(Instant.ofEpochMilli(1L), ZoneOffset.UTC);
 
     @Autowired
     private EmployeeMapper mapper;
@@ -478,10 +478,10 @@ public class EmployeeResourceIT extends PersonIT {
                 .andExpect(jsonPath("$.registerNumber").value(DEFAULT_REGISTER_NUMBER))
                 .andExpect(jsonPath("$.secondLastName").value(DEFAULT_SECOND_LAST_NAME))
                 .andExpect(jsonPath("$.professionalNumber").value(DEFAULT_PROFESSIONAL_NUMBER))
-                .andExpect(jsonPath("$.endDate").value(TestUtil.sameInstant(DEFAULT_END_DATE)))
+                .andExpect(jsonPath("$.endDate").value(DEFAULT_END_DATE.toString()))
                 .andExpect(jsonPath("$.birthdate").value(DEFAULT_BIRTHDATE.toString()))
                 .andExpect(jsonPath("$.isGraduatedBySector").value(DEFAULT_IS_GRADUATE_BY_SECTOR))
-                .andExpect(jsonPath("$.startDate").value(TestUtil.sameInstant(DEFAULT_START_DATE)));
+                .andExpect(jsonPath("$.startDate").value(DEFAULT_START_DATE.toString()));
     }
 
     @Test
@@ -518,8 +518,8 @@ public class EmployeeResourceIT extends PersonIT {
                 .andExpect(jsonPath("$.[*].registerNumber").value(hasItem(DEFAULT_REGISTER_NUMBER)))
                 .andExpect(jsonPath("$.[*].secondLastName").value(hasItem(DEFAULT_SECOND_LAST_NAME)))
                 .andExpect(jsonPath("$.[*].professionalNumber").value(hasItem(DEFAULT_PROFESSIONAL_NUMBER)))
-                .andExpect(jsonPath("$.[*].endDate").value(hasItem(TestUtil.sameInstant(DEFAULT_END_DATE))))
+                .andExpect(jsonPath("$.[*].endDate").value(hasItem(DEFAULT_END_DATE.toString())))
                 .andExpect(jsonPath("$.[*].isGraduatedBySector").value(hasItem(DEFAULT_IS_GRADUATE_BY_SECTOR)))
-                .andExpect(jsonPath("$.[*].startDate").value(hasItem(TestUtil.sameInstant(DEFAULT_START_DATE))));
+                .andExpect(jsonPath("$.[*].startDate").value(hasItem(DEFAULT_START_DATE.toString())));
     }
 }

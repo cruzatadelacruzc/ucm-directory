@@ -17,7 +17,6 @@ public interface WorkPlaceMapper extends EntityMapper<WorkPlaceDTO, WorkPlace> {
     @Mapping(target = "employees", ignore = true)
     WorkPlace toEntity(WorkPlaceDTO dto);
 
-    @Mapping(target = "phones", ignore = true)
     @Mapping(target = "employees", ignore = true)
     WorkPlaceDTO toDto(WorkPlace entity);
 

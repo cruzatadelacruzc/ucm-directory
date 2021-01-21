@@ -21,6 +21,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 
 import javax.persistence.EntityManager;
 
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -84,7 +85,7 @@ public class PhoneResourceIT {
         employee.setIsGraduatedBySector(true);
         employee.setServiceYears(4);
         employee.setBossWorkPlace(true);
-        employee.setStartDate(ZonedDateTime.now(ZoneId.systemDefault()).withNano(0));
+        employee.setStartDate(LocalDateTime.now(ZoneId.systemDefault()).withNano(0));
         em.persist(employee);
 
         phone = new Phone();

@@ -5,6 +5,7 @@ import lombok.Data;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.util.UUID;
 
@@ -15,8 +16,8 @@ import java.util.UUID;
 public class EmployeeDTO extends PersonDTO {
 
     @NotNull
-    private ZonedDateTime startDate;
-    private ZonedDateTime endDate;
+    private LocalDateTime startDate;
+    private LocalDateTime endDate;
     private Boolean bossWorkPlace;
     @Min(value = 0)
     private Integer graduateYears;
