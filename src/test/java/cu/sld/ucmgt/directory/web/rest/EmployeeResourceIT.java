@@ -1,5 +1,9 @@
 package cu.sld.ucmgt.directory.web.rest;
 
+import cu.sld.ucmgt.directory.repository.search.PhoneSearchRepository;
+import cu.sld.ucmgt.directory.service.dto.PhoneDTO;
+import cu.sld.ucmgt.directory.service.dto.WorkPlaceDTO;
+import cu.sld.ucmgt.directory.service.mapper.PhoneMapper;
 import org.junit.jupiter.api.Test;
 import cu.sld.ucmgt.directory.TestUtil;
 import cu.sld.ucmgt.directory.domain.*;
@@ -65,6 +69,12 @@ public class EmployeeResourceIT extends PersonIT {
     private Employee employee;
 
     @Autowired
+    private PhoneMapper phoneMapper;
+
+    @Autowired
+    private PhoneSearchRepository phoneSearchRepository;
+
+    @Autowired
     private EntityManager em;
 
     @Autowired
@@ -73,7 +83,7 @@ public class EmployeeResourceIT extends PersonIT {
     @BeforeEach
     public void initTest() {
         employee = new Employee();
-        employee.setCI(DEFAULT_CI);
+        employee.setCi(DEFAULT_CI);
         employee.setAge(DEFAULT_AGE);
         employee.setName(DEFAULT_NAME);
         employee.setRace(DEFAULT_RACE);
@@ -106,7 +116,7 @@ public class EmployeeResourceIT extends PersonIT {
         List<Employee> employees = TestUtil.findAll(em, Employee.class);
         assertThat(employees).hasSize(databaseSizeBeforeCreate + 1);
         Employee testEmployee = employees.get(employees.size() - 1);
-        assertThat(testEmployee.getCI()).isEqualTo(DEFAULT_CI);
+        assertThat(testEmployee.getCi()).isEqualTo(DEFAULT_CI);
         assertThat(testEmployee.getAge()).isEqualTo(DEFAULT_AGE);
         assertThat(testEmployee.getName()).isEqualTo(DEFAULT_NAME);
         assertThat(testEmployee.getRace()).isEqualTo(DEFAULT_RACE);
@@ -245,7 +255,7 @@ public class EmployeeResourceIT extends PersonIT {
         int databaseSizeBeforeCreate = TestUtil.findAll(em, Employee.class).size();
 
         // Create the Employee, which fails.
-        employee.setCI("1234567891011");
+        employee.setCi("1234567891011");
         EmployeeDTO employeeDTO = mapper.toDto(employee);
 
         restMockMvc.perform(post("/api/employees").with(csrf())
@@ -264,7 +274,7 @@ public class EmployeeResourceIT extends PersonIT {
         int databaseSizeBeforeCreate = TestUtil.findAll(em, Employee.class).size();
 
         // Create the Employee, which fails.
-        employee.setCI("123456789");
+        employee.setCi("123456789");
         EmployeeDTO employeeDTO = mapper.toDto(employee);
 
         restMockMvc.perform(post("/api/employees").with(csrf())
@@ -363,27 +373,7 @@ public class EmployeeResourceIT extends PersonIT {
         int databaseSizeBeforeUpdate = TestUtil.findAll(em, Employee.class).size();
 
         // Update the Employee
-        Employee updatedEmployee = em.find(Employee.class, employee.getId());
-        // Disconnect from session so that the updates on updatedEmployee are not directly saved in db
-        em.detach(updatedEmployee);
-
-        updatedEmployee.setCI(UPDATE_CI);
-        updatedEmployee.setAge(UPDATE_AGE);
-        updatedEmployee.setName(UPDATE_NAME);
-        updatedEmployee.setRace(UPDATE_RACE);
-        updatedEmployee.setEmail(UPDATE_EMAIL);
-        updatedEmployee.setGender(UPDATE_GENDER);
-        updatedEmployee.setAddress(UPDATE_ADDRESS);
-        updatedEmployee.setEndDate(UPDATE_END_DATE);
-        updatedEmployee.setBirthdate(UPDATE_BIRTHDATE);
-        updatedEmployee.setStartDate(UPDATE_START_DATE);
-        updatedEmployee.setServiceYears(UPDATE_SERVICE_YEAR);
-        updatedEmployee.setGraduateYears(UPDATE_GRADUATE_YEAR);
-        updatedEmployee.setFirstLastName(UPDATE_FIRST_LAST_NAME);
-        updatedEmployee.setRegisterNumber(UPDATE_REGISTER_NUMBER);
-        updatedEmployee.setSecondLastName(UPDATE_SECOND_LAST_NAME);
-        updatedEmployee.setProfessionalNumber(UPDATE_PROFESSIONAL_NUMBER);
-        updatedEmployee.setIsGraduatedBySector(UPDATE_IS_GRADUATE_BY_SECTOR);
+        Employee updatedEmployee = updateEmployeeObj();
 
         EmployeeDTO employeeDTO = mapper.toDto(updatedEmployee);
 
@@ -396,7 +386,11 @@ public class EmployeeResourceIT extends PersonIT {
         List<Employee> employees = TestUtil.findAll(em, Employee.class);
         assertThat(employees).hasSize(databaseSizeBeforeUpdate);
         Employee testEmployee = employees.get(employees.size() - 1);
-        assertThat(testEmployee.getCI()).isEqualTo(UPDATE_CI);
+        testUpdateEmployee(testEmployee);
+    }
+
+    private void testUpdateEmployee(Employee testEmployee) {
+        assertThat(testEmployee.getCi()).isEqualTo(UPDATE_CI);
         assertThat(testEmployee.getAge()).isEqualTo(UPDATE_AGE);
         assertThat(testEmployee.getName()).isEqualTo(UPDATE_NAME);
         assertThat(testEmployee.getRace()).isEqualTo(UPDATE_RACE);
@@ -413,6 +407,66 @@ public class EmployeeResourceIT extends PersonIT {
         assertThat(testEmployee.getSecondLastName()).isEqualTo(UPDATE_SECOND_LAST_NAME);
         assertThat(testEmployee.getProfessionalNumber()).isEqualTo(UPDATE_PROFESSIONAL_NUMBER);
         assertThat(testEmployee.getIsGraduatedBySector()).isEqualTo(UPDATE_IS_GRADUATE_BY_SECTOR);
+    }
+
+    private Employee updateEmployeeObj() {
+        Employee updatedEmployee = em.find(Employee.class, employee.getId());
+        // Disconnect from session so that the updates on updatedEmployee are not directly saved in db
+        em.detach(updatedEmployee);
+
+        updatedEmployee.setCi(UPDATE_CI);
+        updatedEmployee.setAge(UPDATE_AGE);
+        updatedEmployee.setName(UPDATE_NAME);
+        updatedEmployee.setRace(UPDATE_RACE);
+        updatedEmployee.setEmail(UPDATE_EMAIL);
+        updatedEmployee.setGender(UPDATE_GENDER);
+        updatedEmployee.setAddress(UPDATE_ADDRESS);
+        updatedEmployee.setEndDate(UPDATE_END_DATE);
+        updatedEmployee.setBirthdate(UPDATE_BIRTHDATE);
+        updatedEmployee.setStartDate(UPDATE_START_DATE);
+        updatedEmployee.setServiceYears(UPDATE_SERVICE_YEAR);
+        updatedEmployee.setGraduateYears(UPDATE_GRADUATE_YEAR);
+        updatedEmployee.setFirstLastName(UPDATE_FIRST_LAST_NAME);
+        updatedEmployee.setRegisterNumber(UPDATE_REGISTER_NUMBER);
+        updatedEmployee.setSecondLastName(UPDATE_SECOND_LAST_NAME);
+        updatedEmployee.setProfessionalNumber(UPDATE_PROFESSIONAL_NUMBER);
+        updatedEmployee.setIsGraduatedBySector(UPDATE_IS_GRADUATE_BY_SECTOR);
+        return updatedEmployee;
+    }
+
+    @Test
+    @Transactional
+    public void updateSavedEmployeeWithPhones() throws Exception {
+        // Initialize the database
+        em.persist(employee);
+        em.flush();
+
+        Phone phone = new Phone();
+        phone.setNumber(21382103);
+        phone.setActive(true);
+        phone.setDescription("Cesar's cell");
+        phone.setEmployee(employee);
+
+        // To save phone with a employee in elasticsearch
+        PhoneDTO phoneDTO = phoneMapper.toDto(phone);
+        restMockMvc.perform(post("/api/phones").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(phoneDTO)))
+                .andExpect(status().isCreated());
+
+        // Update the Employee
+        Employee updatedEmployee = updateEmployeeObj();
+
+        // to update employee belong to employeeDTO
+        EmployeeDTO employeeDTO = mapper.toDto(updatedEmployee);
+        restMockMvc.perform(put("/api/employees").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(employeeDTO)))
+                .andExpect(status().isOk());
+
+        List<Phone> phonesElasticSearch = phoneSearchRepository.findAllByEmployee_Id(employee.getId());
+        Employee testPhoneEmployeeElasticSearch = phonesElasticSearch.get(phonesElasticSearch.size() -1).getEmployee();
+        testUpdateEmployee(testPhoneEmployeeElasticSearch);
     }
 
     @Test

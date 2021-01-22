@@ -65,7 +65,7 @@ public class EmployeeDTO extends PersonDTO {
                 ", teachingCategoryId=" + teachingCategoryId +
                 ", chargeId=" + chargeId +
                 ", id=" + id +
-                ", CI='" + CI + '\'' +
+                ", ci='" + ci + '\'' +
                 ", name='" + name + '\'' +
                 ", firstLastName='" + firstLastName + '\'' +
                 ", secondLastName='" + secondLastName + '\'' +

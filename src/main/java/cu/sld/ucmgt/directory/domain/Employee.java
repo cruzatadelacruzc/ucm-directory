@@ -113,7 +113,7 @@ public class Employee extends Person implements Serializable {
                 ", teachingCategory=" + teachingCategory +
                 ", charge=" + charge +
                 ", id=" + id +
-                ", CI='" + CI + '\'' +
+                ", ci='" + ci + '\'' +
                 ", name='" + name + '\'' +
                 ", email='" + email + '\'' +
                 ", firstLastName='" + firstLastName + '\'' +

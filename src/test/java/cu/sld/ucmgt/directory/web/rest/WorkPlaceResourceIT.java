@@ -135,7 +135,7 @@ public class WorkPlaceResourceIT {
         employee.setRegisterNumber("asdasdqweqw");
         employee.setRace("Azul");
         employee.setGraduateYears(2015);
-        employee.setCI("91061721000");
+        employee.setCi("91061721000");
         employee.setAddress("Diente y caja de muela");
         employee.setStartDate(LocalDateTime.ofInstant(Instant.ofEpochMilli(0L), ZoneOffset.UTC));
         return employee;

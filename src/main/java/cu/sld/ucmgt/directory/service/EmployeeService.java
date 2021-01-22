@@ -2,10 +2,12 @@ package cu.sld.ucmgt.directory.service;
 
 import cu.sld.ucmgt.directory.domain.Employee;
 import cu.sld.ucmgt.directory.domain.Nomenclature;
+import cu.sld.ucmgt.directory.domain.Phone;
 import cu.sld.ucmgt.directory.repository.EmployeeRepository;
 import cu.sld.ucmgt.directory.repository.NomenclatureRepository;
 import cu.sld.ucmgt.directory.repository.WorkPlaceRepository;
 import cu.sld.ucmgt.directory.repository.search.EmployeeSearchRepository;
+import cu.sld.ucmgt.directory.repository.search.PhoneSearchRepository;
 import cu.sld.ucmgt.directory.service.dto.EmployeeDTO;
 import cu.sld.ucmgt.directory.service.mapper.EmployeeMapper;
 import lombok.RequiredArgsConstructor;
@@ -15,8 +17,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -28,6 +32,7 @@ public class EmployeeService {
     private final EmployeeRepository repository;
     private final WorkPlaceRepository workPlaceRepository;
     private final EmployeeSearchRepository searchRepository;
+    private final PhoneSearchRepository phoneSearchRepository;
     private final NomenclatureRepository nomenclatureRepository;
 
     /**
@@ -65,6 +70,14 @@ public class EmployeeService {
         }
         if (employee.getWorkPlace() != null) {
             workPlaceRepository.findById(employee.getWorkPlace().getId()).ifPresent(employee::setWorkPlace);
+        }
+        // updating the employee belonging to phones
+        if (employeeDTO.getId() != null) {
+            List<Phone> updatedEmployeePhones = phoneSearchRepository.findAllByEmployee_Id(employeeDTO.getId()).stream()
+                    .peek(phone -> phone.setEmployee(employee)).collect(Collectors.toList());
+            if (!updatedEmployeePhones.isEmpty()){
+                phoneSearchRepository.saveAll(updatedEmployeePhones);
+            }
         }
         searchRepository.save(employee);
         return result;

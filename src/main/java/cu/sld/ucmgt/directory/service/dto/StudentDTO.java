@@ -37,7 +37,7 @@ public class StudentDTO extends PersonDTO {
                 ", universityYear=" + universityYear +
                 ", residence='" + residence + '\'' +
                 ", id=" + id +
-                ", CI='" + CI + '\'' +
+                ", ci='" + ci + '\'' +
                 ", name='" + name + '\'' +
                 ", firstLastName='" + firstLastName + '\'' +
                 ", secondLastName='" + secondLastName + '\'' +

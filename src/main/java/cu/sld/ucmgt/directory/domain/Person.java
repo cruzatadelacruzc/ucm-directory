@@ -1,9 +1,17 @@
 package cu.sld.ucmgt.directory.domain;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import lombok.Data;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.GenericGenerator;
+import org.springframework.data.elasticsearch.annotations.DateFormat;
+import org.springframework.data.elasticsearch.annotations.Field;
+import org.springframework.data.elasticsearch.annotations.FieldType;
 
 import javax.persistence.*;
 import javax.validation.constraints.Email;
@@ -28,7 +36,7 @@ public class Person extends AbstractAuditingEntity implements Serializable {
     protected UUID id;
 
     @Pattern(regexp = "(^[1-9]\\d{10}$)")
-    protected String CI;
+    protected String ci;
 
     @NotBlank
     protected String name;
@@ -49,6 +57,10 @@ public class Person extends AbstractAuditingEntity implements Serializable {
     @Min(value = 1)
     protected Integer age;
 
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
+    @JsonSerialize(using = LocalDateSerializer.class)
+    @JsonDeserialize(using = LocalDateDeserializer.class)
+    @Field(type = FieldType.Date, format = DateFormat.basic_date)
     protected LocalDate birthdate;
 
     /**
@@ -82,7 +94,7 @@ public class Person extends AbstractAuditingEntity implements Serializable {
     public String toString() {
         return "Person{" +
                 "id=" + id +
-                ", CI='" + CI + '\'' +
+                ", ci='" + ci + '\'' +
                 ", name='" + name + '\'' +
                 ", email='" + email + '\'' +
                 ", address='" + address + '\'' +

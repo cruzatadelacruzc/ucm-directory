@@ -79,7 +79,7 @@ public class PhoneResourceIT {
         employee.setEmail("admin@mail.com");
         employee.setAge(29);
         employee.setRace("Azul");
-        employee.setCI("91061721000");
+        employee.setCi("91061721000");
         employee.setAddress("Diente y caja de muela");
         employee.setRegisterNumber("458r");
         employee.setIsGraduatedBySector(true);

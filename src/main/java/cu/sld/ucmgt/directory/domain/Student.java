@@ -55,7 +55,7 @@ public class Student extends Person implements Serializable {
                 ", universityYear=" + universityYear +
                 ", residence='" + residence + '\'' +
                 ", id=" + id +
-                ", CI='" + CI + '\'' +
+                ", ci='" + ci + '\'' +
                 ", name='" + name + '\'' +
                 ", email='" + email + '\'' +
                 ", firstLastName='" + firstLastName + '\'' +

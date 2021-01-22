@@ -21,7 +21,7 @@ public abstract class PersonDTO implements Serializable {
     protected UUID id;
 
     @Pattern(regexp = "(^[1-9]\\d{10}$)")
-    protected String CI;
+    protected String ci;
     @NotBlank
     protected String name;
     @NotBlank
@@ -55,7 +55,7 @@ public abstract class PersonDTO implements Serializable {
     public String toString() {
         return "PersonDTO{" +
                 "id=" + id +
-                ", CI='" + CI + '\'' +
+                ", ci='" + ci + '\'' +
                 ", name='" + name + '\'' +
                 ", firstLastName='" + firstLastName + '\'' +
                 ", secondLastName='" + secondLastName + '\'' +

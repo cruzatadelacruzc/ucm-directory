@@ -66,7 +66,7 @@ public class StudentResourceIT extends PersonIT {
     @BeforeEach
     public void initTest() {
         student = new Student();
-        student.setCI(DEFAULT_CI);
+        student.setCi(DEFAULT_CI);
         student.setAge(DEFAULT_AGE);
         student.setName(DEFAULT_NAME);
         student.setRace(DEFAULT_RACE);
@@ -105,7 +105,7 @@ public class StudentResourceIT extends PersonIT {
         List<Student> students = TestUtil.findAll(em, Student.class);
         assertThat(students).hasSize(databaseSizeBeforeCreate + 1);
         Student testStudent = students.get(students.size() -1 );
-        assertThat(testStudent.getCI()).isEqualTo(DEFAULT_CI);
+        assertThat(testStudent.getCi()).isEqualTo(DEFAULT_CI);
         assertThat(testStudent.getAge()).isEqualTo(DEFAULT_AGE);
         assertThat(testStudent.getName()).isEqualTo(DEFAULT_NAME);
         assertThat(testStudent.getRace()).isEqualTo(DEFAULT_RACE);
@@ -258,7 +258,7 @@ public class StudentResourceIT extends PersonIT {
         int databaseSizeBeforeCreate = TestUtil.findAll(em, Student.class).size();
 
         // Create the Student, which fails.
-        student.setCI("1234567891011");
+        student.setCi("1234567891011");
         StudentDTO studentDTO = mapper.toDto(student);
 
         restMockMvc.perform(post("/api/students").with(csrf())
@@ -277,7 +277,7 @@ public class StudentResourceIT extends PersonIT {
         int databaseSizeBeforeCreate = TestUtil.findAll(em, Student.class).size();
 
         // Create the Student, which fails.
-        student.setCI("123456789");
+        student.setCi("123456789");
         StudentDTO studentDTO = mapper.toDto(student);
 
         restMockMvc.perform(post("/api/students").with(csrf())
@@ -323,7 +323,7 @@ public class StudentResourceIT extends PersonIT {
         // Disconnect from session so that the updates on updatedStudent are not directly saved in db
         em.detach(updatedStudent);
 
-        updatedStudent.setCI(UPDATE_CI);
+        updatedStudent.setCi(UPDATE_CI);
         updatedStudent.setAge(UPDATE_AGE);
         updatedStudent.setName(UPDATE_NAME);
         updatedStudent.setRace(UPDATE_RACE);
@@ -348,7 +348,7 @@ public class StudentResourceIT extends PersonIT {
         List<Student> students = TestUtil.findAll(em, Student.class);
         assertThat(students).hasSize(databaseSizeBeforeUpdate);
         Student testStudent = students.get(students.size() -1);
-        assertThat(testStudent.getCI()).isEqualTo(UPDATE_CI);
+        assertThat(testStudent.getCi()).isEqualTo(UPDATE_CI);
         assertThat(testStudent.getAge()).isEqualTo(UPDATE_AGE);
         assertThat(testStudent.getName()).isEqualTo(UPDATE_NAME);
         assertThat(testStudent.getRace()).isEqualTo(UPDATE_RACE);

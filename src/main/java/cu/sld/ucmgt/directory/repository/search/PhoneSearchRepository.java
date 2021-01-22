@@ -13,4 +13,6 @@ import java.util.UUID;
 public interface PhoneSearchRepository extends ElasticsearchRepository<Phone, UUID> {
 
     List<Phone> findAllByWorkPlace_Id(UUID uuid);
+
+    List<Phone> findAllByEmployee_Id(UUID uuid);
 }
