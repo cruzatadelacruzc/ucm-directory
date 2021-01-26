@@ -55,6 +55,7 @@ public class Employee extends Person implements Serializable {
 
     private Boolean bossWorkPlace;
 
+    @Field(type = FieldType.Text)
     private String professionalNumber;
 
     @ManyToOne

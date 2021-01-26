@@ -1,19 +1,14 @@
 package cu.sld.ucmgt.directory.domain;
 
-import lombok.*;
+import lombok.Data;
 import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.springframework.data.elasticsearch.annotations.Document;
-import org.springframework.data.elasticsearch.annotations.Field;
-import org.springframework.data.elasticsearch.annotations.FieldType;
+import org.hibernate.annotations.GenericGenerator;
 
-import java.util.Set;
-import java.util.UUID;
-import java.util.HashSet;
 import javax.persistence.*;
-import java.io.Serializable;
 import javax.validation.constraints.NotBlank;
+import java.io.Serializable;
+import java.util.UUID;
 
 @Data
 @Entity
@@ -30,6 +25,9 @@ public class Nomenclature implements Serializable {
     @NotBlank
     private String name;
 
+    @OneToOne
+    private Nomenclature parent;
+
     private Boolean active;
 
     private String description;
@@ -37,29 +35,6 @@ public class Nomenclature implements Serializable {
     @Enumerated(value = EnumType.STRING)
     private NomenclatureType discriminator;
 
-    @OneToMany(mappedBy = "charge")
-    private Set<Employee> employeesCharge = new HashSet<>();
-
-    @OneToMany(mappedBy = "category")
-    private Set<Employee> employeesCategory = new HashSet<>();
-
-    @OneToMany(mappedBy = "specialty")
-    private Set<Person> peopleSpecialty = new HashSet<>();
-
-    @OneToMany(mappedBy = "career")
-    private Set<Student> studentCareer = new HashSet<>();
-
-    @OneToMany(mappedBy = "kind")
-    private Set<Student> studentsKind = new HashSet<>();
-
-    @OneToMany(mappedBy = "scientificDegree")
-    private Set<Employee> employeesScientificDegree = new HashSet<>();
-
-    @OneToMany(mappedBy = "teachingCategory")
-    private Set<Employee> employeesTeachingCategory = new HashSet<>();
-
-    @OneToMany(mappedBy = "profession")
-    private Set<Employee> employeesProfession = new HashSet<>();
 
     @Override
     public boolean equals(Object o) {

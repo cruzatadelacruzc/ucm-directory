@@ -1,13 +1,22 @@
 package cu.sld.ucmgt.directory.web.rest;
 
+import com.google.common.collect.Lists;
 import cu.sld.ucmgt.directory.DirectoryApp;
 import cu.sld.ucmgt.directory.TestUtil;
 import cu.sld.ucmgt.directory.config.TestSecurityConfiguration;
+import cu.sld.ucmgt.directory.domain.Employee;
+import cu.sld.ucmgt.directory.domain.Gender;
 import cu.sld.ucmgt.directory.domain.Nomenclature;
 import cu.sld.ucmgt.directory.domain.NomenclatureType;
 import cu.sld.ucmgt.directory.repository.NomenclatureRepository;
+import cu.sld.ucmgt.directory.repository.search.EmployeeSearchRepository;
+import cu.sld.ucmgt.directory.service.dto.EmployeeDTO;
 import cu.sld.ucmgt.directory.service.dto.NomenclatureDTO;
+import cu.sld.ucmgt.directory.service.dto.PhoneDTO;
+import cu.sld.ucmgt.directory.service.mapper.EmployeeMapper;
 import cu.sld.ucmgt.directory.service.mapper.NomenclatureMapper;
+import org.apache.commons.collections.IteratorUtils;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,12 +24,19 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.query.GetQuery;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
+import org.springframework.data.elasticsearch.core.query.SearchQuery;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -59,6 +75,12 @@ public class NomenclatureResourceIT {
     private NomenclatureRepository repository;
 
     @Autowired
+    private EmployeeMapper employeeMapper;
+
+    @Autowired
+    private ElasticsearchOperations elasticsearchOperations;
+
+    @Autowired
     private EntityManager em;
 
     @Autowired
@@ -76,6 +98,14 @@ public class NomenclatureResourceIT {
     @Test
     @Transactional
     public void createNomenclature() throws Exception {
+        Nomenclature nomenclatureParent = new Nomenclature();
+        nomenclatureParent.setName(UPDATE_NAME);
+        nomenclatureParent.setActive(UPDATE_ACTIVE);
+        nomenclatureParent.setDiscriminator(DEFAULT_DISCRIMINATOR);
+        nomenclatureParent.setDescription(UPDATE_DESCRIPTION);
+        repository.saveAndFlush(nomenclatureParent);
+        nomenclature.setParent(nomenclatureParent);
+
         int databaseSizeBeforeCreate = repository.findAll().size();
         NomenclatureDTO nomenclatureDTO = mapper.toDto(nomenclature);
 
@@ -89,6 +119,7 @@ public class NomenclatureResourceIT {
         assertThat(nomenclatures).hasSize(databaseSizeBeforeCreate + 1);
         Nomenclature testNomenclature = nomenclatures.get(nomenclatures.size() - 1);
         assertThat(testNomenclature.getName()).isEqualTo(DEFAULT_NAME);
+        assertThat(testNomenclature.getParent().getId()).isEqualTo(nomenclatureParent.getId());
         assertThat(testNomenclature.getActive()).isEqualTo(DEFAULT_ACTIVE);
         assertThat(testNomenclature.getDescription()).isEqualTo(DEFAULT_DESCRIPTION);
         assertThat(testNomenclature.getDiscriminator()).isEqualTo(DEFAULT_DISCRIMINATOR);
@@ -187,6 +218,61 @@ public class NomenclatureResourceIT {
         assertThat(testNomenclature.getActive()).isEqualTo(UPDATE_ACTIVE);
         assertThat(testNomenclature.getDescription()).isEqualTo(UPDATE_DESCRIPTION);
         assertThat(testNomenclature.getDiscriminator()).isEqualTo(DEFAULT_DISCRIMINATOR);
+    }
+
+
+    @Test
+    @Transactional
+    public void updateSavedNomenclatureWithEmployees() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(nomenclature);
+        elasticsearchOperations.deleteIndex("employee");
+
+        Employee employee = new Employee();
+        employee.setName("Cesar");
+        employee.setGender(Gender.Masculino);
+        employee.setEmail("admin@mail.com");
+        employee.setAge(29);
+        employee.setServiceYears(5);
+        employee.setRegisterNumber("asdasdqweqw");
+        employee.setRace("Azul");
+        employee.setGraduateYears(2015);
+        employee.setCi("91061721000");
+        employee.setAddress("Diente y caja de muela");
+        employee.setStartDate(LocalDateTime.ofInstant(Instant.ofEpochMilli(0L), ZoneOffset.UTC));
+        employee.setCharge(nomenclature);
+
+
+        // To save nomenclature with a employee in elasticsearch
+        EmployeeDTO employeeDTO = employeeMapper.toDto(employee);
+        restMockMvc.perform(post("/api/employees").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(employeeDTO)))
+                .andExpect(status().isCreated());
+
+        // Update the Nomenclature
+        Nomenclature updatedNomenclature = repository.findById(nomenclature.getId()).get();
+        // Disconnect from session so that the updates on updatedNomenclature are not directly saved in db
+        em.detach(updatedNomenclature);
+
+        updatedNomenclature.setName(UPDATE_NAME);
+        updatedNomenclature.setActive(true);
+        updatedNomenclature.setDescription(UPDATE_DESCRIPTION);
+
+        NomenclatureDTO nomenclatureDTO = mapper.toDto(updatedNomenclature);
+        restMockMvc.perform(put("/api/nomenclatures").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(nomenclatureDTO)))
+                .andExpect(status().isOk());
+
+        SearchQuery query = new NativeSearchQueryBuilder()
+                .withQuery(QueryBuilders.matchAllQuery()).build();
+        List<Employee> employees = elasticsearchOperations.queryForList(query, Employee.class);
+        Employee testEmployeeNomenclatureElasticSearch = employees.get(employees.size() - 1);
+        assertThat(testEmployeeNomenclatureElasticSearch.getCharge().getName()).isEqualTo(UPDATE_NAME);
+        assertThat(testEmployeeNomenclatureElasticSearch.getCharge().getDescription()).isEqualTo(UPDATE_DESCRIPTION);
+        assertThat(testEmployeeNomenclatureElasticSearch.getCharge().getActive()).isEqualTo(true);
+
     }
 
     @Test

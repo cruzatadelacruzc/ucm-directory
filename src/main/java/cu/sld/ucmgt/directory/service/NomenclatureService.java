@@ -7,12 +7,22 @@ import cu.sld.ucmgt.directory.service.dto.NomenclatureDTO;
 import cu.sld.ucmgt.directory.service.mapper.NomenclatureMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.reindex.BulkByScrollResponse;
+import org.elasticsearch.index.reindex.UpdateByQueryRequest;
+import org.elasticsearch.script.Script;
+import org.elasticsearch.script.ScriptType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -24,9 +34,10 @@ public class NomenclatureService {
 
     private final NomenclatureMapper mapper;
     private final NomenclatureRepository repository;
+    private final RestHighLevelClient highLevelClient;
 
     /**
-     * Save a nomenclature.
+     * Save a nomenclature and update Employee indexes if store updated nomenclature.
      *
      * @param nomenclatureDTO the entity to save.
      * @return the persisted entity.
@@ -35,13 +46,37 @@ public class NomenclatureService {
         log.debug("Request to save Nomenclature : {}", nomenclatureDTO);
         Nomenclature nomenclature = mapper.toEntity(nomenclatureDTO);
         repository.save(nomenclature);
+        if (nomenclatureDTO.getId() != null) {
+            try {
+                String filedName = nomenclature.getDiscriminator().getShortCode();
+                Map<String, Object> params = new HashMap<>();
+                String updateCode = "ctx._source." + filedName + "= null";
+                if (nomenclatureDTO.getActive()) {
+                    params.put("name", nomenclature.getName());
+                    params.put("description", nomenclature.getDescription());
+                    params.put("discriminator", nomenclature.getDiscriminator().toString());
+                    updateCode = "for (entry in params.entrySet()){if (entry.getKey() != \"ctx\") " +
+                            "{ctx._source." + filedName + "[entry.getKey()] = entry.getValue()}}";
+                }
+
+                UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("employees");
+                updateByQueryRequest.setAbortOnVersionConflict(true);
+                updateByQueryRequest.setQuery(QueryBuilders.matchQuery(filedName + ".id", nomenclatureDTO.getId().toString()));
+                updateByQueryRequest.setScript(new Script(ScriptType.INLINE, "painless", updateCode, params));
+                BulkByScrollResponse bulkResponse = highLevelClient.updateByQuery(
+                        updateByQueryRequest, RequestOptions.DEFAULT);
+                log.debug("Amount affected Employee indexes: {}", bulkResponse.getUpdated());
+            } catch (ElasticsearchException | IOException e) {
+                log.error(e.getMessage());
+            }
+        }
         return mapper.toDto(nomenclature);
     }
 
     /**
      * Returns a Nomenclature given a name and discriminator
      *
-     * @param name Nomenclature name
+     * @param name          Nomenclature name
      * @param discriminator NomenclatureType
      * @return {@link Nomenclature} instance if founded
      */
