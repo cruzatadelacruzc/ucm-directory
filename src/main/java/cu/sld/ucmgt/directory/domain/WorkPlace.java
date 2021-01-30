@@ -16,7 +16,7 @@ import java.util.UUID;
 
 @Data
 @Entity
-@Document(indexName = "workplaces")
+@Document(indexName = "workplaces", shards = 3)
 @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
 public class WorkPlace extends AbstractAuditingEntity implements Serializable {
     private static final long serialVersionUID = 1L;
