@@ -10,6 +10,7 @@
 
 eureka:
   client:
+    enabled: false
     fetch-registry: false
   instance:
     appname: directory
