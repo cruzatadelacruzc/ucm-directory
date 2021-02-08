@@ -10,8 +10,8 @@
 
 eureka:
   client:
-    enabled: false
     fetch-registry: false
+    register-with-eureka: false
   instance:
     appname: directory
     instanceId: directory:${spring.application.instance-id:${random.value}}
