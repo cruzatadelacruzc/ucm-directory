@@ -28,7 +28,6 @@ public class EmployeeDTO extends PersonDTO {
     protected String registerNumber;
     protected String professionalNumber;
     private UUID workPlaceId;
-    private UUID specialtyId;
     private UUID categoryId;
     private UUID scientificDegreeId;
     private UUID teachingCategoryId;

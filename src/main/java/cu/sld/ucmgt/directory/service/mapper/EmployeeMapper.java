@@ -2,9 +2,11 @@ package cu.sld.ucmgt.directory.service.mapper;
 
 import cu.sld.ucmgt.directory.domain.Employee;
 import cu.sld.ucmgt.directory.service.dto.EmployeeDTO;
+import org.mapstruct.IterableMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+import java.util.Set;
 import java.util.UUID;
 
 /**

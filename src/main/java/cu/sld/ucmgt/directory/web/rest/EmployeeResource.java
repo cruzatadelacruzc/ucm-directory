@@ -48,7 +48,7 @@ public class EmployeeResource {
         if (employeeDTO.getId() != null) {
             throw new BadRequestAlertException("A new employee cannot already have an ID", ENTITY_NAME, "idexists");
         }
-        EmployeeDTO employeeSaved = service.save(employeeDTO);
+        EmployeeDTO employeeSaved = service.create(employeeDTO);
         return ResponseEntity.created(new URI("/api/employees/" + employeeSaved.getId()))
                 .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
                         true, ENTITY_NAME,
@@ -71,7 +71,7 @@ public class EmployeeResource {
             throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
         }
 
-        EmployeeDTO employeeSaved = service.save(employeeDTO);
+        EmployeeDTO employeeSaved = service.update(employeeDTO);
         return ResponseEntity.ok()
                 .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
                         true, ENTITY_NAME,

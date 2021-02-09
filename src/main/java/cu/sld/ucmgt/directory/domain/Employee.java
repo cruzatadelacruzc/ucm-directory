@@ -7,10 +7,12 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.springframework.data.elasticsearch.annotations.DateFormat;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
-import org.springframework.data.elasticsearch.annotations.FieldType;
 
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
@@ -20,13 +22,12 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.time.ZonedDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
 @Data
 @Entity
-@Document(indexName = "employees", shards = 3)
+@EqualsAndHashCode(callSuper=false)
 public class Employee extends Person implements Serializable {
 
     @NotNull
@@ -51,38 +52,32 @@ public class Employee extends Person implements Serializable {
     private Integer serviceYears;
 
     @NotBlank
-    protected String registerNumber;
+    private String registerNumber;
 
     private Boolean bossWorkPlace;
 
-    @Field(type = FieldType.Text)
     private String professionalNumber;
 
     @ManyToOne
-    @JsonIgnoreProperties(value = "employees")
     private WorkPlace workPlace;
 
     @ManyToOne
-    @JsonIgnoreProperties(value = "employeesCategory")
     private Nomenclature category;
 
     @ManyToOne
-    @JsonIgnoreProperties(value = "employeesScientificDegree")
     private Nomenclature scientificDegree;
 
     @ManyToOne
-    @JsonIgnoreProperties(value = "employeesTeachingCategory")
     private Nomenclature teachingCategory;
 
     @ManyToOne
-    @JsonIgnoreProperties(value = "employeesCharge")
     private Nomenclature charge;
 
     @ManyToOne
-    @JsonIgnoreProperties(value = "employeesProfession")
-    protected Nomenclature profession;
+    private Nomenclature profession;
 
     @OneToMany(mappedBy = "employee")
+    @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     private Set<Phone> phones = new HashSet<>();
 
     @Override

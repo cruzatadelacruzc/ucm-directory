@@ -1,50 +1,32 @@
-package cu.sld.ucmgt.directory.domain;
+package cu.sld.ucmgt.directory.domain.elasticsearch;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
+import cu.sld.ucmgt.directory.domain.Gender;
 import lombok.Data;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.GenericGenerator;
 import org.springframework.data.elasticsearch.annotations.DateFormat;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 
-import javax.persistence.*;
-import javax.validation.constraints.Email;
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Pattern;
-import java.io.Serializable;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import java.time.LocalDate;
 import java.util.UUID;
 
 @Data
-@Entity
-@Inheritance(strategy = InheritanceType.JOINED)
-@org.hibernate.annotations.Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
-public class Person extends AbstractAuditingEntity implements Serializable {
-    private static final long serialVersionUID = 1L;
+public abstract class PersonIndex {
 
-    @Id
-    @GeneratedValue(generator = "UUID")
-    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
-    @Column(name = "id", updatable = false, nullable = false)
     protected UUID id;
 
-    @Pattern(regexp = "(^[1-9]\\d{10}$)")
     protected String ci;
 
-    @NotBlank
     protected String name;
 
-    @Email
     protected String email;
 
-    @NotBlank
     protected String address;
 
     protected String firstLastName;
@@ -54,33 +36,26 @@ public class Person extends AbstractAuditingEntity implements Serializable {
     @Enumerated(EnumType.STRING)
     protected Gender gender;
 
-    @Min(value = 1)
     protected Integer age;
+
+    protected String race;
+
+    protected String district;
+
+    protected String specialty;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     @JsonSerialize(using = LocalDateSerializer.class)
     @JsonDeserialize(using = LocalDateDeserializer.class)
-    @Field(type = FieldType.Date, format = DateFormat.basic_date)
+    @Field(type = FieldType.Date, format = DateFormat.date_optional_time)
     protected LocalDate birthdate;
-
-    /**
-     * {@docRoot Black or White race = Black or White people}
-     */
-    @NotBlank
-    protected String race;
-
-    @ManyToOne
-    protected Nomenclature district;
-
-    @ManyToOne
-    protected Nomenclature specialty;
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Person)) return false;
+        if (!(o instanceof PersonIndex)) return false;
 
-        return id != null && id.equals(((Person) o).id);
+        return id != null && id.equals(((PersonIndex) o).id);
     }
 
     @Override
@@ -90,7 +65,7 @@ public class Person extends AbstractAuditingEntity implements Serializable {
 
     @Override
     public String toString() {
-        return "Person{" +
+        return "PersonIndex{" +
                 "id=" + id +
                 ", ci='" + ci + '\'' +
                 ", name='" + name + '\'' +
@@ -100,8 +75,10 @@ public class Person extends AbstractAuditingEntity implements Serializable {
                 ", secondLastName='" + secondLastName + '\'' +
                 ", gender=" + gender +
                 ", age=" + age +
-                ", birthdate=" + birthdate +
                 ", race='" + race + '\'' +
+                ", district='" + district + '\'' +
+                ", specialty='" + specialty + '\'' +
+                ", birthdate=" + birthdate +
                 '}';
     }
 }

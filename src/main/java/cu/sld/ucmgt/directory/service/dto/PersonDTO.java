@@ -36,6 +36,7 @@ public abstract class PersonDTO implements Serializable {
     @NotBlank
     protected String race;
     protected UUID districtId;
+    protected UUID specialtyId;
     protected LocalDate birthdate;
 
     @Override

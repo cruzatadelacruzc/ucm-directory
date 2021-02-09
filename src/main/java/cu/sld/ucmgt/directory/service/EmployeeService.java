@@ -1,26 +1,30 @@
 package cu.sld.ucmgt.directory.service;
 
 import cu.sld.ucmgt.directory.domain.Employee;
-import cu.sld.ucmgt.directory.domain.Nomenclature;
-import cu.sld.ucmgt.directory.domain.Phone;
+import cu.sld.ucmgt.directory.domain.elasticsearch.EmployeeIndex;
 import cu.sld.ucmgt.directory.repository.EmployeeRepository;
 import cu.sld.ucmgt.directory.repository.NomenclatureRepository;
 import cu.sld.ucmgt.directory.repository.WorkPlaceRepository;
 import cu.sld.ucmgt.directory.repository.search.EmployeeSearchRepository;
-import cu.sld.ucmgt.directory.repository.search.PhoneSearchRepository;
 import cu.sld.ucmgt.directory.service.dto.EmployeeDTO;
+import cu.sld.ucmgt.directory.service.mapper.EmployeeIndexMapper;
 import cu.sld.ucmgt.directory.service.mapper.EmployeeMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.reindex.DeleteByQueryRequest;
+import org.elasticsearch.index.reindex.UpdateByQueryRequest;
+import org.elasticsearch.script.Script;
+import org.elasticsearch.script.ScriptType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Collectors;
+import java.io.IOException;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -30,10 +34,11 @@ public class EmployeeService {
 
     private final EmployeeMapper mapper;
     private final EmployeeRepository repository;
+    private final RestHighLevelClient highLevelClient;
     private final WorkPlaceRepository workPlaceRepository;
-    private final EmployeeSearchRepository searchRepository;
-    private final PhoneSearchRepository phoneSearchRepository;
+    private final EmployeeIndexMapper employeeIndexMapper;
     private final NomenclatureRepository nomenclatureRepository;
+    private final EmployeeSearchRepository searchRepository;
 
     /**
      * Save a employee.
@@ -41,11 +46,9 @@ public class EmployeeService {
      * @param employeeDTO the entity to save.
      * @return the persisted entity.
      */
-    public EmployeeDTO save(EmployeeDTO employeeDTO) {
-        log.debug("Request to save Employee : {}", employeeDTO);
+    public Employee save(EmployeeDTO employeeDTO) {
         Employee employee = mapper.toEntity(employeeDTO);
         repository.save(employee);
-        EmployeeDTO result = mapper.toDto(employee);
         // find all nomenclatures and workplace to save in elasticsearch
         if (employee.getCategory() != null) {
             nomenclatureRepository.findById(employee.getCategory().getId()).ifPresent(employee::setCategory);
@@ -53,14 +56,8 @@ public class EmployeeService {
         if (employee.getCharge() != null) {
             nomenclatureRepository.findById(employee.getCharge().getId()).ifPresent(employee::setCharge);
         }
-        if (employee.getScientificDegree() != null) {
-            nomenclatureRepository.findById(employee.getScientificDegree().getId()).ifPresent(employee::setScientificDegree);
-        }
         if (employee.getSpecialty() != null) {
             nomenclatureRepository.findById(employee.getSpecialty().getId()).ifPresent(employee::setSpecialty);
-        }
-        if (employee.getTeachingCategory() != null) {
-            nomenclatureRepository.findById(employee.getTeachingCategory().getId()).ifPresent(employee::setTeachingCategory);
         }
         if (employee.getDistrict() != null) {
             nomenclatureRepository.findById(employee.getDistrict().getId()).ifPresent(employee::setDistrict);
@@ -71,16 +68,76 @@ public class EmployeeService {
         if (employee.getWorkPlace() != null) {
             workPlaceRepository.findById(employee.getWorkPlace().getId()).ifPresent(employee::setWorkPlace);
         }
+        return employee;
+    }
+
+    /**
+     * Create a employee.
+     *
+     * @param employeeDTO the entity to save.
+     * @return the persisted entity.
+     */
+    public EmployeeDTO create(EmployeeDTO employeeDTO) {
+        log.debug("Request to create Employee : {}", employeeDTO);
+        Employee employee = save(employeeDTO);
+        EmployeeIndex employeeIndex = employeeIndexMapper.toIndex(employee);
+        searchRepository.save(employeeIndex);
+        return mapper.toDto(employee);
+    }
+
+    /**
+     * Update a employee and phone's employee.
+     *
+     * @param employeeDTO the entity to save.
+     * @return the persisted entity.
+     */
+    public EmployeeDTO update(EmployeeDTO employeeDTO) {
+        log.debug("Request to update Employee : {}", employeeDTO);
+        Employee employee = save(employeeDTO);
         // updating the employee belonging to phones
-        if (employeeDTO.getId() != null) {
-            List<Phone> updatedEmployeePhones = phoneSearchRepository.findAllByEmployee_Id(employeeDTO.getId()).stream()
-                    .peek(phone -> phone.setEmployee(employee)).collect(Collectors.toList());
-            if (!updatedEmployeePhones.isEmpty()){
-                phoneSearchRepository.saveAll(updatedEmployeePhones);
-            }
+        try {
+            Map<String, Object> params = new HashMap<>();
+            params.put("ci", employee.getCi());
+            params.put("age", employee.getAge());
+            params.put("race", employee.getRace());
+            params.put("name", employee.getName());
+            params.put("email", employee.getEmail());
+            params.put("gender", employee.getGender());
+            params.put("address", employee.getAddress());
+            params.put("birthdate", employee.getBirthdate());
+            params.put("firstLastName", employee.getFirstLastName());
+            params.put("registerNumber", employee.getRegisterNumber());
+            params.put("secondLastName", employee.getSecondLastName());
+            params.put("professionalNumber", employee.getProfessionalNumber());
+            params.put("charge", employee.getCharge() != null ? employee.getCharge().getName() : null);
+            params.put("district", employee.getDistrict() != null ? employee.getDistrict().getName() : null);
+            params.put("category", employee.getCategory() != null ? employee.getCategory().getName() : null);
+            params.put("specialty", employee.getSpecialty() != null ? employee.getSpecialty().getName() : null);
+            params.put("workPlace", employee.getWorkPlace() != null ? employee.getWorkPlace().getName() : null);
+            params.put("profession", employee.getProfession() != null ? employee.getProfession().getName() : null);
+            String updateCode = "def targets = ctx._source.employees.findAll(employee " +
+                    "-> employee.id == \"" + employee.getId().toString() + "\" ); " +
+                    "for (employee in targets) { for (entry in params.entrySet()) { if (entry.getKey() != \"ctx\") {" +
+                    "employee[entry.getKey()] = entry.getValue() }}}";
+            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("workplaces")
+                    .setRefresh(true)
+                    .setAbortOnVersionConflict(true)
+                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, params));
+            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+            log.debug("Operation of update the Employees into Workplaces indices was executed successful");
+
+            updateCode = "for (entry in params.entrySet()){ if (entry.getKey() != \"ctx\") " +
+                    "{ctx._source.employee[entry.getKey()] = entry.getValue()}}";
+            updateByQueryRequest = new UpdateByQueryRequest("phones")
+                    .setRefresh(true)
+                    .setAbortOnVersionConflict(true)
+                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, params))
+                    .setQuery(QueryBuilders.matchQuery("employee.id", employee.getId().toString()));
+            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            log.error(e.getMessage());
         }
-        searchRepository.save(employee);
-        return result;
+        return mapper.toDto(employee);
     }
 
 
@@ -93,6 +150,22 @@ public class EmployeeService {
         log.debug("Request to delete Employee : {}", uid);
         repository.deleteById(uid);
         searchRepository.deleteById(uid);
+        try {
+            String updateCode = "ctx._source.employees.removeIf(employee -> employee.id == \"" + uid.toString() + "\")";
+            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("workplaces")
+                    .setRefresh(true)
+                    .setAbortOnVersionConflict(true)
+                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, Collections.emptyMap()));
+            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+
+            DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest("phones")
+                    .setRefresh(true)
+                    .setAbortOnVersionConflict(true)
+                    .setQuery(QueryBuilders.matchQuery("employee.id", uid.toString()));
+            highLevelClient.deleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
+        } catch (IOException exception) {
+            log.error(exception.getMessage());
+        }
     }
 
 

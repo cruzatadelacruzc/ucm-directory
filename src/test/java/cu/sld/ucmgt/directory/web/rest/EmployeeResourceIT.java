@@ -1,9 +1,17 @@
 package cu.sld.ucmgt.directory.web.rest;
 
+import com.google.common.collect.ImmutableList;
+import cu.sld.ucmgt.directory.domain.elasticsearch.EmployeeIndex;
+import cu.sld.ucmgt.directory.domain.elasticsearch.PhoneIndex;
+import cu.sld.ucmgt.directory.domain.elasticsearch.WorkPlaceIndex;
+import cu.sld.ucmgt.directory.repository.search.EmployeeSearchRepository;
 import cu.sld.ucmgt.directory.repository.search.PhoneSearchRepository;
+import cu.sld.ucmgt.directory.repository.search.WorkPlaceSearchRepository;
 import cu.sld.ucmgt.directory.service.dto.PhoneDTO;
 import cu.sld.ucmgt.directory.service.dto.WorkPlaceDTO;
 import cu.sld.ucmgt.directory.service.mapper.PhoneMapper;
+import cu.sld.ucmgt.directory.service.mapper.WorkPlaceMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import cu.sld.ucmgt.directory.TestUtil;
 import cu.sld.ucmgt.directory.domain.*;
@@ -23,9 +31,9 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
 import java.time.*;
-import java.util.UUID;
-import java.util.List;
+import java.util.*;
 import javax.persistence.EntityManager;
+
 import static org.hamcrest.Matchers.hasItem;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -72,7 +80,16 @@ public class EmployeeResourceIT extends PersonIT {
     private PhoneMapper phoneMapper;
 
     @Autowired
+    private WorkPlaceMapper workPlaceMapper;
+
+    @Autowired
     private PhoneSearchRepository phoneSearchRepository;
+
+    @Autowired
+    private EmployeeSearchRepository employeeSearchRepository;
+
+    @Autowired
+    private WorkPlaceSearchRepository workPlaceSearchRepository;
 
     @Autowired
     private EntityManager em;
@@ -100,6 +117,13 @@ public class EmployeeResourceIT extends PersonIT {
         employee.setSecondLastName(DEFAULT_SECOND_LAST_NAME);
         employee.setProfessionalNumber(DEFAULT_PROFESSIONAL_NUMBER);
         employee.setIsGraduatedBySector(DEFAULT_IS_GRADUATE_BY_SECTOR);
+    }
+
+    @AfterEach
+    public void after() {
+        phoneSearchRepository.deleteAll();
+        employeeSearchRepository.deleteAll();
+        workPlaceSearchRepository.deleteAll();
     }
 
     @Test
@@ -133,6 +157,32 @@ public class EmployeeResourceIT extends PersonIT {
         assertThat(testEmployee.getSecondLastName()).isEqualTo(DEFAULT_SECOND_LAST_NAME);
         assertThat(testEmployee.getProfessionalNumber()).isEqualTo(DEFAULT_PROFESSIONAL_NUMBER);
         assertThat(testEmployee.getIsGraduatedBySector()).isEqualTo(DEFAULT_IS_GRADUATE_BY_SECTOR);
+    }
+
+    @Test
+    @Transactional
+    public void createEmployeeIndex() throws Exception {
+        EmployeeDTO employeeDTO = mapper.toDto(employee);
+        restMockMvc.perform(post("/api/employees").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(employeeDTO)))
+                .andExpect(status().isCreated());
+
+        Iterable<EmployeeIndex> employeeIndices = employeeSearchRepository.findAll();
+        List<EmployeeIndex> employeeIndexList = ImmutableList.copyOf(employeeIndices);
+        EmployeeIndex testEmployeeIndex = employeeIndexList.get(employeeIndexList.size() - 1);
+        assertThat(testEmployeeIndex.getCi()).isEqualTo(DEFAULT_CI);
+        assertThat(testEmployeeIndex.getAge()).isEqualTo(DEFAULT_AGE);
+        assertThat(testEmployeeIndex.getName()).isEqualTo(DEFAULT_NAME);
+        assertThat(testEmployeeIndex.getRace()).isEqualTo(DEFAULT_RACE);
+        assertThat(testEmployeeIndex.getEmail()).isEqualTo(DEFAULT_EMAIL);
+        assertThat(testEmployeeIndex.getGender()).isEqualTo(DEFAULT_GENDER);
+        assertThat(testEmployeeIndex.getAddress()).isEqualTo(DEFAULT_ADDRESS);
+        assertThat(testEmployeeIndex.getBirthdate()).isEqualTo(DEFAULT_BIRTHDATE);
+        assertThat(testEmployeeIndex.getFirstLastName()).isEqualTo(DEFAULT_FIRST_LAST_NAME);
+        assertThat(testEmployeeIndex.getRegisterNumber()).isEqualTo(DEFAULT_REGISTER_NUMBER);
+        assertThat(testEmployeeIndex.getSecondLastName()).isEqualTo(DEFAULT_SECOND_LAST_NAME);
+        assertThat(testEmployeeIndex.getProfessionalNumber()).isEqualTo(DEFAULT_PROFESSIONAL_NUMBER);
     }
 
     @Test
@@ -386,10 +436,6 @@ public class EmployeeResourceIT extends PersonIT {
         List<Employee> employees = TestUtil.findAll(em, Employee.class);
         assertThat(employees).hasSize(databaseSizeBeforeUpdate);
         Employee testEmployee = employees.get(employees.size() - 1);
-        testUpdateEmployee(testEmployee);
-    }
-
-    private void testUpdateEmployee(Employee testEmployee) {
         assertThat(testEmployee.getCi()).isEqualTo(UPDATE_CI);
         assertThat(testEmployee.getAge()).isEqualTo(UPDATE_AGE);
         assertThat(testEmployee.getName()).isEqualTo(UPDATE_NAME);
@@ -436,7 +482,7 @@ public class EmployeeResourceIT extends PersonIT {
 
     @Test
     @Transactional
-    public void updateSavedEmployeeWithPhones() throws Exception {
+    public void updateSavedEmployeeInsidePhonesIndex() throws Exception {
         // Initialize the database
         em.persist(employee);
         em.flush();
@@ -464,9 +510,62 @@ public class EmployeeResourceIT extends PersonIT {
                 .content(TestUtil.convertObjectToJsonBytes(employeeDTO)))
                 .andExpect(status().isOk());
 
-        List<Phone> phonesElasticSearch = phoneSearchRepository.findAllByEmployee_Id(employee.getId());
-        Employee testPhoneEmployeeElasticSearch = phonesElasticSearch.get(phonesElasticSearch.size() -1).getEmployee();
-        testUpdateEmployee(testPhoneEmployeeElasticSearch);
+        List<PhoneIndex> phonesElasticSearch = phoneSearchRepository.findAllByEmployee_Id(employee.getId());
+        EmployeeIndex testPhoneEmployeeIndex = phonesElasticSearch.get(phonesElasticSearch.size() - 1).getEmployee();
+        testEmployeeIndexIsUpdated(testPhoneEmployeeIndex);
+    }
+
+    private void testEmployeeIndexIsUpdated(EmployeeIndex testEmployeeIndex) {
+        assertThat(testEmployeeIndex.getCi()).isEqualTo(UPDATE_CI);
+        assertThat(testEmployeeIndex.getAge()).isEqualTo(UPDATE_AGE);
+        assertThat(testEmployeeIndex.getName()).isEqualTo(UPDATE_NAME);
+        assertThat(testEmployeeIndex.getRace()).isEqualTo(UPDATE_RACE);
+        assertThat(testEmployeeIndex.getEmail()).isEqualTo(UPDATE_EMAIL);
+        assertThat(testEmployeeIndex.getGender()).isEqualTo(UPDATE_GENDER);
+        assertThat(testEmployeeIndex.getAddress()).isEqualTo(UPDATE_ADDRESS);
+        assertThat(testEmployeeIndex.getBirthdate()).isEqualTo(UPDATE_BIRTHDATE);
+        assertThat(testEmployeeIndex.getFirstLastName()).isEqualTo(UPDATE_FIRST_LAST_NAME);
+        assertThat(testEmployeeIndex.getRegisterNumber()).isEqualTo(UPDATE_REGISTER_NUMBER);
+        assertThat(testEmployeeIndex.getSecondLastName()).isEqualTo(UPDATE_SECOND_LAST_NAME);
+        assertThat(testEmployeeIndex.getProfessionalNumber()).isEqualTo(UPDATE_PROFESSIONAL_NUMBER);
+    }
+
+    @Test
+    @Transactional
+    public void updateSavedEmployeeInsideWorkPlaceIndex() throws Exception {
+        // Initialize the database
+        em.persist(employee);
+        em.flush();
+
+        WorkPlace workPlace = new WorkPlace();
+        workPlace.setName("TIC");
+        workPlace.setEmail("tic@infomed.sld.cu");
+        workPlace.setActive(true);
+        workPlace.setDescription("Departamento de las TIC");
+        workPlace.setEmployees(Collections.singleton(employee));
+
+        // To save workplace with a employee in elasticsearch
+        WorkPlaceDTO workPlaceDTO = workPlaceMapper.toDto(workPlace);
+        restMockMvc.perform(post("/api/workplaces").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(workPlaceDTO)))
+                .andExpect(status().isCreated());
+
+        // Update the Employee
+        Employee updatedEmployee = updateEmployeeObj();
+
+        // to update employee belong to employeeDTO
+        EmployeeDTO employeeDTO = mapper.toDto(updatedEmployee);
+        restMockMvc.perform(put("/api/employees").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(employeeDTO)))
+                .andExpect(status().isOk());
+
+        Iterable<WorkPlaceIndex> workPlaceIndices = workPlaceSearchRepository.findAll();
+        List<WorkPlaceIndex> workPlaceIndexList = ImmutableList.copyOf(workPlaceIndices);
+        EmployeeIndex testPhoneEmployeeIndex = workPlaceIndexList.get(workPlaceIndexList.size() - 1)
+                .getEmployees().stream().findAny().get();
+        testEmployeeIndexIsUpdated(testPhoneEmployeeIndex);
     }
 
     @Test
@@ -507,6 +606,92 @@ public class EmployeeResourceIT extends PersonIT {
         assertThat(employees).hasSize(databaseSizeBeforeUpdate - 1);
 
     }
+
+    @Test
+    @Transactional
+    public void deleteEmployeeInsidePhoneIndex() throws Exception {
+        // Initialize the database
+        em.persist(employee);
+        em.flush();
+
+        Phone phone = new Phone();
+        phone.setNumber(21382103);
+        phone.setActive(true);
+        phone.setDescription("Cesar's cell");
+        phone.setEmployee(employee);
+
+        // To save phone with a employee in elasticsearch
+        PhoneDTO phoneDTO = phoneMapper.toDto(phone);
+        restMockMvc.perform(post("/api/phones").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(phoneDTO)))
+                .andExpect(status().isCreated());
+
+        // Delete the employee
+        restMockMvc.perform(delete("/api/employees/{id}", employee.getId()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNoContent());
+
+        List<PhoneIndex> phonesElasticSearch = phoneSearchRepository.findAllByEmployee_Id(employee.getId());
+        assertThat(phonesElasticSearch).hasSize(0);
+
+    }
+
+    @Test
+    @Transactional
+    public void deleteEmployeeInsideWorkplacesIndex() throws Exception {
+        // Initialize the database
+        em.persist(employee);
+        Employee employee2 = new Employee();
+        employee2.setCi(UPDATE_CI);
+        employee2.setAge(UPDATE_AGE);
+        employee2.setName(UPDATE_NAME);
+        employee2.setRace(UPDATE_RACE);
+        employee2.setEmail(UPDATE_EMAIL);
+        employee2.setGender(UPDATE_GENDER);
+        employee2.setAddress(UPDATE_ADDRESS);
+        employee2.setEndDate(UPDATE_END_DATE);
+        employee2.setBirthdate(UPDATE_BIRTHDATE);
+        employee2.setStartDate(UPDATE_START_DATE);
+        employee2.setServiceYears(UPDATE_SERVICE_YEAR);
+        employee2.setGraduateYears(UPDATE_GRADUATE_YEAR);
+        employee2.setFirstLastName(UPDATE_FIRST_LAST_NAME);
+        employee2.setRegisterNumber(UPDATE_REGISTER_NUMBER);
+        employee2.setSecondLastName(UPDATE_SECOND_LAST_NAME);
+        employee2.setProfessionalNumber(UPDATE_PROFESSIONAL_NUMBER);
+        employee2.setIsGraduatedBySector(UPDATE_IS_GRADUATE_BY_SECTOR);
+        em.persist(employee2);
+
+        em.flush();
+
+        Set<Employee> employeeSet = new HashSet<>();
+        employeeSet.add(employee);
+        employeeSet.add(employee2);
+        WorkPlace workPlace = new WorkPlace();
+        workPlace.setName("TIC");
+        workPlace.setEmail("tic@infomed.sld.cu");
+        workPlace.setActive(true);
+        workPlace.setDescription("Departamento de las TIC");
+        workPlace.setEmployees(employeeSet);
+
+        // To save workplace with a employee in elasticsearch
+        WorkPlaceDTO workPlaceDTO = workPlaceMapper.toDto(workPlace);
+        restMockMvc.perform(post("/api/workplaces").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(workPlaceDTO)))
+                .andExpect(status().isCreated());
+
+        // Delete the employee
+        restMockMvc.perform(delete("/api/employees/{id}", employee.getId()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNoContent());
+
+        Iterable<WorkPlaceIndex> workPlaceIndices = workPlaceSearchRepository.findAll();
+        List<WorkPlaceIndex> workPlaceIndexList = ImmutableList.copyOf(workPlaceIndices);
+        WorkPlaceIndex testEmployeeWorkPlaceIndex = workPlaceIndexList.get(workPlaceIndexList.size() - 1);
+        assertThat(testEmployeeWorkPlaceIndex.getEmployees()).hasSize(1);
+    }
+
 
     @Test
     @Transactional
