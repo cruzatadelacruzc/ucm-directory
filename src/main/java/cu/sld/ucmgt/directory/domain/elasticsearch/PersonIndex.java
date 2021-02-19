@@ -42,6 +42,8 @@ public abstract class PersonIndex {
 
     protected String district;
 
+    protected String parentDistrict;
+
     protected String specialty;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING)
@@ -79,6 +81,7 @@ public abstract class PersonIndex {
                 ", district='" + district + '\'' +
                 ", specialty='" + specialty + '\'' +
                 ", birthdate=" + birthdate +
+                ", parentDistrict=" + parentDistrict +
                 '}';
     }
 }

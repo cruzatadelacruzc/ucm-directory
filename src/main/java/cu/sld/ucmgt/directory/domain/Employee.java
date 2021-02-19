@@ -14,6 +14,7 @@ import org.springframework.data.elasticsearch.annotations.DateFormat;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
@@ -23,11 +24,11 @@ import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 @Data
 @Entity
-@EqualsAndHashCode(callSuper=false)
 public class Employee extends Person implements Serializable {
 
     @NotNull
@@ -59,24 +60,30 @@ public class Employee extends Person implements Serializable {
     private String professionalNumber;
 
     @ManyToOne
+    @JsonIgnoreProperties(value = "employees", allowSetters = true)
     private WorkPlace workPlace;
 
     @ManyToOne
+    @JsonIgnoreProperties(value = "employeesCategory", allowSetters = true)
     private Nomenclature category;
 
     @ManyToOne
+    @JsonIgnoreProperties(value = "employeesScientificDegree", allowSetters = true)
     private Nomenclature scientificDegree;
 
     @ManyToOne
+    @JsonIgnoreProperties(value = "employeesTeachingCategory", allowSetters = true)
     private Nomenclature teachingCategory;
 
     @ManyToOne
+    @JsonIgnoreProperties(value = "employeesCharge", allowSetters = true)
     private Nomenclature charge;
 
     @ManyToOne
+    @JsonIgnoreProperties(value = "employeesProfession", allowSetters = true)
     private Nomenclature profession;
 
-    @OneToMany(mappedBy = "employee")
+    @OneToMany(mappedBy = "employee", cascade = CascadeType.PERSIST, orphanRemoval = true)
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     private Set<Phone> phones = new HashSet<>();
 
@@ -90,7 +97,7 @@ public class Employee extends Person implements Serializable {
 
     @Override
     public int hashCode() {
-        return 31;
+        return Objects.hash(id);
     }
 
     @Override
@@ -101,24 +108,16 @@ public class Employee extends Person implements Serializable {
                 ", graduateYears=" + graduateYears +
                 ", isGraduatedBySector=" + isGraduatedBySector +
                 ", serviceYears=" + serviceYears +
+                ", registerNumber='" + registerNumber + '\'' +
                 ", bossWorkPlace=" + bossWorkPlace +
+                ", professionalNumber='" + professionalNumber + '\'' +
                 ", workPlace=" + workPlace +
-                ", specialty=" + specialty +
                 ", category=" + category +
                 ", scientificDegree=" + scientificDegree +
                 ", teachingCategory=" + teachingCategory +
                 ", charge=" + charge +
-                ", id=" + id +
-                ", ci='" + ci + '\'' +
-                ", name='" + name + '\'' +
-                ", email='" + email + '\'' +
-                ", firstLastName='" + firstLastName + '\'' +
-                ", secondLastName='" + secondLastName + '\'' +
-                ", gender=" + gender +
-                ", age=" + age +
-                ", race='" + race + '\'' +
-                ", registerNumber='" + registerNumber + '\'' +
-                ", professionalNumber='" + professionalNumber + '\'' +
-                '}';
+                ", profession=" + profession +
+                ", phones=" + phones +
+                "} " + super.toString();
     }
 }

@@ -487,11 +487,12 @@ public class EmployeeResourceIT extends PersonIT {
         em.persist(employee);
         em.flush();
 
-        Phone phone = new Phone();
-        phone.setNumber(21382103);
-        phone.setActive(true);
-        phone.setDescription("Cesar's cell");
-        phone.setEmployee(employee);
+        // Clear EmployeeIndex and PhoneIndex indices
+        employeeSearchRepository.deleteAll();
+        phoneSearchRepository.deleteAll();
+
+
+        Phone phone = createPhoneOfEmployee(employee);
 
         // To save phone with a employee in elasticsearch
         PhoneDTO phoneDTO = phoneMapper.toDto(phone);
@@ -513,6 +514,15 @@ public class EmployeeResourceIT extends PersonIT {
         List<PhoneIndex> phonesElasticSearch = phoneSearchRepository.findAllByEmployee_Id(employee.getId());
         EmployeeIndex testPhoneEmployeeIndex = phonesElasticSearch.get(phonesElasticSearch.size() - 1).getEmployee();
         testEmployeeIndexIsUpdated(testPhoneEmployeeIndex);
+    }
+
+    private Phone createPhoneOfEmployee(Employee employee) {
+        Phone phone = new Phone();
+        phone.setNumber(21382103);
+        phone.setActive(true);
+        phone.setDescription("Cesar's cell");
+        phone.setEmployee(employee);
+        return phone;
     }
 
     private void testEmployeeIndexIsUpdated(EmployeeIndex testEmployeeIndex) {
@@ -537,12 +547,11 @@ public class EmployeeResourceIT extends PersonIT {
         em.persist(employee);
         em.flush();
 
-        WorkPlace workPlace = new WorkPlace();
-        workPlace.setName("TIC");
-        workPlace.setEmail("tic@infomed.sld.cu");
-        workPlace.setActive(true);
-        workPlace.setDescription("Departamento de las TIC");
-        workPlace.setEmployees(Collections.singleton(employee));
+        // Clear EmployeeIndex and PhoneIndex indices
+        employeeSearchRepository.deleteAll();
+        workPlaceSearchRepository.deleteAll();
+
+        WorkPlace workPlace = createWorkPlaceOfEmployee(Collections.singleton(employee));
 
         // To save workplace with a employee in elasticsearch
         WorkPlaceDTO workPlaceDTO = workPlaceMapper.toDto(workPlace);
@@ -566,6 +575,16 @@ public class EmployeeResourceIT extends PersonIT {
         EmployeeIndex testPhoneEmployeeIndex = workPlaceIndexList.get(workPlaceIndexList.size() - 1)
                 .getEmployees().stream().findAny().get();
         testEmployeeIndexIsUpdated(testPhoneEmployeeIndex);
+    }
+
+    private WorkPlace createWorkPlaceOfEmployee(Set<Employee> employeeSet) {
+        WorkPlace workPlace = new WorkPlace();
+        workPlace.setName("TIC");
+        workPlace.setEmail("tic@infomed.sld.cu");
+        workPlace.setActive(true);
+        workPlace.setDescription("Departamento de las TIC");
+        workPlace.setEmployees(employeeSet);
+        return workPlace;
     }
 
     @Test
@@ -592,6 +611,8 @@ public class EmployeeResourceIT extends PersonIT {
     public void deleteEmployee() throws Exception {
         // Initialize the database
         em.persist(employee);
+        Phone employeePhone = createPhoneOfEmployee(employee);
+        employee.setPhones(Collections.singleton(employeePhone));
         em.flush();
 
         int databaseSizeBeforeUpdate = TestUtil.findAll(em, Employee.class).size();
@@ -613,12 +634,10 @@ public class EmployeeResourceIT extends PersonIT {
         // Initialize the database
         em.persist(employee);
         em.flush();
+        // Clear EmployeeIndex and PhoneIndex indices
+        phoneSearchRepository.deleteAll();
 
-        Phone phone = new Phone();
-        phone.setNumber(21382103);
-        phone.setActive(true);
-        phone.setDescription("Cesar's cell");
-        phone.setEmployee(employee);
+        Phone phone = createPhoneOfEmployee(employee);
 
         // To save phone with a employee in elasticsearch
         PhoneDTO phoneDTO = phoneMapper.toDto(phone);
@@ -667,12 +686,7 @@ public class EmployeeResourceIT extends PersonIT {
         Set<Employee> employeeSet = new HashSet<>();
         employeeSet.add(employee);
         employeeSet.add(employee2);
-        WorkPlace workPlace = new WorkPlace();
-        workPlace.setName("TIC");
-        workPlace.setEmail("tic@infomed.sld.cu");
-        workPlace.setActive(true);
-        workPlace.setDescription("Departamento de las TIC");
-        workPlace.setEmployees(employeeSet);
+        WorkPlace workPlace = createWorkPlaceOfEmployee(employeeSet);
 
         // To save workplace with a employee in elasticsearch
         WorkPlaceDTO workPlaceDTO = workPlaceMapper.toDto(workPlace);

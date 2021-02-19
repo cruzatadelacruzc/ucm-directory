@@ -70,23 +70,12 @@ public class Person extends AbstractAuditingEntity implements Serializable {
     protected String race;
 
     @ManyToOne
+    @JsonIgnoreProperties(value = "peopleDistrict", allowSetters = true)
     protected Nomenclature district;
 
     @ManyToOne
+    @JsonIgnoreProperties(value = "peopleSpecialty", allowSetters = true)
     protected Nomenclature specialty;
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Person)) return false;
-
-        return id != null && id.equals(((Person) o).id);
-    }
-
-    @Override
-    public int hashCode() {
-        return 31;
-    }
 
     @Override
     public String toString() {
