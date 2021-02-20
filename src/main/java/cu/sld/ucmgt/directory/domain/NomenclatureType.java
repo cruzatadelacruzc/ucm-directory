@@ -7,7 +7,9 @@ public enum NomenclatureType {
     PROFESION("profession"),
     GRADO_CIENTIFICO("scientificDegree"),
     CATEGORIA_DOCENTE("teachingCategory"),
-    ESPECIALIDAD("specialty");
+    ESPECIALIDAD("specialty"),
+    TIPO("kind"),
+    CENTRO_ESTUDIO("studyCenter");
 
     private final String shortCode;
 

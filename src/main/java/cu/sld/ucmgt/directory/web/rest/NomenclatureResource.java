@@ -57,7 +57,7 @@ public class NomenclatureResource {
                     + nomenclatureDTO.getDiscriminator() +" already used",
                     ENTITY_NAME, "idexists");
         }
-        NomenclatureDTO nomenclatureSaved = service.save(nomenclatureDTO);
+        NomenclatureDTO nomenclatureSaved = service.create(nomenclatureDTO);
         return ResponseEntity.created(new URI("/api/nomenclatures/" + nomenclatureSaved.getId()))
                 .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
                         true, ENTITY_NAME,
@@ -80,7 +80,7 @@ public class NomenclatureResource {
             throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
         }
 
-        NomenclatureDTO nomenclatureSaved = service.save(nomenclatureDTO);
+        NomenclatureDTO nomenclatureSaved = service.update(nomenclatureDTO);
         return ResponseEntity.ok()
                 .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
                         true, ENTITY_NAME,

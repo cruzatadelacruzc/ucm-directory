@@ -13,10 +13,10 @@ import java.util.UUID;
 @Mapper(componentModel = "spring")
 public interface NomenclatureMapper extends EntityMapper<NomenclatureDTO, Nomenclature> {
 
-    @Mapping(source = "parentId", target = "parent")
+    @Mapping(source = "parentDistrictId", target = "parentDistrict")
     Nomenclature toEntity(NomenclatureDTO projectDto);
 
-    @Mapping(source = "parent.id", target = "parentId")
+    @Mapping(source = "parentDistrict.id", target = "parentDistrictId")
     NomenclatureDTO toDto(Nomenclature entity);
 
     default Nomenclature fromId(UUID uid){

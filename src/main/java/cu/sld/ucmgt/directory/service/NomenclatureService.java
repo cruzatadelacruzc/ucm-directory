@@ -11,7 +11,6 @@ import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptType;
@@ -21,8 +20,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -42,35 +41,46 @@ public class NomenclatureService {
      * @param nomenclatureDTO the entity to save.
      * @return the persisted entity.
      */
-    public NomenclatureDTO save(NomenclatureDTO nomenclatureDTO) {
-        log.debug("Request to save Nomenclature : {}", nomenclatureDTO);
+    public NomenclatureDTO create(NomenclatureDTO nomenclatureDTO) {
+        log.debug("Request to create Nomenclature : {}", nomenclatureDTO);
         Nomenclature nomenclature = mapper.toEntity(nomenclatureDTO);
         repository.save(nomenclature);
-        if (nomenclatureDTO.getId() != null) {
-            try {
-                String filedName = nomenclature.getDiscriminator().getShortCode();
-                Map<String, Object> params = new HashMap<>();
-                String updateCode = "ctx._source." + filedName + "= null";
-                if (nomenclatureDTO.getActive()) {
-                    params.put("name", nomenclature.getName());
-                    params.put("description", nomenclature.getDescription());
-                    params.put("discriminator", nomenclature.getDiscriminator().toString());
-                    updateCode = "for (entry in params.entrySet()){if (entry.getKey() != \"ctx\") " +
-                            "{ctx._source." + filedName + "[entry.getKey()] = entry.getValue()}}";
-                }
-
-                UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("employees");
-                updateByQueryRequest.setAbortOnVersionConflict(true);
-                updateByQueryRequest.setQuery(QueryBuilders.matchQuery(filedName + ".id", nomenclatureDTO.getId().toString()));
-                updateByQueryRequest.setScript(new Script(ScriptType.INLINE, "painless", updateCode, params));
-                BulkByScrollResponse bulkResponse = highLevelClient.updateByQuery(
-                        updateByQueryRequest, RequestOptions.DEFAULT);
-                log.debug("Amount affected Employee indexes: {}", bulkResponse.getUpdated());
-            } catch (ElasticsearchException | IOException e) {
-                log.error(e.getMessage());
-            }
-        }
         return mapper.toDto(nomenclature);
+    }
+
+    public NomenclatureDTO update(NomenclatureDTO nomenclatureDTO) {
+        log.debug("Request to update Nomenclature : {}", nomenclatureDTO);
+        Nomenclature nomenclature = mapper.toEntity(nomenclatureDTO);
+        repository.findById(nomenclatureDTO.getId()).ifPresent(fetchedNomenclature -> {
+            this.updateNomenclatureByEmployeeIndex(nomenclature, fetchedNomenclature.getName());
+            repository.save(nomenclature);
+        });
+        return mapper.toDto(nomenclature);
+    }
+
+    private void updateNomenclatureByEmployeeIndex(Nomenclature newNomenclature, String oldNomenclatureName) {
+        try {
+            String filedName = newNomenclature.getDiscriminator().getShortCode();
+            String updateCode = "ctx._source." + filedName + "=null";
+            if (newNomenclature.getActive()) {
+                updateCode = "ctx._source." + filedName + "=\"" + newNomenclature.getName() + "\"";
+            }
+            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("employees")
+                    .setRefresh(true)
+                    .setAbortOnVersionConflict(true)
+                    .setQuery(QueryBuilders.matchQuery(filedName, oldNomenclatureName))
+                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, Collections.emptyMap()));
+            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+
+            updateByQueryRequest = new UpdateByQueryRequest("students")
+                    .setRefresh(true)
+                    .setAbortOnVersionConflict(true)
+                    .setQuery(QueryBuilders.matchQuery(filedName, oldNomenclatureName))
+                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, Collections.emptyMap()));
+            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+        } catch (ElasticsearchException | IOException e) {
+            log.error(e.getMessage());
+        }
     }
 
     /**
@@ -117,6 +127,35 @@ public class NomenclatureService {
      */
     public void deleteNomenclature(UUID uid) {
         log.debug("Request to delete Nomenclature : {}", uid);
-        repository.deleteById(uid);
+        repository.findNomenclatureWithAssociationsById(uid).ifPresent(nomenclature -> {
+
+            nomenclature.setActive(false);
+            this.updateNomenclatureByEmployeeIndex(nomenclature, nomenclature.getName());
+
+            if (nomenclature.getDiscriminator() == NomenclatureType.DISTRITO) {
+                new HashSet<>(nomenclature.getPeopleDistrict()).forEach(nomenclature::removePeopleDistrict);
+            } else if (nomenclature.getDiscriminator() == NomenclatureType.ESPECIALIDAD) {
+                new HashSet<>(nomenclature.getPeopleSpecialty()).forEach(nomenclature::removePeopleSpecialty);
+            } else if (nomenclature.getDiscriminator() == NomenclatureType.CATEGORIA) {
+                new HashSet<>(nomenclature.getEmployeesCategory()).forEach(nomenclature::removeEmployeesCategory);
+            } else if (nomenclature.getDiscriminator() == NomenclatureType.GRADO_CIENTIFICO) {
+                new HashSet<>(nomenclature.getEmployeesScientificDegree()).forEach(nomenclature::removeEmployeesScientificDegree);
+            } else if (nomenclature.getDiscriminator() == NomenclatureType.CATEGORIA_DOCENTE) {
+                new HashSet<>(nomenclature.getEmployeesTeachingCategory()).forEach(nomenclature::removeEmployeesTeachingCategory);
+            } else if (nomenclature.getDiscriminator() == NomenclatureType.CARGO) {
+                nomenclature.getEmployeesCharge().forEach(nomenclature::removeEmployeesCharge);
+                new HashSet<>(nomenclature.getEmployeesCharge()).forEach(nomenclature::removeEmployeesCharge);
+            } else if (nomenclature.getDiscriminator() == NomenclatureType.PROFESION) {
+                nomenclature.getEmployeesProfession().forEach(nomenclature::removeEmployeesProfession);
+                new HashSet<>(nomenclature.getEmployeesProfession()).forEach(nomenclature::removeEmployeesProfession);
+            } else if (nomenclature.getDiscriminator() == NomenclatureType.TIPO) {
+                nomenclature.getStudentsKind().forEach(nomenclature::removeStudentsKind);
+                new HashSet<>(nomenclature.getStudentsKind()).forEach(nomenclature::removeStudentsKind);
+            } else {
+                nomenclature.getStudentsStudyCenter().forEach(nomenclature::removeStudentsStudyCenter);
+                new HashSet<>(nomenclature.getStudentsStudyCenter()).forEach(nomenclature::removeStudentsStudyCenter);
+            }
+            repository.delete(nomenclature);
+        });
     }
 }
