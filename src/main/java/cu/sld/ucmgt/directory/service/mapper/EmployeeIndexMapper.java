@@ -17,8 +17,8 @@ public interface EmployeeIndexMapper extends IndexMapper<EmployeeIndex, Employee
     @Mapping(source = "specialty.name", target = "specialty")
     @Mapping(source = "profession.name", target = "profession")
     @Mapping(source = "district.parentDistrict.name", target = "parentDistrict")
+    @Mapping(target = "workPlace.employees", ignore = true)
     EmployeeIndex toIndex(Employee entity);
-
 
 
 }

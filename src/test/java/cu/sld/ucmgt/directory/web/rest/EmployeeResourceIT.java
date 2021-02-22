@@ -547,10 +547,6 @@ public class EmployeeResourceIT extends PersonIT {
         em.persist(employee);
         em.flush();
 
-        // Clear EmployeeIndex and PhoneIndex indices
-        employeeSearchRepository.deleteAll();
-        workPlaceSearchRepository.deleteAll();
-
         WorkPlace workPlace = createWorkPlaceOfEmployee(Collections.singleton(employee));
 
         // To save workplace with a employee in elasticsearch

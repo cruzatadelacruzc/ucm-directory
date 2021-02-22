@@ -12,5 +12,5 @@ public interface IndexMapper<I, E> {
 
     I toIndex(E entity);
 
-    Set<I> toIndexes(Set<E> entities);
+    Set<I> toIndices(Set<E> entities);
 }
