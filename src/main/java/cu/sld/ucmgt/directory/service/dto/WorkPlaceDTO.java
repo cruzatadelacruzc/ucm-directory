@@ -27,6 +27,8 @@ public class WorkPlaceDTO implements Serializable {
 
     private Set<UUID> employees;
 
+    private Set<UUID> phones;
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -49,6 +51,7 @@ public class WorkPlaceDTO implements Serializable {
                 ", active=" + active +
                 ", description='" + description + '\'' +
                 ", employees=" + employees +
+                ", phones=" + phones +
                 '}';
     }
 }

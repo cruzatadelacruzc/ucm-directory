@@ -4,19 +4,18 @@ import lombok.Data;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.GenericGenerator;
-import org.springframework.data.elasticsearch.annotations.Document;
 
 import javax.persistence.*;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import java.io.Serializable;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
 @Data
 @Entity
-@Document(indexName = "workplaces", shards = 3)
 @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
 public class WorkPlace extends AbstractAuditingEntity implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -38,10 +37,18 @@ public class WorkPlace extends AbstractAuditingEntity implements Serializable {
     private String description;
 
     @OneToMany(mappedBy = "workPlace")
+    @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     private Set<Employee> employees = new HashSet<>();
 
-    @OneToMany(mappedBy = "workPlace")
+    @OneToMany(mappedBy = "workPlace", cascade = CascadeType.PERSIST, orphanRemoval = true)
+    @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     private Set<Phone> phones = new HashSet<>();
+
+    public void removeEmployee(Employee employee){
+        this.employees.remove(employee);
+        employee.setBossWorkPlace(false);
+        employee.setWorkPlace(null);
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -52,7 +59,7 @@ public class WorkPlace extends AbstractAuditingEntity implements Serializable {
 
     @Override
     public int hashCode() {
-        return 31;
+        return Objects.hash(id);
     }
 
     @Override
