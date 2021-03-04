@@ -1,5 +1,7 @@
 package cu.sld.ucmgt.directory.service.dto;
 
+import cu.sld.ucmgt.directory.domain.Phone;
+import cu.sld.ucmgt.directory.service.UniqueValue;
 import lombok.Data;
 
 import javax.validation.constraints.Min;
@@ -10,6 +12,7 @@ import java.util.UUID;
  * A DTO for the {@link cu.sld.ucmgt.directory.domain.Phone} entity.
  */
 @Data
+@UniqueValue(entityClass = Phone.class, columnNames = "number")
 public class PhoneDTO implements Serializable {
 
     private UUID id;
