@@ -1,24 +1,29 @@
 package cu.sld.ucmgt.directory.service;
 
-import cu.sld.ucmgt.directory.domain.Employee;
 import cu.sld.ucmgt.directory.domain.Phone;
-import cu.sld.ucmgt.directory.domain.WorkPlace;
+import cu.sld.ucmgt.directory.domain.elasticsearch.PhoneIndex;
 import cu.sld.ucmgt.directory.repository.EmployeeRepository;
 import cu.sld.ucmgt.directory.repository.PhoneRepository;
 import cu.sld.ucmgt.directory.repository.WorkPlaceRepository;
 import cu.sld.ucmgt.directory.repository.search.PhoneSearchRepository;
 import cu.sld.ucmgt.directory.service.dto.PhoneDTO;
+import cu.sld.ucmgt.directory.service.mapper.PhoneIndexMapper;
 import cu.sld.ucmgt.directory.service.mapper.PhoneMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.index.reindex.UpdateByQueryRequest;
+import org.elasticsearch.script.Script;
+import org.elasticsearch.script.ScriptType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
-import java.util.UUID;
+import java.io.IOException;
+import java.util.*;
 
 
 @Slf4j
@@ -29,6 +34,8 @@ public class PhoneService {
 
     private final PhoneMapper mapper;
     private final PhoneRepository repository;
+    private final PhoneIndexMapper phoneIndexMapper;
+    private final RestHighLevelClient highLevelClient;
     private final EmployeeRepository employeeRepository;
     private final PhoneSearchRepository searchRepository;
     private final WorkPlaceRepository workPlaceRepository;
@@ -40,19 +47,61 @@ public class PhoneService {
      * @param phoneDTO the entity to save.
      * @return the persisted entity.
      */
-    public PhoneDTO save(PhoneDTO phoneDTO) {
-        log.debug("Request to save Phone : {}", phoneDTO);
+    public Phone save(PhoneDTO phoneDTO) {
         Phone phone = mapper.toEntity(phoneDTO);
         repository.save(phone);
-        PhoneDTO result = mapper.toDto(phone);
-        // find all employee and workplace to save in elasticsearch
+        // find workplace to save in elasticsearch
         if (phone.getWorkPlace() != null) {
             workPlaceRepository.findById(phone.getWorkPlace().getId()).ifPresent(phone::setWorkPlace);
         } else {
             employeeRepository.findById(phone.getEmployee().getId()).ifPresent(phone::setEmployee);
         }
-        searchRepository.save(phone);
-        return result;
+        return phone;
+    }
+
+    /**
+     * Create a phone.
+     *
+     * @param phoneDTO the entity to save.
+     * @return the persisted entity.
+     */
+    public PhoneDTO create(PhoneDTO phoneDTO) {
+        log.debug("Request to create Phone : {}", phoneDTO);
+        Phone phone = save(phoneDTO);
+        PhoneIndex phoneIndex = phoneIndexMapper.toIndex(phone);
+        searchRepository.save(phoneIndex);
+        return mapper.toDto(phone);
+    }
+
+    /**
+     * Update a phone.
+     *
+     * @param phoneDTO the entity to save.
+     * @return the persisted entity.
+     */
+    public PhoneDTO update(PhoneDTO phoneDTO) {
+        log.debug("Request to create Phone : {}", phoneDTO);
+        Phone phone = save(phoneDTO);
+        PhoneIndex phoneIndex = phoneIndexMapper.toIndex(phone);
+        searchRepository.save(phoneIndex);
+        try {
+            // updating the workplace belonging to phones and employees
+            Map<String, Object> params = new HashMap<>();
+            params.put("number", phoneIndex.getNumber());
+            params.put("description", phoneIndex.getDescription());
+            String updateCode = "def targets = ctx._source.phones.findAll(phone -> " +
+                    "phone.id == \"" + phoneIndex.getId().toString() + "\" ); " +
+                    "for (phone in targets) { for (entry in params.entrySet()) { if (entry.getKey() != \"ctx\") {" +
+                    "phone[entry.getKey()] = entry.getValue() }}}";
+            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("workplaces")
+                    .setRefresh(true)
+                    .setAbortOnVersionConflict(true)
+                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, params));
+            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+        return mapper.toDto(phone);
     }
 
     /**
@@ -80,14 +129,24 @@ public class PhoneService {
     }
 
     /**
-     * Delete the phone by uid.
+     * Delete the phone by number.
      *
-     * @param uid the id of the entity.
+     * @param number the id of the entity.
      */
-    public void deletePhone(UUID uid) {
-        log.debug("Request to delete Phone : {}", uid);
-        repository.deleteById(uid);
-        searchRepository.deleteById(uid);
+    public void deletePhone(Integer number) {
+        log.debug("Request to delete Phone : {}", number);
+        repository.deletePhoneByNumber(number);
+        searchRepository.deletePhoneIndexByNumber(number);
+        try {
+            String updateCode = "ctx._source.phones.removeIf(phone -> phone.number == " + number + ")";
+            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("workplaces")
+                    .setRefresh(true)
+                    .setAbortOnVersionConflict(true)
+                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, Collections.emptyMap()));
+            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+        } catch (ElasticsearchException | IOException exception) {
+            log.error(exception.getMessage());
+        }
     }
 
 

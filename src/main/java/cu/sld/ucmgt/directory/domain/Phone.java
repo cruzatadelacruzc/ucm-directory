@@ -5,8 +5,8 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import org.springframework.data.elasticsearch.annotations.Document;
 
+import java.util.Objects;
 import java.util.UUID;
 import javax.persistence.*;
 import java.io.Serializable;
@@ -14,7 +14,6 @@ import javax.validation.constraints.Min;
 
 @Data
 @Entity
-@Document(indexName = "phones")
 @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
 public class Phone extends AbstractAuditingEntity implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -26,6 +25,7 @@ public class Phone extends AbstractAuditingEntity implements Serializable {
     private UUID id;
 
     @Min(value = 1)
+
     private Integer number;
 
     private Boolean active;
@@ -50,7 +50,7 @@ public class Phone extends AbstractAuditingEntity implements Serializable {
 
     @Override
     public int hashCode() {
-        return 31;
+        return Objects.hash(id);
     }
 
     @Override

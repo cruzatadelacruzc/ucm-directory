@@ -49,10 +49,12 @@ public class PhoneResource {
             throw new BadRequestAlertException("A new phone cannot already have an ID", ENTITY_NAME, "idexists");
         }
 
-        if (phoneDTO.getWorkPlaceId() == null && phoneDTO.getEmployeeId() == null){
-            throw new BadRequestAlertException("workPlaceId or personId, both must not be null", ENTITY_NAME, "relationshipnull");
+        if ((phoneDTO.getWorkPlaceId() == null && phoneDTO.getEmployeeId() == null) ||
+            (phoneDTO.getWorkPlaceId() != null && phoneDTO.getEmployeeId() != null)) {
+            throw new BadRequestAlertException("Phone below to WorkPlace or Employee", ENTITY_NAME, "relationshipnull");
         }
-        PhoneDTO phoneSaved = service.save(phoneDTO);
+
+        PhoneDTO phoneSaved = service.create(phoneDTO);
         return ResponseEntity.created(new URI("/api/phones/" + phoneDTO.getId()))
                 .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
                         true, ENTITY_NAME,
@@ -67,7 +69,7 @@ public class PhoneResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of phones in body.
      */
     @GetMapping("/phones")
-    public ResponseEntity<List<PhoneDTO>> getAllPhones(Pageable pageable){
+    public ResponseEntity<List<PhoneDTO>> getAllPhones(Pageable pageable) {
         log.debug("REST request to get a page of Phones");
         Page<PhoneDTO> page = service.getAllPhones(pageable);
         HttpHeaders headers = PaginationUtil.generatePaginationHeaders(
@@ -93,20 +95,20 @@ public class PhoneResource {
 
 
     /**
-     * {@code DELETE  /phones/:id} : delete the "id" phone.
+     * {@code DELETE  /phones/:number} : delete the "number" phone.
      *
-     * @param uid the id of the Phone to delete.
+     * @param number the id of the Phone to delete.
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}.
      */
-    @DeleteMapping("/phones/{id}")
-    public ResponseEntity<Void> deletePhone(@PathVariable(name = "id") UUID uid) {
-        log.debug("REST request to delete Phone : {}", uid);
-        service.deletePhone(uid);
+    @DeleteMapping("/phones/{number}")
+    public ResponseEntity<Void> deletePhone(@PathVariable Integer number) {
+        log.debug("REST request to delete Phone : {}", number);
+        service.deletePhone(number);
         return ResponseEntity.noContent()
                 .headers(HeaderUtil.createEntityDeletionAlert(
                         applicationName,
                         true, ENTITY_NAME,
-                        uid.toString()))
+                        number.toString()))
                 .build();
     }
 
@@ -124,10 +126,11 @@ public class PhoneResource {
         if (phoneDTO.getId() == null) {
             throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
         }
-        if (phoneDTO.getWorkPlaceId() == null && phoneDTO.getEmployeeId() == null){
-            throw new BadRequestAlertException("workPlaceId or personId, both must not be null", ENTITY_NAME, "relationshipnull");
+        if ((phoneDTO.getWorkPlaceId() == null && phoneDTO.getEmployeeId() == null) ||
+                (phoneDTO.getWorkPlaceId() != null && phoneDTO.getEmployeeId() != null)) {
+            throw new BadRequestAlertException("Phone below to WorkPlace or Employee", ENTITY_NAME, "relationshipnull");
         }
-        PhoneDTO phoneSaved = service.save(phoneDTO);
+        PhoneDTO phoneSaved = service.update(phoneDTO);
         return ResponseEntity.ok()
                 .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
                         true, ENTITY_NAME,
