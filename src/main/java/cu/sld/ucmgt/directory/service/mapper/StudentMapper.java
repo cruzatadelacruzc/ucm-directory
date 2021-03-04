@@ -13,10 +13,16 @@ import java.util.UUID;
 @Mapper(componentModel = "spring", uses = {NomenclatureMapper.class})
 public interface StudentMapper extends EntityMapper<StudentDTO, Student>{
 
+    @Mapping(source = "kindId", target = "kind")
     @Mapping(source = "districtId", target = "district")
+    @Mapping(source = "specialtyId", target = "specialty")
+    @Mapping(source = "studyCenterId", target = "studyCenter")
     Student toEntity(StudentDTO dto);
 
+    @Mapping(source = "kind.id", target = "kindId")
     @Mapping(source = "district.id", target = "districtId")
+    @Mapping(source = "specialty.id", target = "specialtyId")
+    @Mapping(source = "studyCenter.id", target = "studyCenterId")
     StudentDTO toDto(Student entity);
 
     default Student fromId(UUID id) {

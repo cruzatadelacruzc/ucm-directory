@@ -1,10 +1,12 @@
 package cu.sld.ucmgt.directory.service;
 
 import cu.sld.ucmgt.directory.domain.Student;
+import cu.sld.ucmgt.directory.domain.elasticsearch.StudentIndex;
 import cu.sld.ucmgt.directory.repository.NomenclatureRepository;
 import cu.sld.ucmgt.directory.repository.StudentRepository;
 import cu.sld.ucmgt.directory.repository.search.StudentSearchRepository;
 import cu.sld.ucmgt.directory.service.dto.StudentDTO;
+import cu.sld.ucmgt.directory.service.mapper.StudentIndexMapper;
 import cu.sld.ucmgt.directory.service.mapper.StudentMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +26,7 @@ import java.util.UUID;
 public class StudentService {
     private final StudentMapper mapper;
     private final StudentRepository repository;
+    private final StudentIndexMapper studentIndexMapper;
     private final StudentSearchRepository searchRepository;
     private final NomenclatureRepository nomenclatureRepository;
 
@@ -37,12 +40,21 @@ public class StudentService {
         log.debug("Request to save Student : {}", studentDTO);
         Student student = mapper.toEntity(studentDTO);
         repository.save(student);
-        StudentDTO result = mapper.toDto(student);
         if (student.getDistrict() != null) {
             nomenclatureRepository.findById(student.getDistrict().getId()).ifPresent(student::setDistrict);
         }
-        searchRepository.save(student);
-        return result;
+        if (student.getSpecialty() != null) {
+            nomenclatureRepository.findById(student.getSpecialty().getId()).ifPresent(student::setSpecialty);
+        }
+        if (student.getStudyCenter() != null) {
+            nomenclatureRepository.findById(student.getStudyCenter().getId()).ifPresent(student::setStudyCenter);
+        }
+        if (student.getKind() != null) {
+            nomenclatureRepository.findById(student.getKind().getId()).ifPresent(student::setKind);
+        }
+        StudentIndex studentIndex = studentIndexMapper.toIndex(student);
+        searchRepository.save(studentIndex);
+        return mapper.toDto(student);
     }
 
     /**

@@ -4,6 +4,7 @@ import lombok.Data;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
+import java.util.UUID;
 
 /**
  * Class DTO representing a {@link cu.sld.ucmgt.directory.domain.Student} entity
@@ -16,6 +17,8 @@ public class StudentDTO extends PersonDTO {
     private Integer universityYear;
     @NotBlank
     private String residence;
+    private UUID kindId;
+    private UUID studyCenterId;
 
     @Override
     public boolean equals(Object o) {

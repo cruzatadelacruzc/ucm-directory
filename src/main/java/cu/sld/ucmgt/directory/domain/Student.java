@@ -1,21 +1,18 @@
 package cu.sld.ucmgt.directory.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import lombok.*;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.springframework.data.elasticsearch.annotations.Document;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-import javax.persistence.*;
+import javax.persistence.Entity;
+import javax.persistence.ManyToOne;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import java.io.Serializable;
-import java.util.UUID;
+import java.util.Objects;
 
 @Data
 @Entity
-@Document(indexName = "students", shards = 3)
 public class Student extends Person implements Serializable {
 
     @NotBlank
@@ -28,12 +25,12 @@ public class Student extends Person implements Serializable {
     private String residence;
 
     @ManyToOne
-    @JsonIgnoreProperties(value = "studentsCareer")
-    protected Nomenclature career;
+    @JsonIgnoreProperties(value = "studentsKind", allowSetters = true)
+    private Nomenclature kind;
 
     @ManyToOne
-    @JsonIgnoreProperties(value = "studentsKind")
-    protected Nomenclature kind;
+    @JsonIgnoreProperties(value = "studentsStudyCenter", allowSetters = true)
+    private Nomenclature studyCenter;
 
     @Override
     public boolean equals(Object o) {
@@ -45,7 +42,7 @@ public class Student extends Person implements Serializable {
 
     @Override
     public int hashCode() {
-        return 31;
+        return Objects.hash(id);
     }
 
     @Override
@@ -54,15 +51,8 @@ public class Student extends Person implements Serializable {
                 "classRoom='" + classRoom + '\'' +
                 ", universityYear=" + universityYear +
                 ", residence='" + residence + '\'' +
-                ", id=" + id +
-                ", ci='" + ci + '\'' +
-                ", name='" + name + '\'' +
-                ", email='" + email + '\'' +
-                ", firstLastName='" + firstLastName + '\'' +
-                ", secondLastName='" + secondLastName + '\'' +
-                ", gender=" + gender +
-                ", age=" + age +
-                ", race='" + race + '\'' +
-                '}';
+                ", kind=" + kind +
+                ", studyCenter=" + studyCenter +
+                "} " + super.toString();
     }
 }
