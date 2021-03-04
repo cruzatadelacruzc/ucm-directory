@@ -432,4 +432,28 @@ public class NomenclatureResourceIT {
                 .andExpect(jsonPath("$.[*].description").value(DEFAULT_DESCRIPTION));
     }
 
+    @Test
+    @Transactional
+    public void getDistrictChildrenByParent() throws Exception{
+        // Initialize the database
+        Nomenclature districtParent = new Nomenclature();
+        districtParent.setName(UPDATE_NAME);
+        districtParent.setActive(UPDATE_ACTIVE);
+        districtParent.setDescription(UPDATE_DESCRIPTION);
+        districtParent.setDiscriminator(NomenclatureType.DISTRITO);
+        em.persist(districtParent);
+
+        nomenclature.setParentDistrict(districtParent);
+        repository.saveAndFlush(nomenclature);
+
+        restMockMvc.perform(get("/api/nomenclatures/childrenbyparentid/{id}?sort=id,desc",districtParent.getId()))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$.[*].id").value(nomenclature.getId().toString()))
+                .andExpect(jsonPath("$.[*].name").value(DEFAULT_NAME))
+                .andExpect(jsonPath("$.[*].active").value(DEFAULT_ACTIVE))
+                .andExpect(jsonPath("$.[*].discriminator").value(DEFAULT_DISCRIMINATOR.toString()))
+                .andExpect(jsonPath("$.[*].description").value(DEFAULT_DESCRIPTION));
+    }
+
 }

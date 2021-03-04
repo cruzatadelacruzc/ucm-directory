@@ -137,4 +137,22 @@ public class NomenclatureResource {
         return ResponseEntity.ok().headers(headers).body(page.getContent());
     }
 
+    /**
+     * {@code GET  /nomenclatures/childrenbyparentid:id} : get a page of children district by parent id
+     *
+     * @param id the id of the nomenclature parent to fetch children.
+     * @param pageable the pagination information.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of nomenclatures in body.
+     */
+    @GetMapping("/nomenclatures/childrenbyparentid/{id}")
+    public ResponseEntity<List<NomenclatureDTO>> getChildrenByParentId(Pageable pageable, @PathVariable UUID id) {
+        log.debug("REST request to get a page of children district by ParentId : {}", id);
+        Page<NomenclatureDTO> page = service.getChildrenByParentId(pageable, id);
+        HttpHeaders headers = PaginationUtil.generatePaginationHeaders(
+                ServletUriComponentsBuilder.fromCurrentRequest(),
+                page
+        );
+        return ResponseEntity.ok().headers(headers).body(page.getContent());
+    }
+
 }

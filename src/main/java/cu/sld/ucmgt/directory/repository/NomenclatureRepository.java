@@ -2,10 +2,13 @@ package cu.sld.ucmgt.directory.repository;
 
 import cu.sld.ucmgt.directory.domain.Nomenclature;
 import cu.sld.ucmgt.directory.domain.NomenclatureType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -26,4 +29,6 @@ public interface NomenclatureRepository extends JpaRepository<Nomenclature, UUID
             "studentsStudyCenter"
     })
     Optional<Nomenclature> findNomenclatureWithAssociationsById(UUID uuid);
+
+    Page<Nomenclature> findAllByParentDistrict_Id(Pageable pageable, UUID id);
 }

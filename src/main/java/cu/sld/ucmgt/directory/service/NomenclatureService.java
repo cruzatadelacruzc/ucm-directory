@@ -158,4 +158,15 @@ public class NomenclatureService {
             repository.delete(nomenclature);
         });
     }
+
+    /**
+     * Get children nomenclatures page given parentId
+     * @param id district parent id
+     * @param pageable the pagination information.
+     * @return the list of entities.
+     */
+    public Page<NomenclatureDTO> getChildrenByParentId(Pageable pageable, UUID id) {
+        log.debug("Request to get a page of children district by ParentId : {}", id);
+        return repository.findAllByParentDistrict_Id(pageable,id).map(mapper::toDto);
+    }
 }
