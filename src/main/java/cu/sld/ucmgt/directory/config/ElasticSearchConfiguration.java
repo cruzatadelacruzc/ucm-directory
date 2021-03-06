@@ -14,7 +14,7 @@ import java.net.URI;
 @Slf4j
 @Configuration
 @Profile(value = Constants.PROFILE_PROD)
-public class RestClientConfig extends AbstractElasticsearchConfiguration {
+public class ElasticSearchConfiguration extends AbstractElasticsearchConfiguration {
 
 
     @Bean
@@ -43,4 +43,5 @@ public class RestClientConfig extends AbstractElasticsearchConfiguration {
         log.info("Elasticsearch server [{}:{}] ssl[{}] auth[{}]", host, port, isSsl, userInfo != null);
         return RestClients.create(builder.build()).rest();
     }
+
 }
