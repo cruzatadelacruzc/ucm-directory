@@ -98,8 +98,8 @@ public class PhoneService {
                     .setAbortOnVersionConflict(true)
                     .setScript(new Script(ScriptType.INLINE, "painless", updateCode, params));
             highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
-        } catch (IOException e) {
-            log.error(e.getMessage());
+        } catch (ElasticsearchException | IOException e) {
+            e.printStackTrace();
         }
         return mapper.toDto(phone);
     }
@@ -145,7 +145,7 @@ public class PhoneService {
                     .setScript(new Script(ScriptType.INLINE, "painless", updateCode, Collections.emptyMap()));
             highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
         } catch (ElasticsearchException | IOException exception) {
-            log.error(exception.getMessage());
+            exception.printStackTrace();
         }
     }
 
