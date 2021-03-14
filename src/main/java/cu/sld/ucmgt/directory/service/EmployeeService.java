@@ -94,27 +94,50 @@ public class EmployeeService {
     public EmployeeDTO update(EmployeeDTO employeeDTO) {
         log.debug("Request to update Employee : {}", employeeDTO);
         Employee employee = save(employeeDTO);
-        // updating the employee belonging to phones
+        // updating the employee belonging to PhoneIndex and WorkPlaceIndex
+        Map<String, Object> params = new HashMap<>();
+        params.put("ci", employee.getCi());
+        params.put("age", employee.getAge());
+        params.put("race", employee.getRace());
+        params.put("name", employee.getName());
+        params.put("email", employee.getEmail());
+        params.put("gender", employee.getGender());
+        params.put("address", employee.getAddress());
+        params.put("birthdate", employee.getBirthdate());
+        params.put("firstLastName", employee.getFirstLastName());
+        params.put("registerNumber", employee.getRegisterNumber());
+        params.put("secondLastName", employee.getSecondLastName());
+        params.put("professionalNumber", employee.getProfessionalNumber());
+        params.put("charge", employee.getCharge() != null ? employee.getCharge().getName() : null);
+        params.put("district", employee.getDistrict() != null ? employee.getDistrict().getName() : null);
+        params.put("category", employee.getCategory() != null ? employee.getCategory().getName() : null);
+        params.put("specialty", employee.getSpecialty() != null ? employee.getSpecialty().getName() : null);
+        params.put("workPlace", employee.getWorkPlace() != null ? employee.getWorkPlace().getName() : null);
+        params.put("profession", employee.getProfession() != null ? employee.getProfession().getName() : null);
+
+        this.updateEmployeeInWorkPlaceIndex(employee, params);
+        this.updateEmployeeInPhoneIndex(employee, params);
+
+        return mapper.toDto(employee);
+    }
+
+    private void updateEmployeeInPhoneIndex(Employee employee, Map<String, Object> params) {
         try {
-            Map<String, Object> params = new HashMap<>();
-            params.put("ci", employee.getCi());
-            params.put("age", employee.getAge());
-            params.put("race", employee.getRace());
-            params.put("name", employee.getName());
-            params.put("email", employee.getEmail());
-            params.put("gender", employee.getGender());
-            params.put("address", employee.getAddress());
-            params.put("birthdate", employee.getBirthdate());
-            params.put("firstLastName", employee.getFirstLastName());
-            params.put("registerNumber", employee.getRegisterNumber());
-            params.put("secondLastName", employee.getSecondLastName());
-            params.put("professionalNumber", employee.getProfessionalNumber());
-            params.put("charge", employee.getCharge() != null ? employee.getCharge().getName() : null);
-            params.put("district", employee.getDistrict() != null ? employee.getDistrict().getName() : null);
-            params.put("category", employee.getCategory() != null ? employee.getCategory().getName() : null);
-            params.put("specialty", employee.getSpecialty() != null ? employee.getSpecialty().getName() : null);
-            params.put("workPlace", employee.getWorkPlace() != null ? employee.getWorkPlace().getName() : null);
-            params.put("profession", employee.getProfession() != null ? employee.getProfession().getName() : null);
+            String updateCode = "for (entry in params.entrySet()){ if (entry.getKey() != \"ctx\") " +
+                    "{ctx._source.employee[entry.getKey()] = entry.getValue()}}";
+            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("phones")
+                    .setRefresh(true)
+                    .setAbortOnVersionConflict(true)
+                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, params))
+                    .setQuery(QueryBuilders.matchQuery("employee.id", employee.getId().toString()));
+            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void updateEmployeeInWorkPlaceIndex(Employee employee, Map<String, Object> params) {
+        try {
             String updateCode = "def targets = ctx._source.employees.findAll(employee " +
                     "-> employee.id == \"" + employee.getId().toString() + "\" ); " +
                     "for (employee in targets) { for (entry in params.entrySet()) { if (entry.getKey() != \"ctx\") {" +
@@ -124,20 +147,9 @@ public class EmployeeService {
                     .setAbortOnVersionConflict(true)
                     .setScript(new Script(ScriptType.INLINE, "painless", updateCode, params));
             highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
-            log.debug("Operation of update the Employees into Workplaces indices was executed successful");
-
-            updateCode = "for (entry in params.entrySet()){ if (entry.getKey() != \"ctx\") " +
-                    "{ctx._source.employee[entry.getKey()] = entry.getValue()}}";
-            updateByQueryRequest = new UpdateByQueryRequest("phones")
-                    .setRefresh(true)
-                    .setAbortOnVersionConflict(true)
-                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, params))
-                    .setQuery(QueryBuilders.matchQuery("employee.id", employee.getId().toString()));
-            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
         } catch (IOException e) {
-            log.error(e.getMessage());
+            e.printStackTrace();
         }
-        return mapper.toDto(employee);
     }
 
 
