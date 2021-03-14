@@ -51,18 +51,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(classes = {DirectoryApp.class, TestSecurityConfiguration.class})
 public class NomenclatureResourceIT {
 
-    private static final String UPDATE_NAME = "Guantanamo";
-    private static final String DEFAULT_NAME = "La Habana";
+    private static final String UPDATE_NAME = "La Habana";
+    private static final String DEFAULT_NAME = "Marianao";
 
     private static final Boolean UPDATE_ACTIVE = false;
     private static final Boolean DEFAULT_ACTIVE = true;
 
-    private static final String UPDATE_DESCRIPTION = "qwerty";
-    private static final String DEFAULT_DESCRIPTION = "asdfgh";
+    private static final String UPDATE_DESCRIPTION = "provincia";
+    private static final String DEFAULT_DESCRIPTION = "municipio";
 
     private static final NomenclatureType DEFAULT_DISCRIMINATOR = NomenclatureType.DISTRITO;
 
     private Nomenclature nomenclature;
+
+    private Nomenclature nomenclatureParentDistrict;
 
     @Autowired
     private NomenclatureMapper mapper;
@@ -87,23 +89,80 @@ public class NomenclatureResourceIT {
 
     @BeforeEach
     public void initTest() {
+        elasticsearchOperations.deleteIndex(StudentIndex.class);
+        elasticsearchOperations.deleteIndex(EmployeeIndex.class);
+        nomenclatureParentDistrict = new Nomenclature();
+        nomenclatureParentDistrict.setName(UPDATE_NAME);
+        nomenclatureParentDistrict.setActive(DEFAULT_ACTIVE);
+        nomenclatureParentDistrict.setDiscriminator(DEFAULT_DISCRIMINATOR);
+        nomenclatureParentDistrict.setDescription(DEFAULT_DESCRIPTION);
+        repository.save(nomenclatureParentDistrict);
+
         nomenclature = new Nomenclature();
         nomenclature.setName(DEFAULT_NAME);
         nomenclature.setActive(DEFAULT_ACTIVE);
         nomenclature.setDiscriminator(DEFAULT_DISCRIMINATOR);
         nomenclature.setDescription(DEFAULT_DESCRIPTION);
+        nomenclature.setParentDistrict(nomenclatureParentDistrict);
     }
 
     @Test
     @Transactional
     public void createNomenclature() throws Exception {
-        Nomenclature nomenclatureParent = new Nomenclature();
-        nomenclatureParent.setName(UPDATE_NAME);
-        nomenclatureParent.setActive(UPDATE_ACTIVE);
-        nomenclatureParent.setDiscriminator(DEFAULT_DISCRIMINATOR);
-        nomenclatureParent.setDescription(UPDATE_DESCRIPTION);
-        repository.saveAndFlush(nomenclatureParent);
-        nomenclature.setParentDistrict(nomenclatureParent);
+        int databaseSizeBeforeCreate = repository.findAll().size();
+        nomenclature.setParentDistrict(null);
+        NomenclatureDTO nomenclatureDTO = mapper.toDto(nomenclature);
+
+        restMockMvc.perform(post("/api/nomenclatures").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(nomenclatureDTO)))
+                .andExpect(status().isCreated());
+
+        // Validate the Nomenclature in the database
+        List<Nomenclature> nomenclatures = repository.findAll();
+        assertThat(nomenclatures).hasSize(databaseSizeBeforeCreate + 1);
+        // databaseSizeBeforeCreate = 1; position of the last stored nomenclature
+        Nomenclature testNomenclature = nomenclatures.get(databaseSizeBeforeCreate);
+        assertThat(testNomenclature.getName()).isEqualTo(DEFAULT_NAME);
+        assertThat(testNomenclature.getActive()).isEqualTo(DEFAULT_ACTIVE);
+        assertThat(testNomenclature.getDescription()).isEqualTo(DEFAULT_DESCRIPTION);
+        assertThat(testNomenclature.getDiscriminator()).isEqualTo(DEFAULT_DISCRIMINATOR);
+    }
+
+    @Test
+    @Transactional
+    public void createNomenclatureChildDistrictAndNomenclatureParentDistrictAndNomenclatureWithCargoDiscriminator() throws Exception {
+        // Initialize database
+        Nomenclature otherNomenclature = new Nomenclature();
+        otherNomenclature.setName(DEFAULT_NAME);
+        otherNomenclature.setActive(UPDATE_ACTIVE);
+        otherNomenclature.setDiscriminator(NomenclatureType.CARGO);
+        otherNomenclature.setDescription(UPDATE_DESCRIPTION);
+        repository.saveAndFlush(otherNomenclature);
+
+        int databaseSizeBeforeCreate = repository.findAll().size();
+
+        NomenclatureDTO nomenclatureDTO = mapper.toDto(nomenclature);
+        restMockMvc.perform(post("/api/nomenclatures").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(nomenclatureDTO)))
+                .andExpect(status().isCreated());
+
+        // Validate the Nomenclature in the database
+        List<Nomenclature> nomenclatures = repository.findAll();
+        assertThat(nomenclatures).hasSize(databaseSizeBeforeCreate + 1);
+        // databaseSizeBeforeCreate = 2; position of the last stored nomenclature
+        Nomenclature testNomenclature = nomenclatures.get(databaseSizeBeforeCreate);
+        assertThat(testNomenclature.getName()).isEqualTo(DEFAULT_NAME);
+        assertThat(testNomenclature.getParentDistrict()).isEqualTo(nomenclatureParentDistrict);
+        assertThat(testNomenclature.getActive()).isEqualTo(DEFAULT_ACTIVE);
+        assertThat(testNomenclature.getDescription()).isEqualTo(DEFAULT_DESCRIPTION);
+        assertThat(testNomenclature.getDiscriminator()).isEqualTo(DEFAULT_DISCRIMINATOR);
+    }
+
+    @Test
+    @Transactional
+    public void createNomenclatureChildDistrictAndNomenclatureParentDistrict() throws Exception {
 
         int databaseSizeBeforeCreate = repository.findAll().size();
         NomenclatureDTO nomenclatureDTO = mapper.toDto(nomenclature);
@@ -116,14 +175,37 @@ public class NomenclatureResourceIT {
         // Validate the Nomenclature in the database
         List<Nomenclature> nomenclatures = repository.findAll();
         assertThat(nomenclatures).hasSize(databaseSizeBeforeCreate + 1);
-        Nomenclature testNomenclature = nomenclatures.get(nomenclatures.size() - 1);
+        // databaseSizeBeforeCreate = 1; position of the last stored nomenclature
+        Nomenclature testNomenclature = nomenclatures.get(databaseSizeBeforeCreate);
         assertThat(testNomenclature.getName()).isEqualTo(DEFAULT_NAME);
-        assertThat(testNomenclature.getParentDistrict().getId()).isEqualTo(nomenclatureParent.getId());
+        assertThat(testNomenclature.getParentDistrict()).isEqualTo(nomenclatureParentDistrict);
         assertThat(testNomenclature.getActive()).isEqualTo(DEFAULT_ACTIVE);
         assertThat(testNomenclature.getDescription()).isEqualTo(DEFAULT_DESCRIPTION);
         assertThat(testNomenclature.getDiscriminator()).isEqualTo(DEFAULT_DISCRIMINATOR);
     }
 
+    @Test
+    @Transactional
+    public void createNomenclatureWithExistingNameAndDiscriminator() throws Exception {
+        Nomenclature nomenclatureChild = new Nomenclature();
+        nomenclatureChild.setName(DEFAULT_NAME);
+        nomenclatureChild.setActive(UPDATE_ACTIVE);
+        nomenclatureChild.setDiscriminator(DEFAULT_DISCRIMINATOR);
+        nomenclatureChild.setDescription(UPDATE_DESCRIPTION);
+        repository.saveAndFlush(nomenclatureChild);
+
+        int databaseSizeBeforeCreate = repository.findAll().size();
+        nomenclature.setParentDistrict(null);
+
+        NomenclatureDTO nomenclatureDTO = mapper.toDto(nomenclature);
+        restMockMvc.perform(post("/api/nomenclatures").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(nomenclatureDTO)))
+                .andExpect(status().isBadRequest());
+
+        List<Nomenclature> nomenclatures = repository.findAll();
+        assertThat(nomenclatures).hasSize(databaseSizeBeforeCreate);
+    }
 
     @Test
     @Transactional
@@ -165,23 +247,24 @@ public class NomenclatureResourceIT {
 
     @Test
     @Transactional
-    public void createNomenclatureWithExistingName() throws Exception {
-        repository.saveAndFlush(nomenclature);
+    public void createNomenclatureChildDistrictWithExistingNomenclatureChildDistrictName() throws Exception {
+        // Initialize database
+        Nomenclature nomenclatureChild = new Nomenclature();
+        nomenclatureChild.setName(DEFAULT_NAME);
+        nomenclatureChild.setActive(UPDATE_ACTIVE);
+        nomenclatureChild.setDiscriminator(DEFAULT_DISCRIMINATOR);
+        nomenclatureChild.setDescription(UPDATE_DESCRIPTION);
+        nomenclatureChild.setParentDistrict(nomenclatureParentDistrict);
+        repository.saveAndFlush(nomenclatureChild);
 
         int databaseSizeBeforeCreate = repository.findAll().size();
 
-        // Create the Nomenclature with an existing Name
-        Nomenclature nomenclatureCopy = new Nomenclature();
-        nomenclatureCopy.setName(DEFAULT_NAME);
-        nomenclatureCopy.setActive(DEFAULT_ACTIVE);
-        nomenclatureCopy.setDiscriminator(DEFAULT_DISCRIMINATOR);
-        nomenclatureCopy.setDescription(DEFAULT_DESCRIPTION);
-        NomenclatureDTO nomenclatureDTO = mapper.toDto(nomenclatureCopy);
-
+        NomenclatureDTO nomenclatureDTO = mapper.toDto(nomenclature);
         restMockMvc.perform(post("/api/nomenclatures").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(TestUtil.convertObjectToJsonBytes(nomenclatureDTO)))
                 .andExpect(status().isBadRequest());
+
         // Validate the Nomenclature in the database
         List<Nomenclature> nomenclatures = repository.findAll();
         assertThat(nomenclatures).hasSize(databaseSizeBeforeCreate);
@@ -226,10 +309,8 @@ public class NomenclatureResourceIT {
         // Initialize the database
         repository.saveAndFlush(nomenclature);
 
-        Employee employee = getEmployee();
-
-
         // To save Nomenclature with a EmployeeIndex
+        Employee employee = getEmployee();
         EmployeeDTO employeeDTO = employeeMapper.toDto(employee);
         restMockMvc.perform(post("/api/employees").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -312,6 +393,59 @@ public class NomenclatureResourceIT {
         assertThat(testStudentIndexNomenclature.getDistrict()).isEqualTo(UPDATE_NAME);
     }
 
+    @Test
+    @Transactional
+    public void updateParentDistrictDisableWithEmployeeIndexAndStudentIndex() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(nomenclature);
+        int databaseSizeBeforeUpdate = repository.findAll().size();
+
+        // To save Nomenclature with a StudentIndex
+        Student student = getStudent();
+        StudentDTO studentDTO = studentMapper.toDto(student);
+        restMockMvc.perform(post("/api/students").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(studentDTO)))
+                .andExpect(status().isCreated());
+
+        // To save Nomenclature with a EmployeeIndex
+        Employee employee = getEmployee();
+        EmployeeDTO employeeDTO = employeeMapper.toDto(employee);
+        restMockMvc.perform(post("/api/employees").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(employeeDTO)))
+                .andExpect(status().isCreated());
+
+        // Update the Nomenclature
+        Nomenclature updatedNomenclature = repository.findById(nomenclatureParentDistrict.getId()).get();
+        // Disconnect from session so that the updates on updatedNomenclature are not directly saved in db
+        em.detach(updatedNomenclature);
+
+        updatedNomenclature.setName(DEFAULT_NAME);
+        updatedNomenclature.setActive(false);
+        updatedNomenclature.setDescription(UPDATE_DESCRIPTION);
+
+        NomenclatureDTO nomenclatureDTO = mapper.toDto(updatedNomenclature);
+        restMockMvc.perform(put("/api/nomenclatures").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(nomenclatureDTO)))
+                .andExpect(status().isOk());
+
+        List<Nomenclature> nomenclatures = repository.findAll();
+        assertThat(nomenclatures).hasSize(databaseSizeBeforeUpdate);
+        assertThat(nomenclatures.get(0).getActive()).isFalse();
+        assertThat(nomenclatures.get(1).getActive()).isFalse();
+        SearchQuery query = new NativeSearchQueryBuilder().withQuery(QueryBuilders.matchAllQuery()).build();
+        List<StudentIndex> studentIndices = elasticsearchOperations.queryForList(query, StudentIndex.class);
+        List<EmployeeIndex> employeeIndices = elasticsearchOperations.queryForList(query, EmployeeIndex.class);
+        StudentIndex testStudentIndexNomenclature = studentIndices.get(studentIndices.size() - 1);
+        StudentIndex testEmployeeIndexNomenclature = studentIndices.get(employeeIndices.size() - 1);
+        assertThat(testStudentIndexNomenclature.getDistrict()).isNull();
+        assertThat(testStudentIndexNomenclature.getDistrict()).isNull();
+        assertThat(testEmployeeIndexNomenclature.getParentDistrict()).isNull();
+        assertThat(testStudentIndexNomenclature.getParentDistrict()).isNull();
+    }
+
     private Student getStudent() {
         Student student = new Student();
         student.setName("Cesar");
@@ -350,6 +484,7 @@ public class NomenclatureResourceIT {
     @Test
     public void deleteNomenclature() throws Exception {
         // Initialize the database
+        nomenclature.setParentDistrict(null);
         repository.saveAndFlush(nomenclature);
         int databaseSizeBeforeUpdate = repository.findAll().size();
 
@@ -393,6 +528,38 @@ public class NomenclatureResourceIT {
     }
 
     @Test
+    public void deleteOnlyNomenclatureChildDistrict() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(nomenclature);
+        int databaseSizeBeforeUpdate = repository.findAll().size();
+
+        // Delete the nomenclature
+        restMockMvc.perform(delete("/api/nomenclatures/{id}", nomenclature.getId()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNoContent());
+
+        // Validate the database contains one less item
+        List<Nomenclature> nomenclatures = repository.findAll();
+        assertThat(nomenclatures).hasSize(databaseSizeBeforeUpdate - 1);
+    }
+
+    @Test
+    public void deleteNomenclatureParentDistrictAndChild() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(nomenclature);
+        int databaseSizeBeforeUpdate = repository.findAll().size();
+
+        // Delete the nomenclature
+        restMockMvc.perform(delete("/api/nomenclatures/{id}", nomenclatureParentDistrict.getId()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNoContent());
+
+        // Validate the database contains one less item
+        List<Nomenclature> nomenclatures = repository.findAll();
+        assertThat(nomenclatures).hasSize(databaseSizeBeforeUpdate - 2);
+    }
+
+    @Test
     @Transactional
     public void getNomenclature() throws Exception {
         // Initialize the database
@@ -420,12 +587,18 @@ public class NomenclatureResourceIT {
     @Transactional
     public void getAllNomenclatures() throws Exception {
         // Initialize the database
-        repository.saveAndFlush(nomenclature);
+        repository.deleteAll();
+        Nomenclature nomenclatureChild = new Nomenclature();
+        nomenclatureChild.setName(DEFAULT_NAME);
+        nomenclatureChild.setActive(DEFAULT_ACTIVE);
+        nomenclatureChild.setDiscriminator(DEFAULT_DISCRIMINATOR);
+        nomenclatureChild.setDescription(DEFAULT_DESCRIPTION);
+        repository.saveAndFlush(nomenclatureChild);
 
         restMockMvc.perform(get("/api/nomenclatures?sort=id,desc"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
-                .andExpect(jsonPath("$.[*].id").value(nomenclature.getId().toString()))
+                .andExpect(jsonPath("$.[*].id").value(nomenclatureChild.getId().toString()))
                 .andExpect(jsonPath("$.[*].name").value(DEFAULT_NAME))
                 .andExpect(jsonPath("$.[*].active").value(DEFAULT_ACTIVE))
                 .andExpect(jsonPath("$.[*].discriminator").value(DEFAULT_DISCRIMINATOR.toString()))

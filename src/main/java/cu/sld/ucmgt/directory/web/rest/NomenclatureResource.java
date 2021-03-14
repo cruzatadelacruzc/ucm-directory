@@ -1,5 +1,6 @@
 package cu.sld.ucmgt.directory.web.rest;
 
+import cu.sld.ucmgt.directory.domain.NomenclatureType;
 import cu.sld.ucmgt.directory.service.NomenclatureService;
 import cu.sld.ucmgt.directory.service.dto.EmployeeDTO;
 import cu.sld.ucmgt.directory.service.dto.NomenclatureDTO;
@@ -50,13 +51,9 @@ public class NomenclatureResource {
         if (nomenclatureDTO.getId() != null) {
             throw new BadRequestAlertException("A new nomenclature cannot already have an ID", ENTITY_NAME, "idexists");
         }
-        if (service.findNomenclatureByNameAndDiscriminator(nomenclatureDTO.getName(), nomenclatureDTO.getDiscriminator()).isPresent()) {
-            throw new BadRequestAlertException("Nomenclature name: "
-                    + nomenclatureDTO.getName() +
-                    " of type: "
-                    + nomenclatureDTO.getDiscriminator() +" already used",
-                    ENTITY_NAME, "idexists");
-        }
+
+        this.checkNomenclatureWithNameAndDiscriminatorExist(nomenclatureDTO);
+
         NomenclatureDTO nomenclatureSaved = service.create(nomenclatureDTO);
         return ResponseEntity.created(new URI("/api/nomenclatures/" + nomenclatureSaved.getId()))
                 .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
@@ -79,6 +76,8 @@ public class NomenclatureResource {
         if (nomenclatureDTO.getId() == null) {
             throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
         }
+
+        this.checkNomenclatureWithNameAndDiscriminatorExist(nomenclatureDTO);
 
         NomenclatureDTO nomenclatureSaved = service.update(nomenclatureDTO);
         return ResponseEntity.ok()
@@ -153,6 +152,22 @@ public class NomenclatureResource {
                 page
         );
         return ResponseEntity.ok().headers(headers).body(page.getContent());
+    }
+
+    private void checkNomenclatureWithNameAndDiscriminatorExist(NomenclatureDTO nomenclatureDTO) {
+        if (nomenclatureDTO.getParentDistrictId() != null &&
+                service.findNomenclatureChildByNameAndDiscriminator(nomenclatureDTO.getName(), nomenclatureDTO.getDiscriminator())
+                        .isPresent()) {
+            throw new BadRequestAlertException("Child nomenclature name: "+ nomenclatureDTO.getName() +" of type: "
+                    + nomenclatureDTO.getDiscriminator() +" already used",ENTITY_NAME, "idexists");
+        }
+
+        if (nomenclatureDTO.getParentDistrictId() == null &&
+                service.findNomenclatureByNameAndDiscriminator(nomenclatureDTO.getName(), nomenclatureDTO.getDiscriminator())
+                        .isPresent()){
+            throw new BadRequestAlertException("Nomenclature name: " + nomenclatureDTO.getName() +" of type: "
+                    + nomenclatureDTO.getDiscriminator() +" already used",ENTITY_NAME, "idexists");
+        }
     }
 
 }

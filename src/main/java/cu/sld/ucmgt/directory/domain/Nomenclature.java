@@ -1,5 +1,6 @@
 package cu.sld.ucmgt.directory.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -28,15 +29,20 @@ public class Nomenclature implements Serializable {
     @NotBlank
     private String name;
 
-    @OneToOne(orphanRemoval = true, cascade = CascadeType.PERSIST)
-    private Nomenclature parentDistrict;
-
     private Boolean active;
 
     private String description;
 
     @Enumerated(value = EnumType.STRING)
     private NomenclatureType discriminator;
+
+    @ManyToOne()
+    @JsonIgnoreProperties(value = "childrenDistrict", allowSetters = true)
+    private Nomenclature parentDistrict;
+
+    @OneToMany(mappedBy = "parentDistrict", orphanRemoval = true, cascade = CascadeType.PERSIST)
+    @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
+    private Set<Nomenclature> childrenDistrict;
 
     @OneToMany(mappedBy = "district")
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
@@ -129,6 +135,9 @@ public class Nomenclature implements Serializable {
         return this;
     }
 
+    public boolean isChildDistrict() {
+        return parentDistrict != null && discriminator.equals(NomenclatureType.DISTRITO);
+    }
 
     @Override
     public boolean equals(Object o) {

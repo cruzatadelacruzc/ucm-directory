@@ -10,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.script.Script;
@@ -20,10 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -43,6 +42,9 @@ public class NomenclatureService {
      */
     public NomenclatureDTO create(NomenclatureDTO nomenclatureDTO) {
         log.debug("Request to create Nomenclature : {}", nomenclatureDTO);
+        if (nomenclatureDTO.getParentDistrictId() != null) {
+            nomenclatureDTO.setDiscriminator(NomenclatureType.DISTRITO);
+        }
         Nomenclature nomenclature = mapper.toEntity(nomenclatureDTO);
         repository.save(nomenclature);
         return mapper.toDto(nomenclature);
@@ -50,37 +52,83 @@ public class NomenclatureService {
 
     public NomenclatureDTO update(NomenclatureDTO nomenclatureDTO) {
         log.debug("Request to update Nomenclature : {}", nomenclatureDTO);
-        Nomenclature nomenclature = mapper.toEntity(nomenclatureDTO);
-        repository.findById(nomenclatureDTO.getId()).ifPresent(fetchedNomenclature -> {
-            this.updateNomenclatureByEmployeeIndex(nomenclature, fetchedNomenclature.getName());
-            repository.save(nomenclature);
-        });
-        return mapper.toDto(nomenclature);
+        if (nomenclatureDTO.getParentDistrictId() != null) {
+            nomenclatureDTO.setDiscriminator(NomenclatureType.DISTRITO);
+        }
+
+        Optional<Nomenclature> nomenclatureToUpdate = repository.findById(nomenclatureDTO.getId());
+        if (nomenclatureToUpdate.isPresent()) {
+            String oldNomenclatureName = nomenclatureToUpdate.get().getName();
+            nomenclatureToUpdate.get().setName(nomenclatureDTO.getName());
+            nomenclatureToUpdate.get().setActive(nomenclatureDTO.getActive());
+            nomenclatureToUpdate.get().setDescription(nomenclatureDTO.getDescription());
+            this.updateIndices(nomenclatureToUpdate.get(), oldNomenclatureName);
+            if (!nomenclatureToUpdate.get().isChildDistrict() && !nomenclatureToUpdate.get().getActive() &&
+                    nomenclatureToUpdate.get().getDiscriminator().equals(NomenclatureType.DISTRITO)){
+                repository.updateByIdOrParentDistrict_Id(false, nomenclatureDTO.getId());
+            }
+            return mapper.toDto(nomenclatureToUpdate.get());
+        }
+        return null;
     }
 
-    private void updateNomenclatureByEmployeeIndex(Nomenclature newNomenclature, String oldNomenclatureName) {
-        try {
-            String filedName = newNomenclature.getDiscriminator().getShortCode();
-            String updateCode = "ctx._source." + filedName + "=null";
-            if (newNomenclature.getActive()) {
+    private void updateIndices(Nomenclature newNomenclature, String oldNomenclatureName) {
+        String filedName = newNomenclature.getDiscriminator().getShortCode();
+        String updateCode = "ctx._source." + filedName + "=null;";
+        if (newNomenclature.getActive()) {
+            updateCode = "ctx._source." + filedName + "=\"" + newNomenclature.getName() + "\"";
+        }
+        if (!newNomenclature.isChildDistrict() &&
+                newNomenclature.getDiscriminator().equals(NomenclatureType.DISTRITO)){
+            updateCode = "ctx._source.district=null;ctx._source.parentDistrict=null;";
+            if (newNomenclature.getActive()){
                 updateCode = "ctx._source." + filedName + "=\"" + newNomenclature.getName() + "\"";
             }
-            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("employees")
-                    .setRefresh(true)
-                    .setAbortOnVersionConflict(true)
-                    .setQuery(QueryBuilders.matchQuery(filedName, oldNomenclatureName))
-                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, Collections.emptyMap()));
-            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+        }
+        BoolQueryBuilder query = new BoolQueryBuilder()
+                .should(QueryBuilders.matchQuery(filedName, oldNomenclatureName))
+                .should(QueryBuilders.matchQuery("parentDistrict", oldNomenclatureName));
+        updateNomenclatureInEmployeeIndex(query, updateCode);
+        updateNomenclatureInStudentIndex(query, updateCode);
+    }
 
-            updateByQueryRequest = new UpdateByQueryRequest("students")
+    private void updateNomenclatureInStudentIndex(QueryBuilder query, String updateCode) {
+        try {
+            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("students")
                     .setRefresh(true)
                     .setAbortOnVersionConflict(true)
-                    .setQuery(QueryBuilders.matchQuery(filedName, oldNomenclatureName))
+                    .setQuery(query)
                     .setScript(new Script(ScriptType.INLINE, "painless", updateCode, Collections.emptyMap()));
             highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
         } catch (ElasticsearchException | IOException e) {
-            log.error(e.getMessage());
+            e.printStackTrace();
         }
+    }
+
+    private void updateNomenclatureInEmployeeIndex(QueryBuilder query, String updateCode) {
+        try {
+            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("employees")
+                    .setRefresh(true)
+                    .setAbortOnVersionConflict(true)
+                    .setQuery(query)
+                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, Collections.emptyMap()));
+            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+        } catch (ElasticsearchException | IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Returns a Nomenclature child of parent district given a name and discriminator
+     *
+     * @param name          Nomenclature name
+     * @param discriminator NomenclatureType
+     * @return {@link Nomenclature} instance if founded
+     */
+    @Transactional(readOnly = true)
+    public Optional<Nomenclature> findNomenclatureChildByNameAndDiscriminator(String name, NomenclatureType discriminator) {
+        log.debug("Request to find a Nomenclature child of parent district by Name : {}", name);
+        return repository.findNomenclatureByNameIgnoreCaseAndDiscriminatorAndParentDistrictNotNull(name, discriminator);
     }
 
     /**
@@ -92,8 +140,8 @@ public class NomenclatureService {
      */
     @Transactional(readOnly = true)
     public Optional<Nomenclature> findNomenclatureByNameAndDiscriminator(String name, NomenclatureType discriminator) {
-        log.debug("Request to find a Nomenclature by Name : {}", name);
-        return repository.findNomenclatureByNameAndDiscriminator(name, discriminator);
+        log.debug("Request to find a Nomenclature by Name {} and Discriminator {}", name, discriminator);
+        return repository.findNomenclatureByNameIgnoreCaseAndDiscriminatorAndParentDistrictNull(name, discriminator);
     }
 
     /**
@@ -130,7 +178,7 @@ public class NomenclatureService {
         repository.findNomenclatureWithAssociationsById(uid).ifPresent(nomenclature -> {
 
             nomenclature.setActive(false);
-            this.updateNomenclatureByEmployeeIndex(nomenclature, nomenclature.getName());
+            this.updateIndices(nomenclature, nomenclature.getName());
 
             if (nomenclature.getDiscriminator() == NomenclatureType.DISTRITO) {
                 new HashSet<>(nomenclature.getPeopleDistrict()).forEach(nomenclature::removePeopleDistrict);
@@ -161,12 +209,13 @@ public class NomenclatureService {
 
     /**
      * Get children nomenclatures page given parentId
-     * @param id district parent id
+     *
+     * @param id       district parent id
      * @param pageable the pagination information.
      * @return the list of entities.
      */
     public Page<NomenclatureDTO> getChildrenByParentId(Pageable pageable, UUID id) {
         log.debug("Request to get a page of children district by ParentId : {}", id);
-        return repository.findAllByParentDistrict_Id(pageable,id).map(mapper::toDto);
+        return repository.findAllByParentDistrict_Id(pageable, id).map(mapper::toDto);
     }
 }
