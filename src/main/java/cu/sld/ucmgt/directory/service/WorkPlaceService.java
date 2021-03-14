@@ -111,7 +111,7 @@ public class WorkPlaceService {
                     .setScript(new Script(ScriptType.INLINE, "painless", updateCode, params));
             highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
         } catch (IOException e) {
-            log.error(e.getMessage());
+            e.printStackTrace();
         }
         return mapper.toDto(workPlace);
     }
@@ -126,27 +126,37 @@ public class WorkPlaceService {
         repository.findWorkPlaceWithAssociationsById(uid).ifPresent(workPlace -> {
             new HashSet<>(workPlace.getEmployees()).forEach(workPlace::removeEmployee);
             repository.delete(workPlace);
-            searchRepository.deleteById(uid);
-            try {
-                DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest("phones")
-                        .setRefresh(true)
-                        .setAbortOnVersionConflict(true)
-                        .setQuery(QueryBuilders.matchQuery("workPlace.id", uid.toString()));
-
-                UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("employees")
-                        .setRefresh(true)
-                        .setAbortOnVersionConflict(true)
-                        .setQuery(QueryBuilders.matchQuery("workPlace.id", workPlace.getId().toString()))
-                        .setScript(new Script(ScriptType.INLINE, "painless",
-                                "ctx._source.workPlace=null", Collections.emptyMap()));
-             highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
-
-                highLevelClient.deleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
-            } catch (IOException exception) {
-                log.error(exception.getMessage());
-            }
+            searchRepository.deleteById(workPlace.getId());
+            this.deleteWorkPlaceInPhoneIndex(workPlace.getId().toString());
+            this.updateWorkPlaceInEmployeeIndex(workPlace.getId().toString());
         });
 
+    }
+
+    private void updateWorkPlaceInEmployeeIndex(String id) {
+        try {
+            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("employees")
+                    .setRefresh(true)
+                    .setAbortOnVersionConflict(true)
+                    .setQuery(QueryBuilders.matchQuery("workPlace.id", id))
+                    .setScript(new Script(ScriptType.INLINE, "painless",
+                            "ctx._source.workPlace=null", Collections.emptyMap()));
+            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+        } catch (IOException exception) {
+            exception.printStackTrace();
+        }
+    }
+
+    private void deleteWorkPlaceInPhoneIndex(String id) {
+        try {
+            DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest("phones")
+                    .setRefresh(true)
+                    .setAbortOnVersionConflict(true)
+                    .setQuery(QueryBuilders.matchQuery("workPlace.id", id));
+            highLevelClient.deleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
+        } catch (IOException exception) {
+            exception.printStackTrace();
+        }
     }
 
     /**

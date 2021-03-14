@@ -318,7 +318,7 @@ public class WorkPlaceResourceIT {
     }
 
     @Test
-    public void deleteWorkPlaceWithEmployeeAndEmployeeIndexAndPhoneAndPhoneIndex() throws Exception {
+    public void deleteWorkPlaceInEmployeeIndexAndPhoneIndex() throws Exception {
         // Initialize the database
         phoneSearchRepository.deleteAll();
         employeeSearchRepository.deleteAll();
