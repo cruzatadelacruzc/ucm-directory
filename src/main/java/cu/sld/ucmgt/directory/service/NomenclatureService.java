@@ -139,7 +139,7 @@ public class NomenclatureService {
      * @return true if changed status or false otherwise
      */
     public Boolean changeStatus(UUID id, boolean status) {
-        log.debug("Request to change status to {} nomenclature by ID {}", status, id);
+        log.debug("Request to change nomenclature status to {} by ID {}", status, id);
         Optional<Nomenclature> nomenclatureToChange = repository.findById(id);
         if (nomenclatureToChange.isPresent()){
             nomenclatureToChange.get().setActive(status);
