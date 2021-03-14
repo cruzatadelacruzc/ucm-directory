@@ -23,6 +23,7 @@ import javax.validation.Valid;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -71,7 +72,7 @@ public class NomenclatureResource {
      * or with status {@code 500 (Internal Server Error)} if the employeeDTO couldn't be updated.
      */
     @PutMapping("/nomenclatures")
-    public ResponseEntity<NomenclatureDTO> updateNomenclature(@Valid @RequestBody NomenclatureDTO nomenclatureDTO){
+    public ResponseEntity<NomenclatureDTO> updateNomenclature(@Valid @RequestBody NomenclatureDTO nomenclatureDTO) {
         log.debug("REST request to update Nomenclature : {}", nomenclatureDTO);
         if (nomenclatureDTO.getId() == null) {
             throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
@@ -85,6 +86,24 @@ public class NomenclatureResource {
                         true, ENTITY_NAME,
                         nomenclatureSaved.getId().toString()))
                 .body(nomenclatureSaved);
+    }
+
+    /**
+     * {@code PUT  /nomenclatures/status} : Change status an existing nomenclature.
+     *
+     * @param mapNomenclature the information to change status.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body boolean result
+     */
+    @PutMapping("/nomenclatures/status")
+    public ResponseEntity<Boolean> updateStatusNomenclature(@RequestBody Map<String, Object> mapNomenclature) {
+        log.debug("REST request to update status Nomenclature : {}", mapNomenclature);
+        if (!mapNomenclature.containsKey("id") && mapNomenclature.get("id") == null) {
+            throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
+        }
+        UUID uuid = UUID.fromString(mapNomenclature.get("id").toString());
+        Boolean status = (Boolean) mapNomenclature.getOrDefault("status", false);
+        Boolean result = service.changeStatus(uuid, status);
+        return ResponseEntity.ok().body(result);
     }
 
     /**
@@ -139,7 +158,7 @@ public class NomenclatureResource {
     /**
      * {@code GET  /nomenclatures/childrenbyparentid:id} : get a page of children district by parent id
      *
-     * @param id the id of the nomenclature parent to fetch children.
+     * @param id       the id of the nomenclature parent to fetch children.
      * @param pageable the pagination information.
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of nomenclatures in body.
      */
@@ -158,15 +177,15 @@ public class NomenclatureResource {
         if (nomenclatureDTO.getParentDistrictId() != null &&
                 service.findNomenclatureChildByNameAndDiscriminator(nomenclatureDTO.getName(), nomenclatureDTO.getDiscriminator())
                         .isPresent()) {
-            throw new BadRequestAlertException("Child nomenclature name: "+ nomenclatureDTO.getName() +" of type: "
-                    + nomenclatureDTO.getDiscriminator() +" already used",ENTITY_NAME, "idexists");
+            throw new BadRequestAlertException("Child nomenclature name: " + nomenclatureDTO.getName() + " of type: "
+                    + nomenclatureDTO.getDiscriminator() + " already used", ENTITY_NAME, "idexists");
         }
 
         if (nomenclatureDTO.getParentDistrictId() == null &&
                 service.findNomenclatureByNameAndDiscriminator(nomenclatureDTO.getName(), nomenclatureDTO.getDiscriminator())
-                        .isPresent()){
-            throw new BadRequestAlertException("Nomenclature name: " + nomenclatureDTO.getName() +" of type: "
-                    + nomenclatureDTO.getDiscriminator() +" already used",ENTITY_NAME, "idexists");
+                        .isPresent()) {
+            throw new BadRequestAlertException("Nomenclature name: " + nomenclatureDTO.getName() + " of type: "
+                    + nomenclatureDTO.getDiscriminator() + " already used", ENTITY_NAME, "idexists");
         }
     }
 

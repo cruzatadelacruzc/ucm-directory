@@ -64,7 +64,7 @@ public class NomenclatureService {
             nomenclatureToUpdate.get().setDescription(nomenclatureDTO.getDescription());
             this.updateIndices(nomenclatureToUpdate.get(), oldNomenclatureName);
             if (!nomenclatureToUpdate.get().isChildDistrict() && !nomenclatureToUpdate.get().getActive() &&
-                    nomenclatureToUpdate.get().getDiscriminator().equals(NomenclatureType.DISTRITO)){
+                    nomenclatureToUpdate.get().getDiscriminator().equals(NomenclatureType.DISTRITO)) {
                 repository.updateByIdOrParentDistrict_Id(false, nomenclatureDTO.getId());
             }
             return mapper.toDto(nomenclatureToUpdate.get());
@@ -79,9 +79,9 @@ public class NomenclatureService {
             updateCode = "ctx._source." + filedName + "=\"" + newNomenclature.getName() + "\"";
         }
         if (!newNomenclature.isChildDistrict() &&
-                newNomenclature.getDiscriminator().equals(NomenclatureType.DISTRITO)){
+                newNomenclature.getDiscriminator().equals(NomenclatureType.DISTRITO)) {
             updateCode = "ctx._source.district=null;ctx._source.parentDistrict=null;";
-            if (newNomenclature.getActive()){
+            if (newNomenclature.getActive()) {
                 updateCode = "ctx._source." + filedName + "=\"" + newNomenclature.getName() + "\"";
             }
         }
@@ -129,6 +129,24 @@ public class NomenclatureService {
     public Optional<Nomenclature> findNomenclatureChildByNameAndDiscriminator(String name, NomenclatureType discriminator) {
         log.debug("Request to find a Nomenclature child of parent district by Name : {}", name);
         return repository.findNomenclatureByNameIgnoreCaseAndDiscriminatorAndParentDistrictNotNull(name, discriminator);
+    }
+
+    /**
+     * Change status for active or disable nomenclature
+     *
+     * @param id          Nomenclature identifier
+     * @param status true or false
+     * @return true if changed status or false otherwise
+     */
+    public Boolean changeStatus(UUID id, boolean status) {
+        log.debug("Request to change status to {} nomenclature by ID {}", status, id);
+        Optional<Nomenclature> nomenclatureToChange = repository.findById(id);
+        if (nomenclatureToChange.isPresent()){
+            nomenclatureToChange.get().setActive(status);
+            repository.save(nomenclatureToChange.get());
+            return true;
+        }
+        return false;
     }
 
     /**

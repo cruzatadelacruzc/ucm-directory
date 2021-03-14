@@ -34,7 +34,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -627,6 +629,28 @@ public class NomenclatureResourceIT {
                 .andExpect(jsonPath("$.[*].active").value(DEFAULT_ACTIVE))
                 .andExpect(jsonPath("$.[*].discriminator").value(DEFAULT_DISCRIMINATOR.toString()))
                 .andExpect(jsonPath("$.[*].description").value(DEFAULT_DESCRIPTION));
+    }
+
+    @Test
+    @Transactional
+    public void disableNomenclatureById() throws Exception {
+        //Initialize database doing flush nomenclatureParentDistrict;
+        em.flush();
+        int databaseSizeBeforeUpdate = repository.findAll().size();
+
+        Map<String, Object> nomenclatureIsActive = new HashMap<>();
+        nomenclatureIsActive.put("id",nomenclatureParentDistrict.getId());
+        nomenclatureIsActive.put("active", false);
+
+        restMockMvc.perform(put("/api/nomenclatures/status").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(nomenclatureIsActive)))
+                .andExpect(status().isOk());
+
+        List<Nomenclature> nomenclatures = repository.findAll();
+        assertThat(nomenclatures).hasSize(databaseSizeBeforeUpdate);
+        Nomenclature testNomenclature = nomenclatures.get(nomenclatures.size() -1);
+        assertThat(testNomenclature.getActive()).isFalse();
     }
 
 }
