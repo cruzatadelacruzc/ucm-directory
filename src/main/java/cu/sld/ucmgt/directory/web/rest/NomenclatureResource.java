@@ -9,6 +9,7 @@ import cu.sld.ucmgt.directory.web.rest.errors.BadRequestAlertException;
 import cu.sld.ucmgt.directory.web.rest.util.HeaderUtil;
 import cu.sld.ucmgt.directory.web.rest.util.PaginationUtil;
 import cu.sld.ucmgt.directory.web.rest.util.ResponseUtil;
+import cu.sld.ucmgt.directory.web.rest.vm.ChangeStatusVM;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -91,18 +92,13 @@ public class NomenclatureResource {
     /**
      * {@code PUT  /nomenclatures/status} : Change status an existing nomenclature.
      *
-     * @param mapNomenclature the information to change status.
+     * @param changeStatusVM the information to change status.
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body boolean result
      */
     @PutMapping("/nomenclatures/status")
-    public ResponseEntity<Boolean> updateStatusNomenclature(@RequestBody Map<String, Object> mapNomenclature) {
-        log.debug("REST request to update status Nomenclature : {}", mapNomenclature);
-        if (!mapNomenclature.containsKey("id") && mapNomenclature.get("id") == null) {
-            throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
-        }
-        UUID uuid = UUID.fromString(mapNomenclature.get("id").toString());
-        Boolean status = (Boolean) mapNomenclature.getOrDefault("status", false);
-        Boolean result = service.changeStatus(uuid, status);
+    public ResponseEntity<Boolean> updateStatusNomenclature(@Valid @RequestBody ChangeStatusVM changeStatusVM) {
+        log.debug("REST request to update status Nomenclature : {}", changeStatusVM);
+        Boolean result = service.changeStatus(changeStatusVM.getId(), changeStatusVM.getStatus());
         return ResponseEntity.ok().body(result);
     }
 

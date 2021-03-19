@@ -640,7 +640,7 @@ public class NomenclatureResourceIT {
 
         Map<String, Object> nomenclatureIsActive = new HashMap<>();
         nomenclatureIsActive.put("id",nomenclatureParentDistrict.getId());
-        nomenclatureIsActive.put("active", false);
+        nomenclatureIsActive.put("status", false);
 
         restMockMvc.perform(put("/api/nomenclatures/status").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -651,6 +651,26 @@ public class NomenclatureResourceIT {
         assertThat(nomenclatures).hasSize(databaseSizeBeforeUpdate);
         Nomenclature testNomenclature = nomenclatures.get(nomenclatures.size() -1);
         assertThat(testNomenclature.getActive()).isFalse();
+    }
+
+    @Test
+    @Transactional
+    public void checkChangeStatusIdIsNotNull() throws Exception {
+        //Initialize database doing flush nomenclatureParentDistrict;
+        em.flush();
+        int databaseSizeBeforeUpdate = repository.findAll().size();
+
+        Map<String, Object> nomenclatureIsActive = new HashMap<>();
+        nomenclatureIsActive.put("id","");
+        nomenclatureIsActive.put("status", false);
+
+        restMockMvc.perform(put("/api/nomenclatures/status").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(nomenclatureIsActive)))
+                .andExpect(status().isBadRequest());
+
+        List<Nomenclature> nomenclatures = repository.findAll();
+        assertThat(nomenclatures).hasSize(databaseSizeBeforeUpdate);
     }
 
 }
