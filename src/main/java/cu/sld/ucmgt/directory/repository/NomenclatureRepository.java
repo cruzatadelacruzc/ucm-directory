@@ -36,6 +36,8 @@ public interface NomenclatureRepository extends JpaRepository<Nomenclature, UUID
 
     Page<Nomenclature> findAllByParentDistrict_Id(Pageable pageable, UUID id);
 
+    Page<Nomenclature> findAllByActiveAndDiscriminator(Pageable pageable, Boolean active, NomenclatureType discriminator);
+
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("UPDATE Nomenclature n SET n.active = :status WHERE n.id = :id OR n.parentDistrict.id = :id")
     int updateByIdOrParentDistrict_Id(@Param("status") boolean status, @Param("id") UUID id);

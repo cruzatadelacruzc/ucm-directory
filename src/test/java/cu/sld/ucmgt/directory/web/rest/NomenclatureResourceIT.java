@@ -91,6 +91,7 @@ public class NomenclatureResourceIT {
 
     @BeforeEach
     public void initTest() {
+        // never do that shit, cause a lot of trouble
         elasticsearchOperations.deleteIndex(StudentIndex.class);
         elasticsearchOperations.deleteIndex(EmployeeIndex.class);
         nomenclatureParentDistrict = new Nomenclature();
@@ -671,6 +672,29 @@ public class NomenclatureResourceIT {
 
         List<Nomenclature> nomenclatures = repository.findAll();
         assertThat(nomenclatures).hasSize(databaseSizeBeforeUpdate);
+    }
+
+    @Test
+    @Transactional
+    public void getAllByStatusAndDiscriminator() throws Exception{
+        // Initialize the database
+        repository.deleteAll();
+        Nomenclature nomenclatureChild = new Nomenclature();
+        nomenclatureChild.setName(DEFAULT_NAME);
+        nomenclatureChild.setActive(DEFAULT_ACTIVE);
+        nomenclatureChild.setDiscriminator(DEFAULT_DISCRIMINATOR);
+        nomenclatureChild.setDescription(DEFAULT_DESCRIPTION);
+        repository.saveAndFlush(nomenclatureChild);
+
+        restMockMvc.perform(get("/api/nomenclatures/{status}/{discriminator}?sort=id,desc",
+                nomenclatureChild.getActive(), nomenclatureChild.getDiscriminator()))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$.[*].id").value(nomenclatureChild.getId().toString()))
+                .andExpect(jsonPath("$.[*].name").value(DEFAULT_NAME))
+                .andExpect(jsonPath("$.[*].active").value(DEFAULT_ACTIVE))
+                .andExpect(jsonPath("$.[*].discriminator").value(DEFAULT_DISCRIMINATOR.toString()))
+                .andExpect(jsonPath("$.[*].description").value(DEFAULT_DESCRIPTION));
     }
 
 }

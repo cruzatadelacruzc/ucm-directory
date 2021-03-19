@@ -169,6 +169,27 @@ public class NomenclatureResource {
         return ResponseEntity.ok().headers(headers).body(page.getContent());
     }
 
+    /**
+     * {@code GET  /nomenclatures/:status/:discriminator} : get a page of nomenclature by status and discriminator
+     *
+     * @param status   false to disable or enable otherwise.
+     * @param discriminator nomenclature discriminator
+     * @param pageable the pagination information.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of nomenclatures in body.
+     */
+    @GetMapping("/nomenclatures/{status}/{discriminator}")
+    public ResponseEntity<List<NomenclatureDTO>> getAllByStatusAndDiscriminator(Pageable pageable,
+                                                                       @PathVariable Boolean status,
+                                                                       @PathVariable NomenclatureType discriminator) {
+        log.debug("REST request to get a page of Nomenclature by status {} and discriminator {}", status, discriminator);
+        Page<NomenclatureDTO> page = service.getAllByStatusAndDiscriminator(pageable, status, discriminator);
+        HttpHeaders headers = PaginationUtil.generatePaginationHeaders(
+                ServletUriComponentsBuilder.fromCurrentRequest(),
+                page
+        );
+        return ResponseEntity.ok().headers(headers).body(page.getContent());
+    }
+
     private void checkNomenclatureWithNameAndDiscriminatorExist(NomenclatureDTO nomenclatureDTO) {
         if (nomenclatureDTO.getParentDistrictId() != null &&
                 service.findNomenclatureChildByNameAndDiscriminator(nomenclatureDTO.getName(), nomenclatureDTO.getDiscriminator())

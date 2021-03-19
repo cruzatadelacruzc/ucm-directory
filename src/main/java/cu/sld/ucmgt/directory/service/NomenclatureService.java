@@ -236,4 +236,18 @@ public class NomenclatureService {
         log.debug("Request to get a page of children district by ParentId : {}", id);
         return repository.findAllByParentDistrict_Id(pageable, id).map(mapper::toDto);
     }
+
+    /**
+     * Get nomenclatures page given status and discriminator
+     *
+     * @param status    false to disable or enable otherwise.
+     * @param discriminator nomenclature discriminator
+     * @param pageable the pagination information.
+     * @return the list of entities.
+     */
+    public Page<NomenclatureDTO> getAllByStatusAndDiscriminator(Pageable pageable, Boolean status,
+                                                                NomenclatureType discriminator) {
+        log.debug("Request to get a page of Nomenclature by status {} and discriminator {}", status, discriminator);
+        return repository.findAllByActiveAndDiscriminator(pageable, status, discriminator).map(mapper::toDto);
+    }
 }
