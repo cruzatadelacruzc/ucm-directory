@@ -3,7 +3,9 @@ package cu.sld.ucmgt.directory.service;
 import cu.sld.ucmgt.directory.domain.Employee;
 import cu.sld.ucmgt.directory.domain.Phone;
 import cu.sld.ucmgt.directory.domain.WorkPlace;
+import cu.sld.ucmgt.directory.domain.elasticsearch.EmployeeIndex;
 import cu.sld.ucmgt.directory.domain.elasticsearch.WorkPlaceIndex;
+import cu.sld.ucmgt.directory.event.UpdatedEmployeeIndexEvent;
 import cu.sld.ucmgt.directory.repository.EmployeeRepository;
 import cu.sld.ucmgt.directory.repository.PhoneRepository;
 import cu.sld.ucmgt.directory.repository.WorkPlaceRepository;
@@ -21,6 +23,7 @@ import org.elasticsearch.index.reindex.DeleteByQueryRequest;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptType;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -114,6 +117,28 @@ public class WorkPlaceService {
             e.printStackTrace();
         }
         return mapper.toDto(workPlace);
+    }
+
+    @EventListener
+    public void saveEmployeeIndexInWorkPlaceIndex(UpdatedEmployeeIndexEvent employeeIndexEvent) {
+        try {
+            // avoid redundant data, employee.workplace equals current workplace
+            employeeIndexEvent.getParams().replace("workPlace", null);
+            String updateCode = "params.remove(\"ctx\");ctx._source.employees.add(params)";
+            if (employeeIndexEvent.getEmployeeId() != null) {
+                updateCode = "def targets = ctx._source.employees.findAll(employee " +
+                        "-> employee.id == \"" + employeeIndexEvent.getEmployeeId() + "\" ); " +
+                        "for (employee in targets) { for (entry in params.entrySet()) { if (entry.getKey() != \"ctx\") {" +
+                        "employee[entry.getKey()] = entry.getValue() }}}";
+            }
+            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("workplaces")
+                    .setRefresh(true)
+                    .setAbortOnVersionConflict(true)
+                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, employeeIndexEvent.getParams()));
+            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
