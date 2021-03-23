@@ -2,6 +2,7 @@ package cu.sld.ucmgt.directory.service;
 
 import cu.sld.ucmgt.directory.domain.Phone;
 import cu.sld.ucmgt.directory.domain.elasticsearch.PhoneIndex;
+import cu.sld.ucmgt.directory.event.UpdatedEmployeeIndexEvent;
 import cu.sld.ucmgt.directory.repository.EmployeeRepository;
 import cu.sld.ucmgt.directory.repository.PhoneRepository;
 import cu.sld.ucmgt.directory.repository.WorkPlaceRepository;
@@ -14,9 +15,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptType;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -102,6 +105,24 @@ public class PhoneService {
             e.printStackTrace();
         }
         return mapper.toDto(phone);
+    }
+
+    @EventListener
+    public void updateEmployeeInPhoneIndex(UpdatedEmployeeIndexEvent employeeIndexEvent) {
+        if (employeeIndexEvent.getEmployeeId() != null) {
+            try {
+                String updateCode = "for (entry in params.entrySet()){ if (entry.getKey() != \"ctx\") " +
+                        "{ctx._source.employee[entry.getKey()] = entry.getValue()}}";
+                UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("phones")
+                  .setRefresh(true)
+                  .setAbortOnVersionConflict(true)
+                  .setScript(new Script(ScriptType.INLINE, "painless", updateCode, employeeIndexEvent.getParams()))
+                  .setQuery(QueryBuilders.matchQuery("employee.id", employeeIndexEvent.getEmployeeId()));
+                highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     /**

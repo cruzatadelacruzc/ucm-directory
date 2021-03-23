@@ -231,6 +231,59 @@ public class EmployeeResourceIT extends PersonIT {
 
     @Test
     @Transactional
+    public void updateEmployeeAndUpdatePhoneIndex() throws Exception {
+        // Clear EmployeeIndex, WorkPlaceIndex and PhoneIndex indices
+        employeeSearchRepository.deleteAll();
+        phoneSearchRepository.deleteAll();
+
+        int databaseSizeBeforeCreate = TestUtil.findAll(em, Employee.class).size();
+        EmployeeDTO employeeDTO = mapper.toDto(employee);
+        MvcResult resultEmployee = restMockMvc.perform(post("/api/employees").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(employeeDTO)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        // Validate the Employee in the database
+        List<Employee> employees = TestUtil.findAll(em, Employee.class);
+        assertThat(employees).hasSize(databaseSizeBeforeCreate + 1);
+        String employeeId = resultEmployee.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        assertThat(employeeId).isNotNull();
+
+        // To save phone with a employee in elasticsearch
+        Phone phone = createPhoneOfEmployee(employee);
+        PhoneDTO phoneDTO = phoneMapper.toDto(phone);
+        phoneDTO.setEmployeeId(UUID.fromString(employeeId));
+        databaseSizeBeforeCreate = TestUtil.findAll(em, Phone.class).size();
+        restMockMvc.perform(post("/api/phones").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(phoneDTO)))
+                .andExpect(status().isCreated());
+        // Validate the Phone in the database
+        List<Phone> phones = TestUtil.findAll(em, Phone.class);
+        assertThat(phones).hasSize(databaseSizeBeforeCreate + 1);
+
+        Employee updatedEmployee = updateEmployeeObj(UUID.fromString(employeeId));
+        // to update employee belong to employeeDTO
+        employeeDTO = mapper.toDto(updatedEmployee);
+       int databaseSizeBeforeUpdate = TestUtil.findAll(em, Employee.class).size();
+        restMockMvc.perform(put("/api/employees").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(employeeDTO)))
+                .andExpect(status().isOk());
+
+        // Validate the Employee in the database
+        List<Employee> employeeList = TestUtil.findAll(em, Employee.class);
+        assertThat(employeeList).hasSize(databaseSizeBeforeUpdate);
+        Employee testEmployee = employees.get(employees.size() - 1);
+        testUpdatedEmployee(testEmployee);
+
+        List<PhoneIndex> phonesElasticSearch = phoneSearchRepository.findAllByEmployee_Id(UUID.fromString(employeeId));
+        EmployeeIndex testEmployeeIndexPhoneIndex = phonesElasticSearch.get(phonesElasticSearch.size() - 1).getEmployee();
+        testEmployeeIndexIsUpdated(testEmployeeIndexPhoneIndex);
+    }
+
+    @Test
+    @Transactional
     public void createEmployeeWithExistingId() throws Exception {
         int databaseSizeBeforeCreate = TestUtil.findAll(em, Employee.class).size();
 
@@ -467,7 +520,7 @@ public class EmployeeResourceIT extends PersonIT {
         int databaseSizeBeforeUpdate = TestUtil.findAll(em, Employee.class).size();
 
         // Update the Employee
-        Employee updatedEmployee = updateEmployeeObj();
+        Employee updatedEmployee = updateEmployeeObj(null);
 
         EmployeeDTO employeeDTO = mapper.toDto(updatedEmployee);
 
@@ -503,8 +556,9 @@ public class EmployeeResourceIT extends PersonIT {
         assertThat(testEmployee.getIsGraduatedBySector()).isEqualTo(UPDATE_IS_GRADUATE_BY_SECTOR);
     }
 
-    private Employee updateEmployeeObj() {
-        Employee updatedEmployee = em.find(Employee.class, employee.getId());
+    private Employee updateEmployeeObj(UUID employeeId) {
+        UUID id = employeeId == null ? employee.getId(): employeeId;
+        Employee updatedEmployee = em.find(Employee.class, id);
         // Disconnect from session so that the updates on updatedEmployee are not directly saved in db
         em.detach(updatedEmployee);
 
@@ -551,7 +605,7 @@ public class EmployeeResourceIT extends PersonIT {
                 .andExpect(status().isCreated());
 
         // Update the Employee
-        Employee updatedEmployee = updateEmployeeObj();
+        Employee updatedEmployee = updateEmployeeObj(null);
 
         // to update employee belong to employeeDTO
         EmployeeDTO employeeDTO = mapper.toDto(updatedEmployee);
@@ -617,7 +671,7 @@ public class EmployeeResourceIT extends PersonIT {
                 .andExpect(status().isCreated());
 
         // Update the Employee
-        Employee updatedEmployee = updateEmployeeObj();
+        Employee updatedEmployee = updateEmployeeObj(null);
 
         // to update employee belong to employeeDTO
         EmployeeDTO employeeDTO = mapper.toDto(updatedEmployee);
