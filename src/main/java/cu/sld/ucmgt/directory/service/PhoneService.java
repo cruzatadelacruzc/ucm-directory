@@ -1,5 +1,6 @@
 package cu.sld.ucmgt.directory.service;
 
+import cu.sld.ucmgt.directory.domain.Employee;
 import cu.sld.ucmgt.directory.domain.Phone;
 import cu.sld.ucmgt.directory.domain.elasticsearch.PhoneIndex;
 import cu.sld.ucmgt.directory.event.UpdatedEmployeeIndexEvent;
@@ -10,6 +11,9 @@ import cu.sld.ucmgt.directory.repository.search.PhoneSearchRepository;
 import cu.sld.ucmgt.directory.service.dto.PhoneDTO;
 import cu.sld.ucmgt.directory.service.mapper.PhoneIndexMapper;
 import cu.sld.ucmgt.directory.service.mapper.PhoneMapper;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.ElasticsearchException;
@@ -19,6 +23,7 @@ import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptType;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -42,6 +47,7 @@ public class PhoneService {
     private final EmployeeRepository employeeRepository;
     private final PhoneSearchRepository searchRepository;
     private final WorkPlaceRepository workPlaceRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
 
     /**
@@ -73,6 +79,12 @@ public class PhoneService {
         Phone phone = save(phoneDTO);
         PhoneIndex phoneIndex = phoneIndexMapper.toIndex(phone);
         searchRepository.save(phoneIndex);
+        Map<String, Object> phoneIndexMap = createPhoneIndexToPhoneIndexMap(phoneIndex);
+        final SavedPhoneIndexEvent indexEvent = SavedPhoneIndexEvent.builder()
+                .phoneId(null)
+                .phoneIndexMap(phoneIndexMap)
+                .build();
+        eventPublisher.publishEvent(indexEvent);
         return mapper.toDto(phone);
     }
 
@@ -87,24 +99,36 @@ public class PhoneService {
         Phone phone = save(phoneDTO);
         PhoneIndex phoneIndex = phoneIndexMapper.toIndex(phone);
         searchRepository.save(phoneIndex);
-        try {
-            // updating the workplace belonging to phones and employees
-            Map<String, Object> params = new HashMap<>();
-            params.put("number", phoneIndex.getNumber());
-            params.put("description", phoneIndex.getDescription());
-            String updateCode = "def targets = ctx._source.phones.findAll(phone -> " +
-                    "phone.id == \"" + phoneIndex.getId().toString() + "\" ); " +
-                    "for (phone in targets) { for (entry in params.entrySet()) { if (entry.getKey() != \"ctx\") {" +
-                    "phone[entry.getKey()] = entry.getValue() }}}";
-            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("workplaces")
-                    .setRefresh(true)
-                    .setAbortOnVersionConflict(true)
-                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, params));
-            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
-        } catch (ElasticsearchException | IOException e) {
-            e.printStackTrace();
-        }
+        Map<String, Object> phoneIndexMap = createPhoneIndexToPhoneIndexMap(phoneIndex);
+        final SavedPhoneIndexEvent indexEvent = SavedPhoneIndexEvent.builder()
+                .phoneIndexMap(phoneIndexMap)
+                .phoneId(phoneIndex.getId())
+                .build();
+        eventPublisher.publishEvent(indexEvent);
         return mapper.toDto(phone);
+    }
+
+    /**
+     * Create a map of {@link PhoneIndex} instance
+     *
+     * @param phoneIndex {@link PhoneIndex} instance
+     * @return phoneMap
+     */
+    private Map<String, Object> createPhoneIndexToPhoneIndexMap(PhoneIndex phoneIndex){
+        Map<String, Object> phoneMap = new HashMap<>();
+        phoneMap.put("number", phoneIndex.getNumber());
+        phoneMap.put("id", phoneIndex.getId().toString());
+        phoneMap.put("description", phoneIndex.getDescription());
+        phoneMap.put("workPlace", null);
+        if (phoneIndex.getWorkPlace() != null){
+            Map<String, Object> workPlaceMap = new HashMap<>();
+            workPlaceMap.put("name", phoneIndex.getWorkPlace().getName());
+            workPlaceMap.put("email", phoneIndex.getWorkPlace().getEmail());
+            workPlaceMap.put("id", phoneIndex.getWorkPlace().getId().toString());
+            workPlaceMap.put("description", phoneIndex.getWorkPlace().getDescription());
+            phoneMap.put("workPlace", workPlaceMap);
+        }
+        return phoneMap;
     }
 
     @EventListener
@@ -170,5 +194,14 @@ public class PhoneService {
         }
     }
 
-
+    /**
+     *  Class to register a saved {@link PhoneIndex} as event
+     */
+    @Data
+    @Builder
+    @AllArgsConstructor
+    public static class SavedPhoneIndexEvent {
+        UUID phoneId;
+        Map<String,Object> phoneIndexMap;
+    }
 }

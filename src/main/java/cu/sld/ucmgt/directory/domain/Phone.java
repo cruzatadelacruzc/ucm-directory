@@ -25,7 +25,6 @@ public class Phone extends AbstractAuditingEntity implements Serializable {
     private UUID id;
 
     @Min(value = 1)
-
     private Integer number;
 
     private Boolean active;

@@ -28,6 +28,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
@@ -84,6 +85,8 @@ public class PhoneResourceIT {
     @Autowired
     private WorkPlaceSearchRepository workPlaceSearchRepository;
 
+    private static final String ENDPOINT_RESPONSE_PARAMETERS_KEY = "X-directoryApp-params";
+
     @Autowired
     private MockMvc restMockMvc;
 
@@ -103,6 +106,8 @@ public class PhoneResourceIT {
     public void createPhoneWithWorkPlace() throws Exception {
         //Initialize database
         int databaseSizeBeforeCreate = repository.findAll().size();
+        // Clear PhoneIndex and WorkPlaceIndex indices
+        searchRepository.deleteAll();
 
         WorkPlace workPlace = getWorkPlaceWithPhones(Collections.emptySet());
         em.persist(workPlace);
@@ -118,9 +123,131 @@ public class PhoneResourceIT {
         List<Phone> phones = repository.findAll();
         assertThat(phones).hasSize(databaseSizeBeforeCreate + 1);
         Phone testPhone = phones.get(phones.size() - 1);
+        testPhoneIsCreated(testPhone);
+        assertThat(testPhone.getWorkPlace().getId()).isEqualTo(workPlace.getId());
+
+        Iterable<PhoneIndex> phoneIndexIterable = searchRepository.findAll();
+        PhoneIndex phoneIndex = phoneIndexIterable.iterator().next();
+        testPhoneIndexIsCreated(phoneIndex);
+    }
+
+    @Test
+    @Transactional
+    public void createPhoneAndUpdateWorkPlaceIndex() throws Exception {
+        // Clear PhoneIndex and WorkPlaceIndex indices
+        searchRepository.deleteAll();
+        workPlaceSearchRepository.deleteAll();
+
+        WorkPlace workPlace = getWorkPlaceWithPhones(Collections.emptySet());
+        WorkPlaceDTO workPlaceDTO = workPlaceMapper.toDto(workPlace);
+        MvcResult resultWorkPlace = restMockMvc.perform(post("/api/workplaces").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(workPlaceDTO)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String workPlaceId = resultWorkPlace.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        assertThat(workPlaceId).isNotNull();
+
+        int databaseSizeBeforeCreate = TestUtil.findAll(em, Phone.class).size();
+        PhoneDTO phoneDTO = mapper.toDto(phone);
+        phoneDTO.setWorkPlaceId(UUID.fromString(workPlaceId));
+        restMockMvc.perform(post("/api/phones").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(phoneDTO)))
+                .andExpect(status().isCreated());
+
+        // Validate the Phone in the database
+        List<Phone> phones = repository.findAll();
+        assertThat(phones).hasSize(databaseSizeBeforeCreate + 1);
+        Phone testPhone = phones.get(phones.size() - 1);
+        testPhoneIsCreated(testPhone);
+        assertThat(testPhone.getWorkPlace().getId()).isEqualTo(UUID.fromString(workPlaceId));
+
+        Iterable<PhoneIndex> phoneIndexIterable = searchRepository.findAll();
+        PhoneIndex phoneIndex = phoneIndexIterable.iterator().next();
+        testPhoneIndexIsCreated(phoneIndex);
+
+        Iterable<WorkPlaceIndex> workPlaceIndices = workPlaceSearchRepository.findAll();
+        PhoneIndex testPhoneIndexWorkPlaceIndex = workPlaceIndices.iterator().next().getPhones().iterator().next();
+        testPhoneIndexIsCreated(testPhoneIndexWorkPlaceIndex);
+    }
+
+    @Test
+    @Transactional
+    public void updatePhoneAndUpdateWorkPlaceIndex() throws Exception {
+        // Clear PhoneIndex and WorkPlaceIndex indices
+        searchRepository.deleteAll();
+        workPlaceSearchRepository.deleteAll();
+
+        WorkPlace workPlace = getWorkPlaceWithPhones(Collections.emptySet());
+        WorkPlaceDTO workPlaceDTO = workPlaceMapper.toDto(workPlace);
+        MvcResult resultWorkPlace = restMockMvc.perform(post("/api/workplaces").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(workPlaceDTO)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String workPlaceId = resultWorkPlace.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        assertThat(workPlaceId).isNotNull();
+
+        int databaseSizeBeforeCreate = TestUtil.findAll(em, Phone.class).size();
+        PhoneDTO phoneDTO = mapper.toDto(phone);
+        phoneDTO.setWorkPlaceId(UUID.fromString(workPlaceId));
+        MvcResult resultPhone = restMockMvc.perform(post("/api/phones").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(phoneDTO)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String phoneId = resultPhone.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        assertThat(phoneId).isNotNull();
+
+        // Update the Phone
+        Phone updatedPhone = getUpdatedPhone(UUID.fromString(phoneId));
+        int databaseSizeBeforeUpdate = TestUtil.findAll(em, Phone.class).size();
+        phoneDTO = mapper.toDto(updatedPhone);
+        restMockMvc.perform(put("/api/phones").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(phoneDTO)))
+                .andExpect(status().isOk());
+
+        // Validate the Phone in the database
+        List<Phone> phones = repository.findAll();
+        assertThat(phones).hasSize(databaseSizeBeforeCreate + 1);
+        assertThat(phones).hasSize(databaseSizeBeforeUpdate);
+        Phone testPhone = phones.get(phones.size() - 1);
+        testPhoneIsUpdated(testPhone);
+
+        Iterable<PhoneIndex> phoneIndexIterable = searchRepository.findAll();
+        PhoneIndex phoneIndex = phoneIndexIterable.iterator().next();
+        testPhoneIndexIsUpdated(phoneIndex);
+
+        Iterable<WorkPlaceIndex> workPlaceIndices = workPlaceSearchRepository.findAll();
+        PhoneIndex testPhoneIndexWorkPlaceIndex = workPlaceIndices.iterator().next().getPhones().iterator().next();
+        testPhoneIndexIsUpdated(testPhoneIndexWorkPlaceIndex);
+    }
+
+    private void testPhoneIsUpdated(Phone testPhone) {
+        assertThat(testPhone.getNumber()).isEqualTo(UPDATE_NUMBER);
+        assertThat(testPhone.getActive()).isEqualTo(UPDATE_ACTIVE);
+        assertThat(testPhone.getDescription()).isEqualTo(UPDATE_DESCRIPTION);
+    }
+
+    private void testPhoneIndexIsUpdated(PhoneIndex phoneIndex) {
+        assertThat(phoneIndex.getNumber()).isEqualTo(UPDATE_NUMBER);
+        assertThat(phoneIndex.getDescription()).isEqualTo(UPDATE_DESCRIPTION);
+    }
+
+    private void testPhoneIsCreated(Phone testPhone) {
         assertThat(testPhone.getNumber()).isEqualTo(DEFAULT_NUMBER);
         assertThat(testPhone.getActive()).isEqualTo(DEFAULT_ACTIVE);
         assertThat(testPhone.getDescription()).isEqualTo(DEFAULT_DESCRIPTION);
+    }
+
+    private void testPhoneIndexIsCreated(PhoneIndex phoneIndex) {
+        assertThat(phoneIndex.getNumber()).isEqualTo(DEFAULT_NUMBER);
+        assertThat(phoneIndex.getDescription()).isEqualTo(DEFAULT_DESCRIPTION);
     }
 
     private WorkPlace getWorkPlaceWithPhones(Set<Phone> set) {
@@ -153,9 +280,7 @@ public class PhoneResourceIT {
         List<Phone> phones = repository.findAll();
         assertThat(phones).hasSize(databaseSizeBeforeCreate + 1);
         Phone testPhone = phones.get(phones.size() - 1);
-        assertThat(testPhone.getNumber()).isEqualTo(DEFAULT_NUMBER);
-        assertThat(testPhone.getActive()).isEqualTo(DEFAULT_ACTIVE);
-        assertThat(testPhone.getDescription()).isEqualTo(DEFAULT_DESCRIPTION);
+        testPhoneIsCreated(testPhone);
     }
 
     private Employee getEmployee() {
@@ -379,13 +504,7 @@ public class PhoneResourceIT {
         long indexSizeBeforeUpdate = searchRepository.count();
 
         // Update the Phone
-        Phone updatedPhone = em.find(Phone.class, phone.getId());
-        // Disconnect from session so that the updates on updatePhoneAndPhoneIndex are not directly saved in db
-        em.detach(updatedPhone);
-
-        updatedPhone.setNumber(UPDATE_NUMBER);
-        updatedPhone.setActive(UPDATE_ACTIVE);
-        updatedPhone.setDescription(UPDATE_DESCRIPTION);
+        Phone updatedPhone = getUpdatedPhone(null);
 
         PhoneDTO phoneDTO = mapper.toDto(updatedPhone);
         restMockMvc.perform(put("/api/phones")
@@ -397,14 +516,21 @@ public class PhoneResourceIT {
         List<Phone> phones = repository.findAll();
         assertThat(phones).hasSize(databaseSizeBeforeUpdate);
         Phone testPhone = phones.get(phones.size() - 1);
-        assertThat(testPhone.getNumber()).isEqualTo(UPDATE_NUMBER);
-        assertThat(testPhone.getActive()).isEqualTo(UPDATE_ACTIVE);
-        assertThat(testPhone.getDescription()).isEqualTo(UPDATE_DESCRIPTION);
+        testPhoneIsUpdated(testPhone);
         Iterable<PhoneIndex> phoneIndexIterable = searchRepository.findAll();
         assertThat(phoneIndexIterable).hasSize((int) indexSizeBeforeUpdate);
         PhoneIndex testPhoneIndex = phoneIndexIterable.iterator().next();
-        assertThat(testPhoneIndex.getNumber()).isEqualTo(UPDATE_NUMBER);
-        assertThat(testPhoneIndex.getDescription()).isEqualTo(UPDATE_DESCRIPTION);
+        testPhoneIndexIsUpdated(testPhoneIndex);
+    }
+
+    private Phone getUpdatedPhone(UUID phoneId) {
+        UUID id = phoneId == null ? phone.getId(): phoneId;
+        Phone updatedPhone = em.find(Phone.class, id);
+
+        updatedPhone.setNumber(UPDATE_NUMBER);
+        updatedPhone.setActive(UPDATE_ACTIVE);
+        updatedPhone.setDescription(UPDATE_DESCRIPTION);
+        return updatedPhone;
     }
 
     @Test

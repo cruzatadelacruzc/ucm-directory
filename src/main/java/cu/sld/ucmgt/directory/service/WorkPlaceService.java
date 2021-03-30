@@ -3,7 +3,6 @@ package cu.sld.ucmgt.directory.service;
 import cu.sld.ucmgt.directory.domain.Employee;
 import cu.sld.ucmgt.directory.domain.Phone;
 import cu.sld.ucmgt.directory.domain.WorkPlace;
-import cu.sld.ucmgt.directory.domain.elasticsearch.EmployeeIndex;
 import cu.sld.ucmgt.directory.domain.elasticsearch.WorkPlaceIndex;
 import cu.sld.ucmgt.directory.event.UpdatedEmployeeIndexEvent;
 import cu.sld.ucmgt.directory.repository.EmployeeRepository;
@@ -15,10 +14,10 @@ import cu.sld.ucmgt.directory.service.mapper.WorkPlaceIndexMapper;
 import cu.sld.ucmgt.directory.service.mapper.WorkPlaceMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.DeleteByQueryRequest;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.script.Script;
@@ -46,6 +45,7 @@ public class WorkPlaceService {
     private final EmployeeRepository employeeRepository;
     private final WorkPlaceIndexMapper workPlaceIndexMapper;
     private final WorkPlaceSearchRepository searchRepository;
+    private static final String INDEX_NAME = "workplaces";
 
     /**
      * Save a workplace.
@@ -131,12 +131,33 @@ public class WorkPlaceService {
                         "for (employee in targets) { for (entry in params.entrySet()) { if (entry.getKey() != \"ctx\") {" +
                         "employee[entry.getKey()] = entry.getValue() }}}";
             }
-            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("workplaces")
+            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(INDEX_NAME)
                     .setRefresh(true)
                     .setAbortOnVersionConflict(true)
                     .setScript(new Script(ScriptType.INLINE, "painless", updateCode, employeeIndexEvent.getParams()));
             highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
         } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @EventListener
+    public void savePhoneInWorkPlaceIndex(PhoneService.SavedPhoneIndexEvent phoneIndexEvent) {
+        try {
+            // updating the phone belonging to workplaces
+            String updateCode = "params.remove(\"ctx\");ctx._source.phones.add(params)";
+            if (phoneIndexEvent.getPhoneId() != null) {
+                updateCode = "def targets = ctx._source.phones.findAll(phone -> " +
+                        "phone.id == \"" + phoneIndexEvent.getPhoneId() + "\" ); " +
+                        "for (phone in targets) { for (entry in params.entrySet()) { if (entry.getKey() != \"ctx\") {" +
+                        "phone[entry.getKey()] = entry.getValue() }}}";
+            }
+            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(INDEX_NAME)
+             .setRefresh(true)
+             .setAbortOnVersionConflict(true)
+             .setScript(new Script(ScriptType.INLINE, "painless", updateCode, phoneIndexEvent.getPhoneIndexMap()));
+            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+        } catch (ElasticsearchException | IOException e) {
             e.printStackTrace();
         }
     }
