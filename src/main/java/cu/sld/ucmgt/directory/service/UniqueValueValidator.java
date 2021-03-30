@@ -64,7 +64,10 @@ public class UniqueValueValidator implements ConstraintValidator<UniqueValue, Ob
                 // check if given includeFields exist in entityClass and create predicates
                 for (Field includeField : includeFieldsList) {
                     for (Field fieldEntityClass : entityClass.getDeclaredFields()) {
-                        if (includeField.getName().equals(fieldEntityClass.getName()) && includeField.getType().equals(fieldEntityClass.getType())) {
+                        if (includeField.getName().equals(fieldEntityClass.getName()) &&
+                            includeField.getType().equals(fieldEntityClass.getType()) &&
+                            includeField.get(currentClass) != null
+                        ) {
                             predicates.add(cb.notEqual(root.get(fieldEntityClass.getName()), includeField.get(currentClass)));
                         }
                     }
