@@ -12,7 +12,7 @@ import java.util.UUID;
  * A DTO for the {@link cu.sld.ucmgt.directory.domain.Phone} entity.
  */
 @Data
-@UniqueValue(entityClass = Phone.class, columnNames = "number")
+@UniqueValue(entityClass = Phone.class, columnNames = "number", includeFields = "id")
 public class PhoneDTO implements Serializable {
 
     private UUID id;

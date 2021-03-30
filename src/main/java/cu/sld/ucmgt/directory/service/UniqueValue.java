@@ -14,6 +14,8 @@ public @interface UniqueValue {
 
     Class<?> entityClass();
 
+    String[] includeFields() default {};
+
     String message() default "{validation.unique.message}";
 
     Class<?>[] groups() default {};
