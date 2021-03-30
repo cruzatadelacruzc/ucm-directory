@@ -512,18 +512,23 @@ public class EmployeeResourceIT extends PersonIT {
 
     @Test
     @Transactional
-    public void updateEmployee() throws Exception {
-        // Initialize the database
-        em.persist(employee);
-        em.flush();
+    public void updateEmployeeAndEmployeeIndex() throws Exception {
 
+        EmployeeDTO employeeDTO = mapper.toDto(employee);
+
+        MvcResult resultEmployee = restMockMvc.perform(post("/api/employees").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(employeeDTO)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String employeeId = resultEmployee.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        assertThat(employeeId).isNotNull();
         int databaseSizeBeforeUpdate = TestUtil.findAll(em, Employee.class).size();
 
         // Update the Employee
-        Employee updatedEmployee = updateEmployeeObj(null);
-
-        EmployeeDTO employeeDTO = mapper.toDto(updatedEmployee);
-
+        Employee updatedEmployee = updateEmployeeObj(UUID.fromString(employeeId));
+        employeeDTO = mapper.toDto(updatedEmployee);
         restMockMvc.perform(put("/api/employees").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(TestUtil.convertObjectToJsonBytes(employeeDTO)))
@@ -534,6 +539,11 @@ public class EmployeeResourceIT extends PersonIT {
         assertThat(employees).hasSize(databaseSizeBeforeUpdate);
         Employee testEmployee = employees.get(employees.size() - 1);
         testUpdatedEmployee(testEmployee);
+
+        Iterable<EmployeeIndex> employeeIndexList = employeeSearchRepository.findAll();
+        assertThat(employeeIndexList).hasSize(databaseSizeBeforeUpdate);
+        EmployeeIndex testEmployeeIndex = employeeIndexList.iterator().next();
+        testEmployeeIndexIsUpdated(testEmployeeIndex);
     }
 
     private void testUpdatedEmployee(Employee testEmployee) {
