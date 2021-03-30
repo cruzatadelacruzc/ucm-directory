@@ -122,13 +122,6 @@ public class EmployeeResourceIT extends PersonIT {
         employee.setIsGraduatedBySector(DEFAULT_IS_GRADUATE_BY_SECTOR);
     }
 
-    @AfterEach
-    public void after() {
-        phoneSearchRepository.deleteAll();
-        employeeSearchRepository.deleteAll();
-        workPlaceSearchRepository.deleteAll();
-    }
-
     @Test
     @Transactional
     public void createEmployee() throws Exception {
