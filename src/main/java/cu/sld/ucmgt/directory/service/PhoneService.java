@@ -15,7 +15,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -181,18 +180,17 @@ public class PhoneService {
      */
     public void deletePhone(Integer number) {
         log.debug("Request to delete Phone : {}", number);
-        repository.deletePhoneByNumber(number);
-        searchRepository.deletePhoneIndexByNumber(number);
-        try {
-            String updateCode = "ctx._source.phones.removeIf(phone -> phone.number == " + number + ")";
-            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("workplaces")
-                    .setRefresh(true)
-                    .setAbortOnVersionConflict(true)
-                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, Collections.emptyMap()));
-            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
-        } catch (ElasticsearchException | IOException exception) {
-            exception.printStackTrace();
-        }
+        repository.findPhoneByNumber(number).ifPresent(phone -> {
+            repository.delete(phone);
+            PhoneIndex phoneIndex  = searchRepository.findPhoneIndexByNumber(number)
+                    .orElseThrow(() -> new NoSuchElementException("PhoneIndex with number: " + number + " not was found"));
+                searchRepository.delete(phoneIndex);
+                final RemovedPhoneIndexEvent removedPhoneIndexEvent = RemovedPhoneIndexEvent.builder()
+                        .removedPhoneIndex(phoneIndex)
+                        .removedPhoneIndexId(phoneIndex.getId())
+                        .build();
+                eventPublisher.publishEvent(removedPhoneIndexEvent);
+        });
     }
 
     /**

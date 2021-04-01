@@ -456,23 +456,35 @@ public class PhoneResourceIT {
     public void deletePhoneAndPhoneIndexInsideWorkPlace() throws Exception {
         // clear indices
         workPlaceSearchRepository.deleteAll();
-        // Initialize the database
+        searchRepository.deleteAll();
+
         Phone phone2 = new Phone();
         phone2.setActive(true);
         phone2.setNumber(21319094);
         phone2.setDescription("Carlos Manuel's Phone");
-        repository.saveAndFlush(phone);
-        repository.saveAndFlush(phone2);
-        int databaseSizeBeforeCreate = repository.findAll().size();
 
-        Set<Phone> phoneSet = new HashSet<>();
-        phoneSet.add(phone);
-        phoneSet.add(phone2);
-        WorkPlace phoneWorkPlace = getWorkPlaceWithPhones(phoneSet);
+        WorkPlace phoneWorkPlace = getWorkPlaceWithPhones(Collections.emptySet());
         WorkPlaceDTO workPlaceDTO = workPlaceMapper.toDto(phoneWorkPlace);
-        restMockMvc.perform(post("/api/workplaces").with(csrf())
+        MvcResult resultWorkplace = restMockMvc.perform(post("/api/workplaces").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(TestUtil.convertObjectToJsonBytes(workPlaceDTO)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String workplaceId = resultWorkplace.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        assertThat(workplaceId).isNotNull();
+
+        PhoneDTO phoneDTO = mapper.toDto(phone);
+        phoneDTO.setWorkPlaceId(UUID.fromString(workplaceId));
+        restMockMvc.perform(post("/api/phones").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(phoneDTO)))
+                .andExpect(status().isCreated());
+
+        PhoneDTO phone2DTO = mapper.toDto(phone2);
+        phone2DTO.setWorkPlaceId(UUID.fromString(workplaceId));
+        restMockMvc.perform(post("/api/phones").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(phone2DTO)))
                 .andExpect(status().isCreated());
 
         // Delete the phone
@@ -482,10 +494,12 @@ public class PhoneResourceIT {
 
         // Validate the database contains one less item
         List<Phone> phones = repository.findAll();
-        assertThat(phones).hasSize(databaseSizeBeforeCreate - 1);
+        assertThat(phones).hasSize(1);
+
         Iterable<WorkPlaceIndex> workPlaceIndexIterable = workPlaceSearchRepository.findAll();
         WorkPlaceIndex testWorkPaceIndex = workPlaceIndexIterable.iterator().next();
         assertThat(testWorkPaceIndex.getPhones()).hasSize(1);
+        assertThat(testWorkPaceIndex.getPhones().iterator().next().getNumber()).isEqualTo(phone2.getNumber());
     }
 
     @Test
