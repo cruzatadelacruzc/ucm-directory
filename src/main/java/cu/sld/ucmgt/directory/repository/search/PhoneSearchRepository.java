@@ -10,7 +10,7 @@ import java.util.UUID;
 /**
  * Spring Data Elasticsearch repository for the {@link PhoneIndex} entity.
  */
-public interface PhoneSearchRepository extends ElasticsearchRepository<PhoneIndex, Integer> {
+public interface PhoneSearchRepository extends ElasticsearchRepository<PhoneIndex, UUID> {
 
     List<PhoneIndex> findAllByWorkPlace_Id(UUID uuid);
 

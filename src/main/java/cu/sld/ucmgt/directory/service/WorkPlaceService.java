@@ -143,6 +143,7 @@ public class WorkPlaceService {
 
     @EventListener
     public void savePhoneInWorkPlaceIndex(PhoneService.SavedPhoneIndexEvent phoneIndexEvent) {
+        log.debug("Listening SavedPhoneIndexEvent event with PhoneIndex ID: {}", phoneIndexEvent.getPhoneId());
         try {
             // updating the phone belonging to workplaces
             String updateCode = "params.remove(\"ctx\");ctx._source.phones.add(params)";
@@ -159,6 +160,21 @@ public class WorkPlaceService {
             highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
         } catch (ElasticsearchException | IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    @EventListener
+    public void removePhoneIndexInWorkPlaceIndex(PhoneService.RemovedPhoneIndexEvent event) {
+        log.debug("Listening RemovedPhoneIndexEvent event with PhoneIndex ID: {}", event.getRemovedPhoneIndexId());
+        try {
+            String updateCode = "ctx._source.phones.removeIf(phone -> phone.id == \"" + event.getRemovedPhoneIndexId().toString() + "\")";
+            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("workplaces")
+                    .setRefresh(true)
+                    .setAbortOnVersionConflict(true)
+                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, Collections.emptyMap()));
+            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+        } catch (ElasticsearchException | IOException exception) {
+            exception.printStackTrace();
         }
     }
 

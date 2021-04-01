@@ -6,6 +6,7 @@ import cu.sld.ucmgt.directory.web.rest.errors.BadRequestAlertException;
 import cu.sld.ucmgt.directory.web.rest.util.HeaderUtil;
 import cu.sld.ucmgt.directory.web.rest.util.PaginationUtil;
 import cu.sld.ucmgt.directory.web.rest.util.ResponseUtil;
+import cu.sld.ucmgt.directory.web.rest.vm.ChangeStatusVM;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -137,5 +138,18 @@ public class PhoneResource {
                         phoneSaved.getId().toString()))
                 .body(phoneSaved);
 
+    }
+
+    /**
+     * {@code PUT  /phones/status} : Change status an existing phone.
+     *
+     * @param changeStatusVM the information to change status.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body boolean result
+     */
+    @PutMapping("/phones/status")
+    public ResponseEntity<Boolean> updateStatusPhone(@Valid @RequestBody ChangeStatusVM changeStatusVM) {
+        log.debug("REST request to update status Phone : {}", changeStatusVM);
+        Boolean result = service.changeStatus(changeStatusVM.getId(), changeStatusVM.getStatus());
+        return ResponseEntity.ok().body(result);
     }
 }

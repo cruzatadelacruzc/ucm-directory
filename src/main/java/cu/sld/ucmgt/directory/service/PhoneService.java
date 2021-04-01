@@ -1,6 +1,5 @@
 package cu.sld.ucmgt.directory.service;
 
-import cu.sld.ucmgt.directory.domain.Employee;
 import cu.sld.ucmgt.directory.domain.Phone;
 import cu.sld.ucmgt.directory.domain.elasticsearch.PhoneIndex;
 import cu.sld.ucmgt.directory.event.UpdatedEmployeeIndexEvent;
@@ -76,6 +75,8 @@ public class PhoneService {
      */
     public PhoneDTO create(PhoneDTO phoneDTO) {
         log.debug("Request to create Phone : {}", phoneDTO);
+        // always create enabled phone
+        phoneDTO.setActive(true);
         Phone phone = save(phoneDTO);
         PhoneIndex phoneIndex = phoneIndexMapper.toIndex(phone);
         searchRepository.save(phoneIndex);
@@ -95,7 +96,7 @@ public class PhoneService {
      * @return the persisted entity.
      */
     public PhoneDTO update(PhoneDTO phoneDTO) {
-        log.debug("Request to create Phone : {}", phoneDTO);
+        log.debug("Request to update Phone : {}", phoneDTO);
         Phone phone = save(phoneDTO);
         PhoneIndex phoneIndex = phoneIndexMapper.toIndex(phone);
         searchRepository.save(phoneIndex);
@@ -195,6 +196,45 @@ public class PhoneService {
     }
 
     /**
+     * Change status for active or disable phone
+     *
+     * @param id          phone identifier
+     * @param status true or false
+     * @return true if changed status or false otherwise
+     */
+    public Boolean changeStatus(UUID id, Boolean status) {
+        log.debug("Request to change phone status to {} by ID {}", status, id);
+        Optional<Phone> phoneToUpdate = repository.findById(id);
+        if (phoneToUpdate.isPresent()) {
+            phoneToUpdate.get().setActive(status);
+            repository.save(phoneToUpdate.get());
+            if (status) {
+                // PhoneIndex must to be created because when Phone was disabled, PhoneIndex was removed
+                PhoneIndex phoneIndexToUpdate = phoneIndexMapper.toIndex(phoneToUpdate.get());
+                searchRepository.save(phoneIndexToUpdate);
+                Map<String, Object> phoneIndexMap = createPhoneIndexToPhoneIndexMap(phoneIndexToUpdate);
+                final SavedPhoneIndexEvent savedPhoneIndexEvent = SavedPhoneIndexEvent.builder()
+                        .phoneId(null)
+                        .phoneIndexMap(phoneIndexMap)
+                        .build();
+                eventPublisher.publishEvent(savedPhoneIndexEvent);
+            } else {
+                // PhoneIndex must to be removed because Phone was disabled
+                searchRepository.findPhoneIndexByNumber(phoneToUpdate.get().getNumber()).ifPresent(phoneIndexToDisable -> {
+                    searchRepository.delete(phoneIndexToDisable);
+                    final RemovedPhoneIndexEvent removedPhoneIndexEvent = RemovedPhoneIndexEvent.builder()
+                            .removedPhoneIndex(phoneIndexToDisable)
+                            .removedPhoneIndexId(phoneIndexToDisable.getId())
+                            .build();
+                    eventPublisher.publishEvent(removedPhoneIndexEvent);
+                });
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /**
      *  Class to register a saved {@link PhoneIndex} as event
      */
     @Data
@@ -204,4 +244,17 @@ public class PhoneService {
         UUID phoneId;
         Map<String,Object> phoneIndexMap;
     }
+
+    /**
+     *  Class to register a removed {@link PhoneIndex} as event
+     */
+    @Data
+    @Builder
+    @AllArgsConstructor
+    public static class RemovedPhoneIndexEvent {
+        UUID removedPhoneIndexId;
+        PhoneIndex removedPhoneIndex;
+
+    }
+
 }
