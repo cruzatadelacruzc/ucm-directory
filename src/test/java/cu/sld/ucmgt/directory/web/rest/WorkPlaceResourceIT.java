@@ -31,6 +31,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
@@ -87,6 +88,8 @@ public class WorkPlaceResourceIT {
 
     @Autowired
     private EmployeeSearchRepository employeeSearchRepository;
+
+    private static final String ENDPOINT_RESPONSE_PARAMETERS_KEY = "X-directoryApp-params";
 
     @Autowired
     private WorkPlaceRepository repository;
@@ -189,26 +192,45 @@ public class WorkPlaceResourceIT {
 
     @Test
     @Transactional
-    public void updateWorkPlace() throws Exception {
-        // Initialize the database
-        repository.saveAndFlush(workPlace);
+    public void updateWorkPlaceAndWorkPlaceIndex() throws Exception {
+        // clear WorkPlaceIndex
+            searchRepository.deleteAll();
+        WorkPlaceDTO workPlaceDTO = mapper.toDto(workPlace);
+        MvcResult resultWorkplace = restMockMvc.perform(post("/api/workplaces").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(workPlaceDTO)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String workplaceId = resultWorkplace.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        assertThat(workplaceId).isNotNull();
+
         int databaseSizeBeforeUpdate = repository.findAll().size();
-
-        WorkPlace updatedWorkPlace = updateWorkPlaceObj(workPlace);
-
-        WorkPlaceDTO workPlaceDTO = mapper.toDto(updatedWorkPlace);
+        WorkPlace updatedWorkPlace =  repository.findById(UUID.fromString(workplaceId)).get();
+        updatedWorkPlace.setActive(true);
+        updatedWorkPlace.setName(UPDATE_NAME);
+        updatedWorkPlace.setEmail(UPDATE_EMAIL);
+        updatedWorkPlace.setDescription(UPDATE_DESCRIPTION);
+        workPlaceDTO = mapper.toDto(updatedWorkPlace);
         restMockMvc.perform(put("/api/workplaces").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(TestUtil.convertObjectToJsonBytes(workPlaceDTO)))
                 .andExpect(status().isOk());
+
         // Validate the Employee in the database
         List<WorkPlace> workPlaceList = repository.findAll();
         assertThat(workPlaceList).hasSize(databaseSizeBeforeUpdate);
         WorkPlace testWorkPlace = workPlaceList.get(workPlaceList.size() - 1);
         assertThat(testWorkPlace.getName()).isEqualTo(UPDATE_NAME);
         assertThat(testWorkPlace.getEmail()).isEqualTo(UPDATE_EMAIL);
-        assertThat(testWorkPlace.getActive()).isEqualTo(UPDATE_ACTIVE);
+        assertThat(testWorkPlace.getActive()).isEqualTo(true);
         assertThat(testWorkPlace.getDescription()).isEqualTo(UPDATE_DESCRIPTION);
+
+        Iterable<WorkPlaceIndex> workPlaceIndexIterable = searchRepository.findAll();
+        assertThat(workPlaceIndexIterable).hasSize(databaseSizeBeforeUpdate);
+        WorkPlaceIndex testWorkPlaceIndex = workPlaceIndexIterable.iterator().next();
+        assertThat(testWorkPlaceIndex.getName()).isEqualTo(UPDATE_NAME);
+        assertThat(testWorkPlaceIndex.getEmail()).isEqualTo(UPDATE_EMAIL);
+        assertThat(testWorkPlaceIndex.getDescription()).isEqualTo(UPDATE_DESCRIPTION);
     }
 
     private WorkPlace updateWorkPlaceObj(WorkPlace workPlace) {

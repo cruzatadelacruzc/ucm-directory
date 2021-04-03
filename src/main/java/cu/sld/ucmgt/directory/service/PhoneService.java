@@ -1,11 +1,13 @@
 package cu.sld.ucmgt.directory.service;
 
 import cu.sld.ucmgt.directory.domain.Phone;
+import cu.sld.ucmgt.directory.domain.elasticsearch.EmployeeIndex;
 import cu.sld.ucmgt.directory.domain.elasticsearch.PhoneIndex;
 import cu.sld.ucmgt.directory.repository.EmployeeRepository;
 import cu.sld.ucmgt.directory.repository.PhoneRepository;
 import cu.sld.ucmgt.directory.repository.WorkPlaceRepository;
 import cu.sld.ucmgt.directory.repository.search.PhoneSearchRepository;
+import cu.sld.ucmgt.directory.service.WorkPlaceService.SavedWorkPlaceIndexEvent;
 import cu.sld.ucmgt.directory.service.dto.PhoneDTO;
 import cu.sld.ucmgt.directory.service.mapper.PhoneIndexMapper;
 import cu.sld.ucmgt.directory.service.mapper.PhoneMapper;
@@ -163,6 +165,28 @@ public class PhoneService {
             highLevelClient.deleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
         } catch (IOException exception) {
             exception.printStackTrace();
+        }
+    }
+
+    /**
+     * Listen {@link SavedWorkPlaceIndexEvent} event to update workplace inside {@link EmployeeIndex} index
+     * @param workPlaceIndexEvent information about event
+     */
+    @EventListener
+    public void updateWorkPlaceInEmployeeIndex(SavedWorkPlaceIndexEvent workPlaceIndexEvent) {
+        log.debug("Listening SavedWorkPlaceIndexEvent event to update WorkPlace in PhoneIndex with WorkPlaceIndex ID: {}",
+                workPlaceIndexEvent.getWorkplaceId());
+        try {
+            String updateCode = "for (entry in params.entrySet()){if (entry.getKey() != \"ctx\") " +
+                    "{ctx._source.workPlace[entry.getKey()] = entry.getValue()}}";
+            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(INDEX_NAME)
+              .setRefresh(true)
+              .setAbortOnVersionConflict(true)
+              .setQuery(QueryBuilders.matchQuery("workPlace.id", workPlaceIndexEvent.getWorkplaceId().toString()))
+              .setScript(new Script(ScriptType.INLINE, "painless", updateCode, workPlaceIndexEvent.getWorkplaceMap()));
+            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 

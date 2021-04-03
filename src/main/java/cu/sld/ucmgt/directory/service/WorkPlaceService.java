@@ -19,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptType;
@@ -102,24 +101,30 @@ public class WorkPlaceService {
     public WorkPlaceDTO update(WorkPlaceDTO workPlaceDTO) {
         log.debug("Request to update WorkPlace : {}", workPlaceDTO);
         WorkPlace workPlace = save(workPlaceDTO);
-        try {
-            // updating the workplace belonging to phones and employees
-            Map<String, Object> params = new HashMap<>();
-            params.put("name", workPlaceDTO.getName());
-            params.put("email", workPlaceDTO.getEmail());
-            params.put("description", workPlaceDTO.getDescription());
-            String updateCode = "for (entry in params.entrySet()){if (entry.getKey() != \"ctx\") " +
-                    "{ctx._source.workPlace[entry.getKey()] = entry.getValue()}}";
-            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("phones", "employees")
-                    .setRefresh(true)
-                    .setAbortOnVersionConflict(true)
-                    .setQuery(QueryBuilders.matchQuery("workPlace.id", workPlace.getId().toString()))
-                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, params));
-            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        WorkPlaceIndex workPlaceIndex = workPlaceIndexMapper.toIndex(workPlace);
+        searchRepository.save(workPlaceIndex);
+        // updating the workplace belonging to phones and employees
+        Map<String, Object> workPlaceMap = mapWorkPlaceToWorkPlaceIndex(workPlaceIndex);
+        final SavedWorkPlaceIndexEvent savedWorkPlaceIndexEvent = SavedWorkPlaceIndexEvent.builder()
+                .workplaceId(workPlaceIndex.getId())
+                .workplaceMap(workPlaceMap)
+                .build();
+        eventPublisher.publishEvent(savedWorkPlaceIndexEvent);
         return mapper.toDto(workPlace);
+    }
+
+    /**
+     * Create a Map of {@link WorkPlaceIndex} instance
+     *
+     * @param workPlaceIndex {@link WorkPlaceIndex} instance
+     * @return employeeIndexMap
+     */
+    private Map<String, Object> mapWorkPlaceToWorkPlaceIndex(WorkPlaceIndex workPlaceIndex) {
+        Map<String, Object> workPlaceIndexMap = new HashMap<>();
+        workPlaceIndexMap.put("name", workPlaceIndex.getName());
+        workPlaceIndexMap.put("email", workPlaceIndex.getEmail());
+        workPlaceIndexMap.put("description", workPlaceIndex.getDescription());
+        return workPlaceIndexMap;
     }
 
     @EventListener
@@ -235,5 +240,16 @@ public class WorkPlaceService {
     public static class RemovedWorkPlaceIndexEvent {
         UUID removedWorkPlaceIndexId;
         WorkPlaceIndex removedWorkPlaceIndex;
+    }
+
+    /**
+     *  Class to register a saved {@link WorkPlaceIndex} as event
+     */
+    @Data
+    @Builder
+    @AllArgsConstructor
+    public static class SavedWorkPlaceIndexEvent{
+        private UUID workplaceId;
+        private Map<String,Object> workplaceMap;
     }
 }

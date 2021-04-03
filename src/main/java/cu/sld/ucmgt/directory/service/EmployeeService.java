@@ -6,6 +6,7 @@ import cu.sld.ucmgt.directory.repository.EmployeeRepository;
 import cu.sld.ucmgt.directory.repository.NomenclatureRepository;
 import cu.sld.ucmgt.directory.repository.WorkPlaceRepository;
 import cu.sld.ucmgt.directory.repository.search.EmployeeSearchRepository;
+import cu.sld.ucmgt.directory.service.WorkPlaceService.SavedWorkPlaceIndexEvent;
 import cu.sld.ucmgt.directory.service.dto.EmployeeDTO;
 import cu.sld.ucmgt.directory.service.mapper.EmployeeIndexMapper;
 import cu.sld.ucmgt.directory.service.mapper.EmployeeMapper;
@@ -184,6 +185,28 @@ public class EmployeeService {
         }
     }
 
+    /**
+     * Listen {@link SavedWorkPlaceIndexEvent} event to update workplace inside {@link EmployeeIndex} index
+     * @param workPlaceIndexEvent information about event
+     */
+    @EventListener
+    public void updateWorkPlaceInEmployeeIndex(SavedWorkPlaceIndexEvent workPlaceIndexEvent) {
+        log.debug("Listening SavedWorkPlaceIndexEvent event to update WorkPlace in EmployeeIndex with WorkPlaceIndex ID: {}",
+                workPlaceIndexEvent.getWorkplaceId());
+        try {
+            String updateCode = "for (entry in params.entrySet()){if (entry.getKey() != \"ctx\") " +
+                    "{ctx._source.workPlace[entry.getKey()] = entry.getValue()}}";
+            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(INDEX_NAME)
+              .setRefresh(true)
+              .setAbortOnVersionConflict(true)
+              .setQuery(QueryBuilders.matchQuery("workPlace.id", workPlaceIndexEvent.getWorkplaceId().toString()))
+              .setScript(new Script(ScriptType.INLINE, "painless", updateCode, workPlaceIndexEvent.getWorkplaceMap()));
+            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     /**
      * Get one employee by uid.
@@ -210,8 +233,8 @@ public class EmployeeService {
     }
 
     @EventListener
-    public void updateWorkPlaceInEmployeeIndex(WorkPlaceService.RemovedWorkPlaceIndexEvent workPlaceIndexEvent) {
-        log.debug("Listening RemovedWorkPlaceIndexEvent event to update WorkPlace in PhoneIndex with WorkPlaceIndex ID: {}",
+    public void removeWorkPlaceInEmployeeIndex(WorkPlaceService.RemovedWorkPlaceIndexEvent workPlaceIndexEvent) {
+        log.debug("Listening RemovedWorkPlaceIndexEvent event to remove WorkPlace in EmployeeIndex with WorkPlaceIndex ID: {}",
                 workPlaceIndexEvent.getRemovedWorkPlaceIndexId());
         try {
             UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(INDEX_NAME)
