@@ -4,7 +4,6 @@ import cu.sld.ucmgt.directory.domain.Employee;
 import cu.sld.ucmgt.directory.domain.Phone;
 import cu.sld.ucmgt.directory.domain.WorkPlace;
 import cu.sld.ucmgt.directory.domain.elasticsearch.WorkPlaceIndex;
-import cu.sld.ucmgt.directory.event.UpdatedEmployeeIndexEvent;
 import cu.sld.ucmgt.directory.repository.EmployeeRepository;
 import cu.sld.ucmgt.directory.repository.PhoneRepository;
 import cu.sld.ucmgt.directory.repository.WorkPlaceRepository;
@@ -120,7 +119,7 @@ public class WorkPlaceService {
     }
 
     @EventListener
-    public void saveEmployeeIndexInWorkPlaceIndex(UpdatedEmployeeIndexEvent employeeIndexEvent) {
+    public void saveEmployeeIndexInWorkPlaceIndex(EmployeeService.SavedEmployeeIndexEvent employeeIndexEvent) {
         try {
             // avoid redundant data, employee.workplace equals current workplace
             employeeIndexEvent.getParams().replace("workPlace", null);

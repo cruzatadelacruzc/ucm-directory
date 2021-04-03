@@ -1,46 +1,49 @@
 package cu.sld.ucmgt.directory.web.rest;
 
 import com.google.common.collect.ImmutableList;
+import cu.sld.ucmgt.directory.DirectoryApp;
+import cu.sld.ucmgt.directory.TestUtil;
+import cu.sld.ucmgt.directory.config.TestSecurityConfiguration;
+import cu.sld.ucmgt.directory.domain.Employee;
+import cu.sld.ucmgt.directory.domain.Phone;
+import cu.sld.ucmgt.directory.domain.WorkPlace;
 import cu.sld.ucmgt.directory.domain.elasticsearch.EmployeeIndex;
 import cu.sld.ucmgt.directory.domain.elasticsearch.PhoneIndex;
 import cu.sld.ucmgt.directory.domain.elasticsearch.WorkPlaceIndex;
 import cu.sld.ucmgt.directory.repository.search.EmployeeSearchRepository;
 import cu.sld.ucmgt.directory.repository.search.PhoneSearchRepository;
 import cu.sld.ucmgt.directory.repository.search.WorkPlaceSearchRepository;
+import cu.sld.ucmgt.directory.service.dto.EmployeeDTO;
 import cu.sld.ucmgt.directory.service.dto.PhoneDTO;
 import cu.sld.ucmgt.directory.service.dto.WorkPlaceDTO;
+import cu.sld.ucmgt.directory.service.mapper.EmployeeMapper;
 import cu.sld.ucmgt.directory.service.mapper.PhoneMapper;
 import cu.sld.ucmgt.directory.service.mapper.WorkPlaceMapper;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
-import cu.sld.ucmgt.directory.TestUtil;
-import cu.sld.ucmgt.directory.domain.*;
 import org.junit.jupiter.api.BeforeEach;
-import org.springframework.http.MediaType;
-import cu.sld.ucmgt.directory.DirectoryApp;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.web.servlet.MockMvc;
-import cu.sld.ucmgt.directory.service.dto.EmployeeDTO;
-import cu.sld.ucmgt.directory.service.mapper.EmployeeMapper;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.beans.factory.annotation.Autowired;
-import cu.sld.ucmgt.directory.config.TestSecurityConfiguration;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
-import java.time.*;
-import java.util.*;
 import javax.persistence.EntityManager;
-
-import static org.hamcrest.Matchers.hasItem;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasItem;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
 /**
  * Integration tests for the {@link EmployeeResource} REST controller.
@@ -506,6 +509,8 @@ public class EmployeeResourceIT extends PersonIT {
     @Test
     @Transactional
     public void updateEmployeeAndEmployeeIndex() throws Exception {
+        // clear EmployeeIndex
+        employeeSearchRepository.deleteAll();
 
         EmployeeDTO employeeDTO = mapper.toDto(employee);
 

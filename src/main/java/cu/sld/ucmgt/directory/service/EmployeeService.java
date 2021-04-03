@@ -2,8 +2,6 @@ package cu.sld.ucmgt.directory.service;
 
 import cu.sld.ucmgt.directory.domain.Employee;
 import cu.sld.ucmgt.directory.domain.elasticsearch.EmployeeIndex;
-import cu.sld.ucmgt.directory.domain.elasticsearch.WorkPlaceIndex;
-import cu.sld.ucmgt.directory.event.RegisterEmployeeIndexEventPublisher;
 import cu.sld.ucmgt.directory.repository.EmployeeRepository;
 import cu.sld.ucmgt.directory.repository.NomenclatureRepository;
 import cu.sld.ucmgt.directory.repository.WorkPlaceRepository;
@@ -11,7 +9,9 @@ import cu.sld.ucmgt.directory.repository.search.EmployeeSearchRepository;
 import cu.sld.ucmgt.directory.service.dto.EmployeeDTO;
 import cu.sld.ucmgt.directory.service.mapper.EmployeeIndexMapper;
 import cu.sld.ucmgt.directory.service.mapper.EmployeeMapper;
-import cu.sld.ucmgt.directory.service.mapper.WorkPlaceIndexMapper;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.client.RequestOptions;
@@ -21,6 +21,7 @@ import org.elasticsearch.index.reindex.DeleteByQueryRequest;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptType;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -40,10 +41,9 @@ public class EmployeeService {
     private final RestHighLevelClient highLevelClient;
     private final WorkPlaceRepository workPlaceRepository;
     private final EmployeeIndexMapper employeeIndexMapper;
-    private final WorkPlaceIndexMapper workPlaceIndexMapper;
+    private final ApplicationEventPublisher eventPublisher;
     private final EmployeeSearchRepository searchRepository;
     private final NomenclatureRepository nomenclatureRepository;
-    private final RegisterEmployeeIndexEventPublisher publisher;
 
     /**
      * Save a employee.
@@ -87,9 +87,12 @@ public class EmployeeService {
         Employee employee = save(employeeDTO);
         EmployeeIndex employeeIndex = employeeIndexMapper.toIndex(employee);
         searchRepository.save(employeeIndex);
-        // updating the EmployeeIndex belonging to PhoneIndex and WorkPlaceIndex
+        // saving the EmployeeIndex belonging to PhoneIndex and WorkPlaceIndex
         Map<String, Object> employeeIndexMap = createEmployeeToEmployeeIndexMap(employee);
-        publisher.publishSavedEmployeeIndexEvent(null, employeeIndexMap);
+        final SavedEmployeeIndexEvent savedEmployeeIndexEvent = SavedEmployeeIndexEvent.builder()
+                .params(employeeIndexMap)
+                .build();
+        eventPublisher.publishEvent(savedEmployeeIndexEvent);
         return mapper.toDto(employee);
     }
 
@@ -105,7 +108,11 @@ public class EmployeeService {
         searchRepository.save(employeeIndexMapper.toIndex(employee));
         // updating the EmployeeIndex belonging to PhoneIndex and WorkPlaceIndex
         Map<String, Object> employeeIndexMap = createEmployeeToEmployeeIndexMap(employee);
-        publisher.publishSavedEmployeeIndexEvent(employee.getId().toString(), employeeIndexMap);
+        final SavedEmployeeIndexEvent savedEmployeeIndexEvent = SavedEmployeeIndexEvent.builder()
+                .employeeId(employee.getId().toString())
+                .params(employeeIndexMap)
+                .build();
+        eventPublisher.publishEvent(savedEmployeeIndexEvent);
         return mapper.toDto(employee);
     }
 
@@ -198,5 +205,16 @@ public class EmployeeService {
     public Page<EmployeeDTO> getAllEmployees(Pageable pageable) {
         log.debug("Request to get all Employees");
         return repository.findAll(pageable).map(mapper::toDto);
+    }
+
+    /**
+     *  Class to register a saved {@link EmployeeIndex} as event
+     */
+    @Data
+    @Builder
+    @AllArgsConstructor
+    public static class SavedEmployeeIndexEvent{
+       private String employeeId;
+       private Map<String,Object> params;
     }
 }

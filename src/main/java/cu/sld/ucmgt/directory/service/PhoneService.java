@@ -2,7 +2,6 @@ package cu.sld.ucmgt.directory.service;
 
 import cu.sld.ucmgt.directory.domain.Phone;
 import cu.sld.ucmgt.directory.domain.elasticsearch.PhoneIndex;
-import cu.sld.ucmgt.directory.event.UpdatedEmployeeIndexEvent;
 import cu.sld.ucmgt.directory.repository.EmployeeRepository;
 import cu.sld.ucmgt.directory.repository.PhoneRepository;
 import cu.sld.ucmgt.directory.repository.WorkPlaceRepository;
@@ -132,7 +131,7 @@ public class PhoneService {
     }
 
     @EventListener
-    public void updateEmployeeInPhoneIndex(UpdatedEmployeeIndexEvent employeeIndexEvent) {
+    public void updateEmployeeInPhoneIndex(EmployeeService.SavedEmployeeIndexEvent  employeeIndexEvent) {
         if (employeeIndexEvent.getEmployeeId() != null) {
             try {
                 String updateCode = "for (entry in params.entrySet()){ if (entry.getKey() != \"ctx\") " +
