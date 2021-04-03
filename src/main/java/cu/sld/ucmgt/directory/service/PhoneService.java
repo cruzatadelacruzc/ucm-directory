@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.reindex.DeleteByQueryRequest;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptType;
@@ -41,6 +42,7 @@ public class PhoneService {
     private final PhoneRepository repository;
     private final PhoneIndexMapper phoneIndexMapper;
     private final RestHighLevelClient highLevelClient;
+    private static final String INDEX_NAME = "phones";
     private final EmployeeRepository employeeRepository;
     private final PhoneSearchRepository searchRepository;
     private final WorkPlaceRepository workPlaceRepository;
@@ -145,6 +147,22 @@ public class PhoneService {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    @EventListener
+    public void deleteWorkPlaceInPhoneIndex(WorkPlaceService.RemovedWorkPlaceIndexEvent workPlaceIndexEvent) {
+        log.debug("Listening RemovedWorkPlaceIndexEvent event to delete WorkPlace in PhoneIndex with WorkPlaceIndex ID: {}",
+                workPlaceIndexEvent.getRemovedWorkPlaceIndexId());
+        try {
+            DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest(INDEX_NAME)
+                    .setRefresh(true)
+                    .setAbortOnVersionConflict(true)
+                    .setQuery(QueryBuilders.matchQuery("workPlace.id",
+                            workPlaceIndexEvent.getRemovedWorkPlaceIndexId().toString()));
+            highLevelClient.deleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
+        } catch (IOException exception) {
+            exception.printStackTrace();
         }
     }
 

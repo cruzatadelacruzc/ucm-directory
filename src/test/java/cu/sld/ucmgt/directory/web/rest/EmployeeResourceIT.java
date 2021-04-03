@@ -781,6 +781,9 @@ public class EmployeeResourceIT extends PersonIT {
     @Test
     @Transactional
     public void deleteEmployeeInsideWorkplacesIndex() throws Exception {
+        //clear WorkplaceIndex
+        workPlaceSearchRepository.deleteAll();
+
         // Initialize the database
         em.persist(employee);
         Employee employee2 = new Employee();

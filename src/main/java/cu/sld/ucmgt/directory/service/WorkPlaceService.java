@@ -11,16 +11,19 @@ import cu.sld.ucmgt.directory.repository.search.WorkPlaceSearchRepository;
 import cu.sld.ucmgt.directory.service.dto.WorkPlaceDTO;
 import cu.sld.ucmgt.directory.service.mapper.WorkPlaceIndexMapper;
 import cu.sld.ucmgt.directory.service.mapper.WorkPlaceMapper;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.reindex.DeleteByQueryRequest;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptType;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -44,6 +47,7 @@ public class WorkPlaceService {
     private final EmployeeRepository employeeRepository;
     private final WorkPlaceIndexMapper workPlaceIndexMapper;
     private final WorkPlaceSearchRepository searchRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private static final String INDEX_NAME = "workplaces";
 
     /**
@@ -188,36 +192,14 @@ public class WorkPlaceService {
             new HashSet<>(workPlace.getEmployees()).forEach(workPlace::removeEmployee);
             repository.delete(workPlace);
             searchRepository.deleteById(workPlace.getId());
-            this.deleteWorkPlaceInPhoneIndex(workPlace.getId().toString());
-            this.updateWorkPlaceInEmployeeIndex(workPlace.getId().toString());
+            WorkPlaceIndex workPlaceIndex = workPlaceIndexMapper.toIndex(workPlace);
+            final RemovedWorkPlaceIndexEvent removedWorkPlaceIndexEvent = RemovedWorkPlaceIndexEvent.builder()
+                    .removedWorkPlaceIndexId(workPlaceIndex.getId())
+                    .removedWorkPlaceIndex(workPlaceIndex)
+                    .build();
+            eventPublisher.publishEvent(removedWorkPlaceIndexEvent);
         });
 
-    }
-
-    private void updateWorkPlaceInEmployeeIndex(String id) {
-        try {
-            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("employees")
-                    .setRefresh(true)
-                    .setAbortOnVersionConflict(true)
-                    .setQuery(QueryBuilders.matchQuery("workPlace.id", id))
-                    .setScript(new Script(ScriptType.INLINE, "painless",
-                            "ctx._source.workPlace=null", Collections.emptyMap()));
-            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
-        } catch (IOException exception) {
-            exception.printStackTrace();
-        }
-    }
-
-    private void deleteWorkPlaceInPhoneIndex(String id) {
-        try {
-            DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest("phones")
-                    .setRefresh(true)
-                    .setAbortOnVersionConflict(true)
-                    .setQuery(QueryBuilders.matchQuery("workPlace.id", id));
-            highLevelClient.deleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
-        } catch (IOException exception) {
-            exception.printStackTrace();
-        }
     }
 
     /**
@@ -242,5 +224,16 @@ public class WorkPlaceService {
     public Page<WorkPlaceDTO> getAllWorkPlaces(Pageable pageable) {
         log.debug("Request to get all WorkPlaces");
         return repository.findAll(pageable).map(mapper::toDto);
+    }
+
+    /**
+     *  Class to register a removed {@link WorkPlaceIndex} as event
+     */
+    @Data
+    @Builder
+    @AllArgsConstructor
+    public static class RemovedWorkPlaceIndexEvent {
+        UUID removedWorkPlaceIndexId;
+        WorkPlaceIndex removedWorkPlaceIndex;
     }
 }

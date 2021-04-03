@@ -22,6 +22,7 @@ import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptType;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,7 @@ public class EmployeeService {
     private final EmployeeMapper mapper;
     private final EmployeeRepository repository;
     private final RestHighLevelClient highLevelClient;
+    private static final String INDEX_NAME = "employees";
     private final WorkPlaceRepository workPlaceRepository;
     private final EmployeeIndexMapper employeeIndexMapper;
     private final ApplicationEventPublisher eventPublisher;
@@ -205,6 +207,24 @@ public class EmployeeService {
     public Page<EmployeeDTO> getAllEmployees(Pageable pageable) {
         log.debug("Request to get all Employees");
         return repository.findAll(pageable).map(mapper::toDto);
+    }
+
+    @EventListener
+    public void updateWorkPlaceInEmployeeIndex(WorkPlaceService.RemovedWorkPlaceIndexEvent workPlaceIndexEvent) {
+        log.debug("Listening RemovedWorkPlaceIndexEvent event to update WorkPlace in PhoneIndex with WorkPlaceIndex ID: {}",
+                workPlaceIndexEvent.getRemovedWorkPlaceIndexId());
+        try {
+            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(INDEX_NAME)
+                    .setRefresh(true)
+                    .setAbortOnVersionConflict(true)
+                    .setQuery(QueryBuilders.matchQuery("workPlace.id", workPlaceIndexEvent
+                            .getRemovedWorkPlaceIndexId().toString()))
+                    .setScript(new Script(ScriptType.INLINE, "painless",
+                            "ctx._source.workPlace=null", Collections.emptyMap()));
+            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+        } catch (IOException exception) {
+            exception.printStackTrace();
+        }
     }
 
     /**
