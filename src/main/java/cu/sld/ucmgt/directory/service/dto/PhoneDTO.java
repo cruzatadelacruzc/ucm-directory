@@ -18,7 +18,7 @@ public class PhoneDTO implements Serializable {
     private UUID id;
     @Min(value = 1)
     private Integer number;
-    private Boolean active;
+    private Boolean active = false;
     private String description;
     private UUID employeeId;
     private UUID workPlaceId;
