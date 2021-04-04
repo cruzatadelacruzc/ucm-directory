@@ -7,6 +7,7 @@ import cu.sld.ucmgt.directory.repository.EmployeeRepository;
 import cu.sld.ucmgt.directory.repository.PhoneRepository;
 import cu.sld.ucmgt.directory.repository.WorkPlaceRepository;
 import cu.sld.ucmgt.directory.repository.search.PhoneSearchRepository;
+import cu.sld.ucmgt.directory.service.EmployeeService.RemovedEmployeeIndexEvent;
 import cu.sld.ucmgt.directory.service.WorkPlaceService.SavedWorkPlaceIndexEvent;
 import cu.sld.ucmgt.directory.service.dto.PhoneDTO;
 import cu.sld.ucmgt.directory.service.mapper.PhoneIndexMapper;
@@ -187,6 +188,21 @@ public class PhoneService {
             highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    @EventListener
+    public void removeEmployeeIndexInPhoneIndex(RemovedEmployeeIndexEvent event) {
+        log.debug("Listening RemovedEmployeeIndexEvent event to remove Employee in PhoneIndex with EmployeeIndex ID: {}",
+                event.getRemovedEmployeeId());
+        try {
+            DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest(INDEX_NAME)
+                    .setRefresh(true)
+                    .setAbortOnVersionConflict(true)
+                    .setQuery(QueryBuilders.matchQuery("employee.id", event.getRemovedEmployeeId().toString()));
+            highLevelClient.deleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
+        } catch (IOException exception) {
+            log.error(exception.getMessage());
         }
     }
 

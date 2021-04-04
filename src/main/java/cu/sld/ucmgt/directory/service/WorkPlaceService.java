@@ -8,6 +8,10 @@ import cu.sld.ucmgt.directory.repository.EmployeeRepository;
 import cu.sld.ucmgt.directory.repository.PhoneRepository;
 import cu.sld.ucmgt.directory.repository.WorkPlaceRepository;
 import cu.sld.ucmgt.directory.repository.search.WorkPlaceSearchRepository;
+import cu.sld.ucmgt.directory.service.EmployeeService.RemovedEmployeeIndexEvent;
+import cu.sld.ucmgt.directory.service.EmployeeService.SavedEmployeeIndexEvent;
+import cu.sld.ucmgt.directory.service.PhoneService.RemovedPhoneIndexEvent;
+import cu.sld.ucmgt.directory.service.PhoneService.SavedPhoneIndexEvent;
 import cu.sld.ucmgt.directory.service.dto.WorkPlaceDTO;
 import cu.sld.ucmgt.directory.service.mapper.WorkPlaceIndexMapper;
 import cu.sld.ucmgt.directory.service.mapper.WorkPlaceMapper;
@@ -128,7 +132,9 @@ public class WorkPlaceService {
     }
 
     @EventListener
-    public void saveEmployeeIndexInWorkPlaceIndex(EmployeeService.SavedEmployeeIndexEvent employeeIndexEvent) {
+    public void saveEmployeeIndexInWorkPlaceIndex(SavedEmployeeIndexEvent employeeIndexEvent) {
+        log.debug("Listening SavedPhoneIndexEvent event to save Employee in WorkPlaceIndex with EmployeeIndex ID: {}",
+                employeeIndexEvent.getEmployeeId());
         try {
             // avoid redundant data, employee.workplace equals current workplace
             employeeIndexEvent.getParams().replace("workPlace", null);
@@ -150,8 +156,9 @@ public class WorkPlaceService {
     }
 
     @EventListener
-    public void savePhoneInWorkPlaceIndex(PhoneService.SavedPhoneIndexEvent phoneIndexEvent) {
-        log.debug("Listening SavedPhoneIndexEvent event with PhoneIndex ID: {}", phoneIndexEvent.getPhoneId());
+    public void savePhoneInWorkPlaceIndex(SavedPhoneIndexEvent phoneIndexEvent) {
+        log.debug("Listening SavedPhoneIndexEvent event to save Phone in WorkPlaceIndex with PhoneIndex ID: {}",
+                phoneIndexEvent.getPhoneId());
         try {
             // updating the phone belonging to workplaces
             String updateCode = "params.remove(\"ctx\");ctx._source.phones.add(params)";
@@ -172,8 +179,9 @@ public class WorkPlaceService {
     }
 
     @EventListener
-    public void removePhoneIndexInWorkPlaceIndex(PhoneService.RemovedPhoneIndexEvent event) {
-        log.debug("Listening RemovedPhoneIndexEvent event with PhoneIndex ID: {}", event.getRemovedPhoneIndexId());
+    public void removePhoneIndexInWorkPlaceIndex(RemovedPhoneIndexEvent event) {
+        log.debug("Listening RemovedPhoneIndexEvent event to remove Phone in WorkPlaceIndex with PhoneIndex ID: {}",
+                event.getRemovedPhoneIndexId());
         try {
             String updateCode = "ctx._source.phones.removeIf(phone -> phone.id == \"" + event.getRemovedPhoneIndexId().toString() + "\")";
             UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("workplaces")
@@ -182,6 +190,23 @@ public class WorkPlaceService {
                     .setScript(new Script(ScriptType.INLINE, "painless", updateCode, Collections.emptyMap()));
             highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
         } catch (ElasticsearchException | IOException exception) {
+            exception.printStackTrace();
+        }
+    }
+
+    @EventListener
+    public void removeEmployeeIndexInWorkPlaceIndex(RemovedEmployeeIndexEvent event) {
+        log.debug("Listening RemovedEmployeeIndexEvent event to remove Employee in WorkPlaceIndex with EmployeeIndex ID: {}"
+                , event.getRemovedEmployeeId());
+        try {
+            String updateCode = "ctx._source.employees.removeIf(employee -> employee.id == \"" + event
+                    .getRemovedEmployeeId().toString() + "\")";
+            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(INDEX_NAME)
+                    .setRefresh(true)
+                    .setAbortOnVersionConflict(true)
+                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, Collections.emptyMap()));
+            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+        }catch (IOException exception){
             exception.printStackTrace();
         }
     }

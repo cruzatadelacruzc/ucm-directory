@@ -18,7 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.reindex.DeleteByQueryRequest;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptType;
@@ -165,24 +164,17 @@ public class EmployeeService {
      */
     public void deleteEmployee(UUID uid) {
         log.debug("Request to delete Employee : {}", uid);
-        repository.deleteById(uid);
-        searchRepository.deleteById(uid);
-        try {
-            String updateCode = "ctx._source.employees.removeIf(employee -> employee.id == \"" + uid.toString() + "\")";
-            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("workplaces")
-                    .setRefresh(true)
-                    .setAbortOnVersionConflict(true)
-                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, Collections.emptyMap()));
-            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
-
-            DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest("phones")
-                    .setRefresh(true)
-                    .setAbortOnVersionConflict(true)
-                    .setQuery(QueryBuilders.matchQuery("employee.id", uid.toString()));
-            highLevelClient.deleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
-        } catch (IOException exception) {
-            log.error(exception.getMessage());
-        }
+        repository.findById(uid).ifPresent(employee -> {
+           repository.delete(employee);
+           EmployeeIndex employeeIndex = searchRepository.findById(employee.getId())
+            .orElseThrow(() -> new NoSuchElementException("EmployeeIndex with ID: " + employee.getId() + " not was found"));
+           searchRepository.delete(employeeIndex);
+           final RemovedEmployeeIndexEvent removedEmployeeIndexEvent = RemovedEmployeeIndexEvent.builder()
+                   .removedEmployeeId(employeeIndex.getId())
+                   .removedEmployeeIndex(employeeIndex)
+                   .build();
+           eventPublisher.publishEvent(removedEmployeeIndexEvent);
+        });
     }
 
     /**
@@ -259,5 +251,16 @@ public class EmployeeService {
     public static class SavedEmployeeIndexEvent{
        private String employeeId;
        private Map<String,Object> params;
+    }
+
+    /**
+     *  Class to register a removed {@link EmployeeIndex} as event
+     */
+    @Data
+    @Builder
+    @AllArgsConstructor
+    public static class RemovedEmployeeIndexEvent{
+        private UUID removedEmployeeId;
+        private EmployeeIndex removedEmployeeIndex;
     }
 }

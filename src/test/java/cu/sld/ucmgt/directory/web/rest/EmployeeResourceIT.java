@@ -16,6 +16,7 @@ import cu.sld.ucmgt.directory.repository.search.WorkPlaceSearchRepository;
 import cu.sld.ucmgt.directory.service.dto.EmployeeDTO;
 import cu.sld.ucmgt.directory.service.dto.PhoneDTO;
 import cu.sld.ucmgt.directory.service.dto.WorkPlaceDTO;
+import cu.sld.ucmgt.directory.service.mapper.EmployeeIndexMapper;
 import cu.sld.ucmgt.directory.service.mapper.EmployeeMapper;
 import cu.sld.ucmgt.directory.service.mapper.PhoneMapper;
 import cu.sld.ucmgt.directory.service.mapper.WorkPlaceMapper;
@@ -84,6 +85,9 @@ public class EmployeeResourceIT extends PersonIT {
 
     @Autowired
     private PhoneMapper phoneMapper;
+
+    @Autowired
+    private EmployeeIndexMapper indexMapper;
 
     @Autowired
     private WorkPlaceMapper workPlaceMapper;
@@ -736,32 +740,40 @@ public class EmployeeResourceIT extends PersonIT {
         Phone employeePhone = createPhoneOfEmployee(employee);
         employee.setPhones(Collections.singleton(employeePhone));
         em.flush();
+        // Initialize Index
+        EmployeeIndex employeeIndex = indexMapper.toIndex(employee);
+        employeeSearchRepository.save(employeeIndex);
 
-        int databaseSizeBeforeUpdate = TestUtil.findAll(em, Employee.class).size();
+        int databaseSizeBeforeDelete = TestUtil.findAll(em, Employee.class).size();
+        long indexCountBeforeDelete = employeeSearchRepository.count();
 
         // Delete the employee
         restMockMvc.perform(delete("/api/employees/{id}", employee.getId()).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent());
 
-        // Validate the database contains one less item
+        // Validate the database and index contains one less item
         List<Employee> employees = TestUtil.findAll(em, Employee.class);
-        assertThat(employees).hasSize(databaseSizeBeforeUpdate - 1);
-
+        assertThat(employees).hasSize(databaseSizeBeforeDelete - 1);
+        Iterable<EmployeeIndex> employeeIndexIterable = employeeSearchRepository.findAll();
+        assertThat(employeeIndexIterable).hasSize((int) (indexCountBeforeDelete - 1));
     }
 
     @Test
     @Transactional
     public void deleteEmployeeInsidePhoneIndex() throws Exception {
-        // Initialize the database
-        em.persist(employee);
-        em.flush();
         // Clear EmployeeIndex and PhoneIndex indices
         phoneSearchRepository.deleteAll();
+        employeeSearchRepository.deleteAll();
 
-        Phone phone = createPhoneOfEmployee(employee);
+        // Initialize the database and index
+        em.persist(employee);
+        em.flush();
+        EmployeeIndex employeeIndex = indexMapper.toIndex(employee);
+        employeeSearchRepository.save(employeeIndex);
 
         // To save phone with a employee in elasticsearch
+        Phone phone = createPhoneOfEmployee(employee);
         PhoneDTO phoneDTO = phoneMapper.toDto(phone);
         restMockMvc.perform(post("/api/phones").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -812,6 +824,11 @@ public class EmployeeResourceIT extends PersonIT {
         employeeSet.add(employee);
         employeeSet.add(employee2);
         WorkPlace workPlace = createWorkPlaceOfEmployee(employeeSet);
+        // Initialize index
+        EmployeeIndex employeeIndex = indexMapper.toIndex(employee);
+        EmployeeIndex employeeIndex2 = indexMapper.toIndex(employee2);
+        employeeSearchRepository.save(employeeIndex);
+        employeeSearchRepository.save(employeeIndex2);
 
         // To save workplace with a employee in elasticsearch
         WorkPlaceDTO workPlaceDTO = workPlaceMapper.toDto(workPlace);
