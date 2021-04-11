@@ -262,7 +262,7 @@ public class WorkPlaceResourceIT {
 
     @Test
     @Transactional
-    public void updateSavedWorkPlaceWithPhones() throws Exception {
+    public void updateWorkPlaceWithPhoneIndex() throws Exception {
         // Initialize the database
         phoneSearchRepository.deleteAll();
         repository.saveAndFlush(workPlace);
@@ -271,10 +271,16 @@ public class WorkPlaceResourceIT {
 
         // To save phone with a workplace in elasticsearch
         PhoneDTO phoneDTO = phoneMapper.toDto(phone);
-        restMockMvc.perform(post("/api/phones").with(csrf())
+        MvcResult phoneResult = restMockMvc.perform(post("/api/phones").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(TestUtil.convertObjectToJsonBytes(phoneDTO)))
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String phoneId = phoneResult.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        assertThat(phoneId).isNotNull();
+        Phone createdPhone = em.find(Phone.class, UUID.fromString(phoneId));
+        workPlace.addPhone(createdPhone);
 
         WorkPlace updatedWorkPlace = updateWorkPlaceObj(workPlace);
 
