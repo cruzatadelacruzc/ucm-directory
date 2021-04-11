@@ -301,7 +301,7 @@ public class WorkPlaceResourceIT {
 
     @Test
     @Transactional
-    public void updateSavedWorkPlaceWithEmployees() throws Exception {
+    public void updateWorkPlaceIntoEmployeeIndex() throws Exception {
         // Initialize the database
         employeeSearchRepository.deleteAll();
         repository.saveAndFlush(workPlace);
@@ -311,11 +311,17 @@ public class WorkPlaceResourceIT {
 
         // To save employee with a workplace in elasticsearch
         EmployeeDTO employeeDTO = employeeMapper.toDto(employee);
-        restMockMvc.perform(post("/api/employees").with(csrf())
+        MvcResult employeeResult = restMockMvc.perform(post("/api/employees").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(TestUtil.convertObjectToJsonBytes(employeeDTO)))
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                .andReturn();
 
+        String employeeId = employeeResult.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        assertThat(employeeId).isNotNull();
+
+        Employee savedEmployee = em.find(Employee.class, UUID.fromString(employeeId));
+        workPlace.addEmployee(savedEmployee);
         WorkPlace updatedWorkPlace = updateWorkPlaceObj(workPlace);
 
         // to update workplace belong to employeeDTO
@@ -329,7 +335,7 @@ public class WorkPlaceResourceIT {
         Iterable<EmployeeIndex> employeesElasticSearch = employeeSearchRepository.findAll();
         List<EmployeeIndex> indexList = ImmutableList.copyOf(employeesElasticSearch);
         EmployeeIndex testEmployeeWorkPlaceElasticSearch = indexList.get(indexList.size() - 1);
-        assertThat(testEmployeeWorkPlaceElasticSearch.getWorkPlace().getName()).isEqualTo(UPDATE_NAME);
+        testUpdatedWorkPlaceIndex(testEmployeeWorkPlaceElasticSearch.getWorkPlace());
     }
 
     @Test
