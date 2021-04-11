@@ -18,7 +18,9 @@ import cu.sld.ucmgt.directory.repository.search.WorkPlaceSearchRepository;
 import cu.sld.ucmgt.directory.service.dto.EmployeeDTO;
 import cu.sld.ucmgt.directory.service.dto.PhoneDTO;
 import cu.sld.ucmgt.directory.service.dto.WorkPlaceDTO;
-import cu.sld.ucmgt.directory.service.mapper.*;
+import cu.sld.ucmgt.directory.service.mapper.EmployeeMapper;
+import cu.sld.ucmgt.directory.service.mapper.PhoneMapper;
+import cu.sld.ucmgt.directory.service.mapper.WorkPlaceMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -72,12 +74,6 @@ public class WorkPlaceResourceIT {
 
     @Autowired
     private PhoneMapper phoneMapper;
-
-    @Autowired
-    private EmployeeIndexMapper employeeIndexMapper;
-
-    @Autowired
-    private PhoneIndexMapper phoneIndexMapper;
 
     @Autowired
     private EmployeeMapper employeeMapper;
@@ -397,35 +393,45 @@ public class WorkPlaceResourceIT {
     }
 
     @Test
+    @Transactional
     public void deleteWorkPlaceAndWorkPlaceIndexAndEmployeeAndEmployeeIndex() throws Exception {
         // Clear EmployeeIndex and WorkPlaceIndex
         searchRepository.deleteAll();
         employeeSearchRepository.deleteAll();
 
         WorkPlaceDTO workPlaceDTO = mapper.toDto(workPlace);
-        restMockMvc.perform(post("/api/workplaces").with(csrf())
+        MvcResult workPlaceResult = restMockMvc.perform(post("/api/workplaces").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(TestUtil.convertObjectToJsonBytes(workPlaceDTO)))
-                .andExpect(status().isCreated());
-        List<WorkPlace> databaseSizeAfterCreatedWorkPlace = TestUtil.findAll(em, WorkPlace.class);
+                .andExpect(status().isCreated())
+                .andReturn();
+        String workplaceId = workPlaceResult.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        assertThat(workplaceId).isNotNull();
 
         Employee workPlaceEmployee = getEmployeeObj();
-        WorkPlace fetchedWorkPlace = databaseSizeAfterCreatedWorkPlace.get(databaseSizeAfterCreatedWorkPlace.size() -1);
-        workPlaceEmployee.setWorkPlace(fetchedWorkPlace);
         EmployeeDTO employeeDTO = employeeMapper.toDto(workPlaceEmployee);
-        restMockMvc.perform(post("/api/employees").with(csrf())
+        employeeDTO.setWorkPlaceId(UUID.fromString(workplaceId));
+        MvcResult employeeResult = restMockMvc.perform(post("/api/employees").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(TestUtil.convertObjectToJsonBytes(employeeDTO)))
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                .andReturn();
+        String employeeId = employeeResult.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        assertThat(employeeId).isNotNull();
+
+        // code to achieve full associations between phone and workplace
+        Employee savedEmployee = em.find(Employee.class, UUID.fromString(employeeId));
+        WorkPlace savedWorkPlace = em.find(WorkPlace.class, UUID.fromString(workplaceId));
+        savedWorkPlace.addEmployee(savedEmployee);
 
         // Delete the workplace
-        restMockMvc.perform(delete("/api/workplaces/{id}", fetchedWorkPlace.getId()).with(csrf())
+        restMockMvc.perform(delete("/api/workplaces/{id}", UUID.fromString(workplaceId)).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent());
 
         // Validate the database contains one less item
         List<WorkPlace> workPlaces = TestUtil.findAll(em, WorkPlace.class);
-        assertThat(workPlaces).hasSize(databaseSizeAfterCreatedWorkPlace.size() - 1);
+        assertThat(workPlaces).hasSize(0);
 
         List<Employee> employees = TestUtil.findAll(em, Employee.class);
         Employee testEmployee = employees.get(employees.size() -1);
