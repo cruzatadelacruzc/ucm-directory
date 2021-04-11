@@ -6,6 +6,7 @@ import cu.sld.ucmgt.directory.web.rest.errors.BadRequestAlertException;
 import cu.sld.ucmgt.directory.web.rest.util.HeaderUtil;
 import cu.sld.ucmgt.directory.web.rest.util.PaginationUtil;
 import cu.sld.ucmgt.directory.web.rest.util.ResponseUtil;
+import cu.sld.ucmgt.directory.web.rest.vm.ChangeStatusVM;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -48,7 +49,7 @@ public class WorkPlaceResource {
         if (workPlaceDTO.getId() != null) {
             throw new BadRequestAlertException("A new workplace cannot already have an ID", ENTITY_NAME, "idexists");
         }
-        WorkPlaceDTO workPlaceSaved = service.create(workPlaceDTO);
+        WorkPlaceDTO workPlaceSaved = service.save(workPlaceDTO);
         return ResponseEntity.created(new URI("/api/workplaces/" + workPlaceSaved.getId()))
                 .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
                         true, ENTITY_NAME,
@@ -70,7 +71,7 @@ public class WorkPlaceResource {
         if (workPlaceDTO.getId() == null) {
             throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
         }
-        WorkPlaceDTO workPlaceSaved = service.update(workPlaceDTO);
+        WorkPlaceDTO workPlaceSaved = service.save(workPlaceDTO);
         return ResponseEntity.ok()
                 .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
                         true, ENTITY_NAME,
@@ -125,5 +126,18 @@ public class WorkPlaceResource {
                 page
         );
         return ResponseEntity.ok().headers(headers).body(page.getContent());
+    }
+
+    /**
+     * {@code PUT  /workplaces/status} : Change status an existing workplace.
+     *
+     * @param changeStatusVM the information to change status.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body boolean result
+     */
+    @PutMapping("/workplaces/status")
+    public ResponseEntity<Boolean> updateStatusPhone(@Valid @RequestBody ChangeStatusVM changeStatusVM) {
+        log.debug("REST request to update status WorkPlace : {}", changeStatusVM);
+        Boolean result = service.changeStatus(changeStatusVM.getId(), changeStatusVM.getStatus());
+        return ResponseEntity.ok().body(result);
     }
 }

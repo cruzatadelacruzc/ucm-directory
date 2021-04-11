@@ -45,6 +45,7 @@ public abstract class WorkPlaceIndexMapper {
         Set<PhoneIndex> set = new HashSet<>(Math.max((int) (phones.size() / .75f) + 1, 16));
         for ( Phone phone : phones ) {
             PhoneIndex phoneIndex = new PhoneIndex();
+            phoneIndex.setId(phone.getId());
             phoneIndex.setDescription(phone.getDescription());
             phoneIndex.setNumber(phone.getNumber());
             set.add( phoneIndex );

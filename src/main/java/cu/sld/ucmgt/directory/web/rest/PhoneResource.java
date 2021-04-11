@@ -55,7 +55,7 @@ public class PhoneResource {
             throw new BadRequestAlertException("Phone below to WorkPlace or Employee", ENTITY_NAME, "relationshipnull");
         }
 
-        PhoneDTO phoneSaved = service.create(phoneDTO);
+        PhoneDTO phoneSaved = service.save(phoneDTO);
         return ResponseEntity.created(new URI("/api/phones/" + phoneDTO.getId()))
                 .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
                         true, ENTITY_NAME,
@@ -131,7 +131,7 @@ public class PhoneResource {
                 (phoneDTO.getWorkPlaceId() != null && phoneDTO.getEmployeeId() != null)) {
             throw new BadRequestAlertException("Phone below to WorkPlace or Employee", ENTITY_NAME, "relationshipnull");
         }
-        PhoneDTO phoneSaved = service.update(phoneDTO);
+        PhoneDTO phoneSaved = service.save(phoneDTO);
         return ResponseEntity.ok()
                 .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
                         true, ENTITY_NAME,

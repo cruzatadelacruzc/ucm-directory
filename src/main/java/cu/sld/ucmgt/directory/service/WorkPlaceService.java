@@ -3,6 +3,8 @@ package cu.sld.ucmgt.directory.service;
 import cu.sld.ucmgt.directory.domain.Employee;
 import cu.sld.ucmgt.directory.domain.Phone;
 import cu.sld.ucmgt.directory.domain.WorkPlace;
+import cu.sld.ucmgt.directory.domain.elasticsearch.EmployeeIndex;
+import cu.sld.ucmgt.directory.domain.elasticsearch.PhoneIndex;
 import cu.sld.ucmgt.directory.domain.elasticsearch.WorkPlaceIndex;
 import cu.sld.ucmgt.directory.repository.EmployeeRepository;
 import cu.sld.ucmgt.directory.repository.PhoneRepository;
@@ -23,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptType;
@@ -59,7 +62,8 @@ public class WorkPlaceService {
      * @param workPlaceDTO the entity to save.
      * @return the persisted entity.
      */
-    public WorkPlace save(WorkPlaceDTO workPlaceDTO) {
+    public WorkPlaceDTO save(WorkPlaceDTO workPlaceDTO) {
+        log.debug("Request to save WorkPlace : {}", workPlaceDTO);
         WorkPlace workPlace = mapper.toEntity(workPlaceDTO);
         // find all employees and phones to saves
         if (workPlaceDTO.getEmployees() != null) {
@@ -68,7 +72,7 @@ public class WorkPlaceService {
                     .filter(Optional::isPresent)
                     .map(Optional::get)
                     .collect(Collectors.toSet());
-            workPlace.setEmployees(employees);
+            employees.forEach(workPlace::addEmployee);
         }
         if (workPlaceDTO.getPhones() != null) {
             Set<Phone> phones = workPlaceDTO.getPhones().stream()
@@ -76,42 +80,20 @@ public class WorkPlaceService {
                     .filter(Optional::isPresent)
                     .map(Optional::get)
                     .collect(Collectors.toSet());
-            workPlace.setPhones(phones);
+            phones.forEach(workPlace::addPhone);
         }
         repository.save(workPlace);
-        return workPlace;
-    }
-
-    /**
-     * Create a workplace.
-     *
-     * @param workPlaceDTO the entity to save.
-     * @return the persisted entity.
-     */
-    public WorkPlaceDTO create(WorkPlaceDTO workPlaceDTO) {
-        log.debug("Request to create WorkPlace : {}", workPlaceDTO);
-        WorkPlace workPlace = save(workPlaceDTO);
         WorkPlaceIndex workPlaceIndex = workPlaceIndexMapper.toIndex(workPlace);
         searchRepository.save(workPlaceIndex);
-        return mapper.toDto(workPlace);
-    }
-
-    /**
-     * Update a workplace.
-     *
-     * @param workPlaceDTO the entity to save.
-     * @return the persisted entity.
-     */
-    public WorkPlaceDTO update(WorkPlaceDTO workPlaceDTO) {
-        log.debug("Request to update WorkPlace : {}", workPlaceDTO);
-        WorkPlace workPlace = save(workPlaceDTO);
-        WorkPlaceIndex workPlaceIndex = workPlaceIndexMapper.toIndex(workPlace);
-        searchRepository.save(workPlaceIndex);
-        // updating the workplace belonging to phones and employees
-        Map<String, Object> workPlaceMap = mapWorkPlaceToWorkPlaceIndex(workPlaceIndex);
+        // saving the workplace belonging to phones and employees
+        Map<String, Object> workPlaceMap = convertWorkPlaceIndexToWorkPlaceIndexMap(workPlaceIndex);
+        List<UUID> employeeIds = workPlace.getEmployees().stream().map(Employee::getId).collect(Collectors.toList());
+        List<UUID> phoneIds = workPlace.getPhones().stream().map(Phone::getId).collect(Collectors.toList());
         final SavedWorkPlaceIndexEvent savedWorkPlaceIndexEvent = SavedWorkPlaceIndexEvent.builder()
-                .workplaceId(workPlaceIndex.getId())
-                .workplaceMap(workPlaceMap)
+                .workplaceId( workPlaceDTO.getId() != null ? workPlaceIndex.getId(): null)
+                .phoneIds(phoneIds)
+                .employeeIds(employeeIds)
+                .workplaceIndexMap(workPlaceMap)
                 .build();
         eventPublisher.publishEvent(savedWorkPlaceIndexEvent);
         return mapper.toDto(workPlace);
@@ -123,8 +105,9 @@ public class WorkPlaceService {
      * @param workPlaceIndex {@link WorkPlaceIndex} instance
      * @return employeeIndexMap
      */
-    private Map<String, Object> mapWorkPlaceToWorkPlaceIndex(WorkPlaceIndex workPlaceIndex) {
+    private Map<String, Object> convertWorkPlaceIndexToWorkPlaceIndexMap(WorkPlaceIndex workPlaceIndex) {
         Map<String, Object> workPlaceIndexMap = new HashMap<>();
+        workPlaceIndexMap.put("id", workPlaceIndex.getId().toString());
         workPlaceIndexMap.put("name", workPlaceIndex.getName());
         workPlaceIndexMap.put("email", workPlaceIndex.getEmail());
         workPlaceIndexMap.put("description", workPlaceIndex.getDescription());
@@ -133,25 +116,30 @@ public class WorkPlaceService {
 
     @EventListener
     public void saveEmployeeIndexInWorkPlaceIndex(SavedEmployeeIndexEvent employeeIndexEvent) {
-        log.debug("Listening SavedPhoneIndexEvent event to save Employee in WorkPlaceIndex with EmployeeIndex ID: {}",
+        log.debug("Listening SavedEmployeeIndexEvent event to save EmployeeIndex with ID: {} in WorkPlaceIndex",
                 employeeIndexEvent.getEmployeeId());
-        try {
-            // avoid redundant data, employee.workplace equals current workplace
-            employeeIndexEvent.getParams().replace("workPlace", null);
-            String updateCode = "params.remove(\"ctx\");ctx._source.employees.add(params)";
-            if (employeeIndexEvent.getEmployeeId() != null) {
-                updateCode = "def targets = ctx._source.employees.findAll(employee " +
-                        "-> employee.id == \"" + employeeIndexEvent.getEmployeeId() + "\" ); " +
-                        "for (employee in targets) { for (entry in params.entrySet()) { if (entry.getKey() != \"ctx\") {" +
-                        "employee[entry.getKey()] = entry.getValue() }}}";
+        Object workPlaceMap = employeeIndexEvent.getParams().getOrDefault("workPlace", null);
+        if (workPlaceMap != null) {
+            try {
+                String workPlaceId = (String) ((HashMap) workPlaceMap).get("id");
+                // avoid redundant data, employee.workplace equals current workplace
+                employeeIndexEvent.getParams().replace("workPlace", null);
+                String updateCode = "params.remove(\"ctx\");ctx._source.employees.add(params)";
+                if (employeeIndexEvent.getEmployeeId() != null) {
+                    updateCode = "def targets = ctx._source.employees.findAll(employee " +
+                            "-> employee.id == \"" + employeeIndexEvent.getEmployeeId() + "\" ); " +
+                            "for (employee in targets) { for (entry in params.entrySet()) { if (entry.getKey() != \"ctx\") {" +
+                            "employee[entry.getKey()] = entry.getValue() }}}";
+                }
+                UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(INDEX_NAME)
+                        .setRefresh(true)
+                        .setAbortOnVersionConflict(true)
+                        .setQuery(QueryBuilders.matchQuery("id", workPlaceId))
+                        .setScript(new Script(ScriptType.INLINE, "painless", updateCode, employeeIndexEvent.getParams()));
+                highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(INDEX_NAME)
-                    .setRefresh(true)
-                    .setAbortOnVersionConflict(true)
-                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, employeeIndexEvent.getParams()));
-            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 
@@ -171,6 +159,7 @@ public class WorkPlaceService {
             UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(INDEX_NAME)
              .setRefresh(true)
              .setAbortOnVersionConflict(true)
+             .setQuery(QueryBuilders.matchQuery("id", phoneIndexEvent.getWorkPlaceId().toString()))
              .setScript(new Script(ScriptType.INLINE, "painless", updateCode, phoneIndexEvent.getPhoneIndexMap()));
             highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
         } catch (ElasticsearchException | IOException e) {
@@ -187,6 +176,7 @@ public class WorkPlaceService {
             UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("workplaces")
                     .setRefresh(true)
                     .setAbortOnVersionConflict(true)
+                    .setQuery(QueryBuilders.matchQuery("id", event.getWorkPlaceId().toString()))
                     .setScript(new Script(ScriptType.INLINE, "painless", updateCode, Collections.emptyMap()));
             highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
         } catch (ElasticsearchException | IOException exception) {
@@ -257,6 +247,49 @@ public class WorkPlaceService {
     }
 
     /**
+     * Change status for active or disable workplace
+     *
+     * @param id          workplace identifier
+     * @param status true or false
+     * @return true if changed status or false otherwise
+     */
+    public Boolean changeStatus(UUID id, Boolean status) {
+        log.debug("Request to change WorkPlace status to {} by ID {}", status, id);
+        Optional<WorkPlace> workPlaceToUpdate  = repository.findWorkPlaceWithAssociationsById(id);
+        if (workPlaceToUpdate.isPresent()){
+            workPlaceToUpdate.get().setActive(status);
+            repository.save(workPlaceToUpdate.get());
+            if (status) {
+                // WorkPlaceIndex must to be created because when WorkPlace was disabled, WorkPlaceIndex was removed
+                WorkPlaceIndex workPlaceIndex = workPlaceIndexMapper.toIndex(workPlaceToUpdate.get());
+                searchRepository.save(workPlaceIndex);
+                Map<String, Object> workPlaceIndexMap = convertWorkPlaceIndexToWorkPlaceIndexMap(workPlaceIndex);
+                List<UUID> employeeIds = workPlaceIndex.getEmployees().stream().map(EmployeeIndex::getId).collect(Collectors.toList());
+                List<UUID> phoneIds = workPlaceIndex.getPhones().stream().map(PhoneIndex::getId).collect(Collectors.toList());
+                final SavedWorkPlaceIndexEvent savedWorkPlaceIndexEvent = SavedWorkPlaceIndexEvent.builder()
+                        .employeeIds(employeeIds)
+                        .phoneIds(phoneIds)
+                        .workplaceIndexMap(workPlaceIndexMap)
+                        .build();
+                eventPublisher.publishEvent(savedWorkPlaceIndexEvent);
+            } else {
+                // WorkPlaceIndex must to be removed because WorkPlace was disabled
+                WorkPlaceIndex workPlaceIndex = searchRepository.findById(workPlaceToUpdate.get().getId())
+                        .orElseThrow(() -> new NoSuchElementException("WorkPlaceIndex with ID: "
+                                + workPlaceToUpdate.get().getId() + " not was found"));
+                searchRepository.delete(workPlaceIndex);
+                final RemovedWorkPlaceIndexEvent removedWorkPlaceIndexEvent = RemovedWorkPlaceIndexEvent.builder()
+                        .removedWorkPlaceIndexId(workPlaceIndex.getId())
+                        .removedWorkPlaceIndex(workPlaceIndex)
+                        .build();
+                eventPublisher.publishEvent(removedWorkPlaceIndexEvent);
+            }
+            return true;
+        };
+        return false;
+    }
+
+    /**
      *  Class to register a removed {@link WorkPlaceIndex} as event
      */
     @Data
@@ -275,6 +308,8 @@ public class WorkPlaceService {
     @AllArgsConstructor
     public static class SavedWorkPlaceIndexEvent{
         private UUID workplaceId;
-        private Map<String,Object> workplaceMap;
+        private Map<String,Object> workplaceIndexMap;
+        private List<UUID> employeeIds;
+        private List<UUID> phoneIds;
     }
 }

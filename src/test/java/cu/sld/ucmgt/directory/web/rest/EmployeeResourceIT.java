@@ -664,14 +664,17 @@ public class EmployeeResourceIT extends PersonIT {
     @Test
     @Transactional
     public void updateSavedEmployeeInsideWorkPlaceIndex() throws Exception {
-        // Initialize the database
+        // Clear EmployeeIndex and PhoneIndex indices
+        employeeSearchRepository.deleteAll();
+        workPlaceSearchRepository.deleteAll();
+
+        // Initialize the database and Index
         em.persist(employee);
         em.flush();
         int databaseSizeBeforeUpdate = TestUtil.findAll(em, Employee.class).size();
 
-        // Clear EmployeeIndex and PhoneIndex indices
-        employeeSearchRepository.deleteAll();
-        workPlaceSearchRepository.deleteAll();
+        EmployeeIndex employeeIndex = indexMapper.toIndex(employee);
+        employeeSearchRepository.save(employeeIndex);
 
         WorkPlace workPlace = createWorkPlaceOfEmployee(Collections.singleton(employee));
 

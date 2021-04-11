@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.script.Script;
@@ -181,7 +182,7 @@ public class EmployeeService {
      * Listen {@link SavedWorkPlaceIndexEvent} event to update workplace inside {@link EmployeeIndex} index
      * @param workPlaceIndexEvent information about event
      */
-    @EventListener
+    @EventListener(condition = "#workPlaceIndexEvent.workplaceId != null && !#workPlaceIndexEvent.employeeIds.isEmpty()")
     public void updateWorkPlaceInEmployeeIndex(SavedWorkPlaceIndexEvent workPlaceIndexEvent) {
         log.debug("Listening SavedWorkPlaceIndexEvent event to update WorkPlace in EmployeeIndex with WorkPlaceIndex ID: {}",
                 workPlaceIndexEvent.getWorkplaceId());
@@ -192,7 +193,30 @@ public class EmployeeService {
               .setRefresh(true)
               .setAbortOnVersionConflict(true)
               .setQuery(QueryBuilders.matchQuery("workPlace.id", workPlaceIndexEvent.getWorkplaceId().toString()))
-              .setScript(new Script(ScriptType.INLINE, "painless", updateCode, workPlaceIndexEvent.getWorkplaceMap()));
+              .setScript(new Script(ScriptType.INLINE, "painless", updateCode, workPlaceIndexEvent.getWorkplaceIndexMap()));
+            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Listen {@link SavedWorkPlaceIndexEvent} event to create workplace inside {@link EmployeeIndex} index
+     * @param workPlaceIndexEvent information about event
+     */
+    @EventListener(condition = "#workPlaceIndexEvent.getWorkplaceId() == null && !#workPlaceIndexEvent.employeeIds.isEmpty()")
+    public void createWorkPlaceInEmployeeIndex(SavedWorkPlaceIndexEvent workPlaceIndexEvent) {
+        log.debug("Listening SavedWorkPlaceIndexEvent event to create WorkPlace in EmployeeIndex with WorkPlaceIndex");
+        try {
+                BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+                workPlaceIndexEvent.getEmployeeIds().forEach(employeeId -> boolQueryBuilder
+                        .should(QueryBuilders.matchQuery("id", employeeId.toString())));
+            String updateCode = "params.remove(\"ctx\");ctx._source.workPlace=params;";
+            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(INDEX_NAME)
+                    .setRefresh(true)
+                    .setAbortOnVersionConflict(true)
+                    .setQuery(boolQueryBuilder)
+                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, workPlaceIndexEvent.getWorkplaceIndexMap()));
             highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
         } catch (IOException e) {
             e.printStackTrace();

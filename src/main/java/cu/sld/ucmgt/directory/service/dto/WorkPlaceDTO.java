@@ -21,7 +21,7 @@ public class WorkPlaceDTO implements Serializable {
     @Email
     private String email;
 
-    private Boolean active;
+    private Boolean active = false;
 
     private String description;
 

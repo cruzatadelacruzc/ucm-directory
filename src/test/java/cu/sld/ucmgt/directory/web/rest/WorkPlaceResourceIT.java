@@ -18,9 +18,7 @@ import cu.sld.ucmgt.directory.repository.search.WorkPlaceSearchRepository;
 import cu.sld.ucmgt.directory.service.dto.EmployeeDTO;
 import cu.sld.ucmgt.directory.service.dto.PhoneDTO;
 import cu.sld.ucmgt.directory.service.dto.WorkPlaceDTO;
-import cu.sld.ucmgt.directory.service.mapper.EmployeeMapper;
-import cu.sld.ucmgt.directory.service.mapper.PhoneMapper;
-import cu.sld.ucmgt.directory.service.mapper.WorkPlaceMapper;
+import cu.sld.ucmgt.directory.service.mapper.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,9 +36,7 @@ import javax.persistence.EntityManager;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -78,6 +74,12 @@ public class WorkPlaceResourceIT {
     private PhoneMapper phoneMapper;
 
     @Autowired
+    private EmployeeIndexMapper employeeIndexMapper;
+
+    @Autowired
+    private PhoneIndexMapper phoneIndexMapper;
+
+    @Autowired
     private EmployeeMapper employeeMapper;
 
     @Autowired
@@ -113,7 +115,8 @@ public class WorkPlaceResourceIT {
     @Test
     @Transactional
     public void createWorkPlace() throws Exception {
-        int databaseSizeBeforeCreate = repository.findAll().size();
+        // Clear WorkPlaceIndex
+        searchRepository.deleteAll();
 
         Employee employee = getEmployeeObj();
         em.persist(employee);
@@ -129,11 +132,23 @@ public class WorkPlaceResourceIT {
 
         // Validate the WorkPlace in the database
         List<WorkPlace> workPlaceList = repository.findAll();
-        assertThat(workPlaceList).hasSize(databaseSizeBeforeCreate + 1);
+        assertThat(workPlaceList).hasSize(1);
         WorkPlace testWorkPlace = workPlaceList.get(workPlaceList.size() - 1);
         assertThat(testWorkPlace.getName()).isEqualTo(DEFAULT_NAME);
         assertThat(testWorkPlace.getActive()).isEqualTo(DEFAULT_ACTIVE);
+        assertThat(testWorkPlace.getEmail()).isEqualTo(DEFAULT_EMAIL);
         assertThat(testWorkPlace.getDescription()).isEqualTo(DEFAULT_DESCRIPTION);
+
+        Iterable<WorkPlaceIndex> workPlaceIndexIterable = searchRepository.findAll();
+        assertThat(workPlaceIndexIterable).hasSize(1);
+        WorkPlaceIndex workPlaceIndex = workPlaceIndexIterable.iterator().next();
+        testCreatedWorkPlaceIndex(workPlaceIndex);
+    }
+
+    private void testCreatedWorkPlaceIndex(WorkPlaceIndex workPlaceIndex) {
+        assertThat(workPlaceIndex.getName()).isEqualTo(DEFAULT_NAME);
+        assertThat(workPlaceIndex.getEmail()).isEqualTo(DEFAULT_EMAIL);
+        assertThat(workPlaceIndex.getDescription()).isEqualTo(DEFAULT_DESCRIPTION);
     }
 
     private Employee getEmployeeObj() {
@@ -204,7 +219,6 @@ public class WorkPlaceResourceIT {
         String workplaceId = resultWorkplace.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
         assertThat(workplaceId).isNotNull();
 
-        int databaseSizeBeforeUpdate = repository.findAll().size();
         WorkPlace updatedWorkPlace =  repository.findById(UUID.fromString(workplaceId)).get();
         updatedWorkPlace.setActive(true);
         updatedWorkPlace.setName(UPDATE_NAME);
@@ -218,7 +232,7 @@ public class WorkPlaceResourceIT {
 
         // Validate the Employee in the database
         List<WorkPlace> workPlaceList = repository.findAll();
-        assertThat(workPlaceList).hasSize(databaseSizeBeforeUpdate);
+        assertThat(workPlaceList).hasSize(1);
         WorkPlace testWorkPlace = workPlaceList.get(workPlaceList.size() - 1);
         assertThat(testWorkPlace.getName()).isEqualTo(UPDATE_NAME);
         assertThat(testWorkPlace.getEmail()).isEqualTo(UPDATE_EMAIL);
@@ -226,8 +240,12 @@ public class WorkPlaceResourceIT {
         assertThat(testWorkPlace.getDescription()).isEqualTo(UPDATE_DESCRIPTION);
 
         Iterable<WorkPlaceIndex> workPlaceIndexIterable = searchRepository.findAll();
-        assertThat(workPlaceIndexIterable).hasSize(databaseSizeBeforeUpdate);
+        assertThat(workPlaceIndexIterable).hasSize(1);
         WorkPlaceIndex testWorkPlaceIndex = workPlaceIndexIterable.iterator().next();
+        testUpdatedWorkPlaceIndex(testWorkPlaceIndex);
+    }
+
+    private void testUpdatedWorkPlaceIndex(WorkPlaceIndex testWorkPlaceIndex) {
         assertThat(testWorkPlaceIndex.getName()).isEqualTo(UPDATE_NAME);
         assertThat(testWorkPlaceIndex.getEmail()).isEqualTo(UPDATE_EMAIL);
         assertThat(testWorkPlaceIndex.getDescription()).isEqualTo(UPDATE_DESCRIPTION);
@@ -273,9 +291,7 @@ public class WorkPlaceResourceIT {
 
         List<PhoneIndex> phonesElasticSearch = phoneSearchRepository.findAllByWorkPlace_Id(workPlace.getId());
         PhoneIndex testPhoneWorkPlaceES = phonesElasticSearch.get(phonesElasticSearch.size() - 1);
-        assertThat(testPhoneWorkPlaceES.getWorkPlace().getName()).isEqualTo(UPDATE_NAME);
-        assertThat(testPhoneWorkPlaceES.getWorkPlace().getEmail()).isEqualTo(UPDATE_EMAIL);
-        assertThat(testPhoneWorkPlaceES.getWorkPlace().getDescription()).isEqualTo(UPDATE_DESCRIPTION);
+        testUpdatedWorkPlaceIndex(testPhoneWorkPlaceES.getWorkPlace());
     }
 
     private Phone createPhoneOfWorkPlace(WorkPlace workPlace) {
@@ -458,5 +474,162 @@ public class WorkPlaceResourceIT {
                 .andExpect(jsonPath("$.[*].name").value(DEFAULT_NAME))
                 .andExpect(jsonPath("$.[*].active").value(DEFAULT_ACTIVE))
                 .andExpect(jsonPath("$.[*].description").value(DEFAULT_DESCRIPTION));
+    }
+
+    @Test
+    @Transactional
+    public void disableWorkPlace() throws Exception {
+        // Clear PhoneIndex, EmployeeIndex and WorkPlaceIndex
+        searchRepository.deleteAll();
+        employeeSearchRepository.deleteAll();
+        phoneSearchRepository.deleteAll();
+
+        Employee employee = getEmployeeObj();
+        employee.setWorkPlace(workPlace);
+
+        // save employee with a workplace in elasticsearch
+        EmployeeDTO employeeDTO = employeeMapper.toDto(employee);
+        MvcResult employeeResult = restMockMvc.perform(post("/api/employees").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(employeeDTO)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String employeeId = employeeResult.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        assertThat(employeeId).isNotNull();
+
+        WorkPlaceDTO workPlaceDTO = mapper.toDto(workPlace);
+        workPlaceDTO.setEmployees(Collections.singleton(UUID.fromString(employeeId)));
+        MvcResult workPlaceResult = restMockMvc.perform(post("/api/workplaces").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(workPlaceDTO)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String workplaceId = workPlaceResult.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        assertThat(workplaceId).isNotNull();
+
+
+        Phone phone = createPhoneOfWorkPlace(null);
+        PhoneDTO phoneDTO = phoneMapper.toDto(phone);
+        phoneDTO.setWorkPlaceId(UUID.fromString(workplaceId));
+        restMockMvc.perform(post("/api/phones").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(phoneDTO)))
+                .andExpect(status().isCreated());
+
+        Map<String, Object> switchStatusWorkPlace = new HashMap<>();
+        switchStatusWorkPlace.put("id",workplaceId);
+        switchStatusWorkPlace.put("status", UPDATE_ACTIVE);
+        int databaseSizeAfterUpdate = repository.findAll().size();
+        restMockMvc.perform(put("/api/workplaces/status").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(switchStatusWorkPlace)))
+                .andExpect(status().isOk())
+                .andExpect(content().string("true"));
+
+        List<WorkPlace> workPlaces = repository.findAll();
+        assertThat(workPlaces).hasSize(databaseSizeAfterUpdate);
+        WorkPlace testWorkPlace = workPlaces.get(workPlaces.size() - 1);
+        assertThat(testWorkPlace.getActive()).isEqualTo(UPDATE_ACTIVE);
+
+        Iterable<WorkPlaceIndex> workPlaceIndexIterable = searchRepository.findAll();
+        assertThat(workPlaceIndexIterable).hasSize(0);
+
+        Iterable<EmployeeIndex> employeeIndexIterable = employeeSearchRepository.findAll();
+        assertThat(employeeIndexIterable).hasSize(1);
+        EmployeeIndex testEmployeeIndex = employeeIndexIterable.iterator().next();
+        assertThat(testEmployeeIndex.getWorkPlace()).isNull();
+
+        Iterable<PhoneIndex> phoneIndexIterable = phoneSearchRepository.findAll();
+        assertThat(phoneIndexIterable).hasSize(0);
+    }
+
+    @Test
+    @Transactional
+    public void enableWorkPlace() throws Exception {
+        // Clear PhoneIndex, EmployeeIndex and WorkPlaceIndex
+        searchRepository.deleteAll();
+        employeeSearchRepository.deleteAll();
+        phoneSearchRepository.deleteAll();
+
+        Employee employee = getEmployeeObj();
+        employee.setWorkPlace(workPlace);
+
+        // save employee with a workplace in elasticsearch
+        EmployeeDTO employeeDTO = employeeMapper.toDto(employee);
+        MvcResult employeeResult = restMockMvc.perform(post("/api/employees").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(employeeDTO)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String employeeId = employeeResult.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        assertThat(employeeId).isNotNull();
+
+        WorkPlaceDTO workPlaceDTO = mapper.toDto(workPlace);
+        workPlaceDTO.setEmployees(Collections.singleton(UUID.fromString(employeeId)));
+        MvcResult workPlaceResult = restMockMvc.perform(post("/api/workplaces").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(workPlaceDTO)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String workplaceId = workPlaceResult.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        assertThat(workplaceId).isNotNull();
+
+
+        Phone phone = createPhoneOfWorkPlace(workPlace);
+        PhoneDTO phoneDTO = phoneMapper.toDto(phone);
+        phoneDTO.setWorkPlaceId(UUID.fromString(workplaceId));
+        MvcResult phoneResult = restMockMvc.perform(post("/api/phones").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(phoneDTO)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String phoneId = phoneResult.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        assertThat(phoneId).isNotNull();
+
+        // code to achieve full associations between phone and workplace
+        Phone phone1 = em.find(Phone.class, UUID.fromString(phoneId));
+        WorkPlace workPlace1 = em.find(WorkPlace.class, UUID.fromString(workplaceId));
+        workPlace1.addPhone(phone1);
+
+        Map<String, Object> switchStatusWorkPlace = new HashMap<>();
+        switchStatusWorkPlace.put("id",workplaceId);
+        switchStatusWorkPlace.put("status", UPDATE_ACTIVE);
+        restMockMvc.perform(put("/api/workplaces/status").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(switchStatusWorkPlace)))
+                .andExpect(status().isOk())
+                .andExpect(content().string("true"));
+
+        switchStatusWorkPlace = new HashMap<>();
+        switchStatusWorkPlace.put("id",workplaceId);
+        switchStatusWorkPlace.put("status", DEFAULT_ACTIVE);
+        int databaseSizeAfterUpdate = repository.findAll().size();
+        restMockMvc.perform(put("/api/workplaces/status").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(switchStatusWorkPlace)))
+                .andExpect(status().isOk())
+                .andExpect(content().string("true"));
+
+        List<WorkPlace> workPlaces = repository.findAll();
+        assertThat(workPlaces).hasSize(databaseSizeAfterUpdate);
+        WorkPlace testWorkPlace = workPlaces.get(workPlaces.size() - 1);
+        assertThat(testWorkPlace.getActive()).isEqualTo(DEFAULT_ACTIVE);
+
+        Iterable<WorkPlaceIndex> workPlaceIndexIterable = searchRepository.findAll();
+        assertThat(workPlaceIndexIterable).hasSize(1);
+        WorkPlaceIndex testWorkPlaceIndex = workPlaceIndexIterable.iterator().next();
+        testCreatedWorkPlaceIndex(testWorkPlaceIndex);
+
+        Iterable<EmployeeIndex> employeeIndexIterable = employeeSearchRepository.findAll();
+        assertThat(employeeIndexIterable).hasSize(1);
+        EmployeeIndex testEmployeeIndex = employeeIndexIterable.iterator().next();
+        testCreatedWorkPlaceIndex(testEmployeeIndex.getWorkPlace());
+
+        Iterable<PhoneIndex> phoneIndexIterable = phoneSearchRepository.findAll();
+        assertThat(phoneIndexIterable).hasSize(1);
+        PhoneIndex testPhoneIndex = phoneIndexIterable.iterator().next();
+        testCreatedWorkPlaceIndex(testPhoneIndex.getWorkPlace());
     }
 }

@@ -44,10 +44,20 @@ public class WorkPlace extends AbstractAuditingEntity implements Serializable {
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     private Set<Phone> phones = new HashSet<>();
 
-    public void removeEmployee(Employee employee){
+    public void removeEmployee(Employee employee) {
         this.employees.remove(employee);
         employee.setBossWorkPlace(false);
         employee.setWorkPlace(null);
+    }
+
+    public void addEmployee(Employee employee) {
+        this.employees.add(employee);
+        employee.setWorkPlace(this);
+    }
+
+    public void addPhone(Phone phone) {
+        this.phones.add(phone);
+        phone.setWorkPlace(this);
     }
 
     @Override

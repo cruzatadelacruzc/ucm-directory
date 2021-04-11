@@ -1,13 +1,14 @@
 package cu.sld.ucmgt.directory.service;
 
 import cu.sld.ucmgt.directory.domain.Phone;
-import cu.sld.ucmgt.directory.domain.elasticsearch.EmployeeIndex;
 import cu.sld.ucmgt.directory.domain.elasticsearch.PhoneIndex;
 import cu.sld.ucmgt.directory.repository.EmployeeRepository;
 import cu.sld.ucmgt.directory.repository.PhoneRepository;
 import cu.sld.ucmgt.directory.repository.WorkPlaceRepository;
 import cu.sld.ucmgt.directory.repository.search.PhoneSearchRepository;
 import cu.sld.ucmgt.directory.service.EmployeeService.RemovedEmployeeIndexEvent;
+import cu.sld.ucmgt.directory.service.EmployeeService.SavedEmployeeIndexEvent;
+import cu.sld.ucmgt.directory.service.WorkPlaceService.RemovedWorkPlaceIndexEvent;
 import cu.sld.ucmgt.directory.service.WorkPlaceService.SavedWorkPlaceIndexEvent;
 import cu.sld.ucmgt.directory.service.dto.PhoneDTO;
 import cu.sld.ucmgt.directory.service.mapper.PhoneIndexMapper;
@@ -58,55 +59,27 @@ public class PhoneService {
      * @param phoneDTO the entity to save.
      * @return the persisted entity.
      */
-    public Phone save(PhoneDTO phoneDTO) {
+    public PhoneDTO save(PhoneDTO phoneDTO) {
+        log.debug("Request to save Phone : {}", phoneDTO);
         Phone phone = mapper.toEntity(phoneDTO);
-        repository.save(phone);
+        if (phoneDTO.getId() == null) {
+            // always create enabled phone
+            phoneDTO.setActive(true);
+        }
         // find workplace to save in elasticsearch
         if (phone.getWorkPlace() != null) {
             workPlaceRepository.findById(phone.getWorkPlace().getId()).ifPresent(phone::setWorkPlace);
         } else {
             employeeRepository.findById(phone.getEmployee().getId()).ifPresent(phone::setEmployee);
         }
-        return phone;
-    }
-
-    /**
-     * Create a phone.
-     *
-     * @param phoneDTO the entity to save.
-     * @return the persisted entity.
-     */
-    public PhoneDTO create(PhoneDTO phoneDTO) {
-        log.debug("Request to create Phone : {}", phoneDTO);
-        // always create enabled phone
-        phoneDTO.setActive(true);
-        Phone phone = save(phoneDTO);
-        PhoneIndex phoneIndex = phoneIndexMapper.toIndex(phone);
-        searchRepository.save(phoneIndex);
-        Map<String, Object> phoneIndexMap = createPhoneIndexToPhoneIndexMap(phoneIndex);
-        final SavedPhoneIndexEvent indexEvent = SavedPhoneIndexEvent.builder()
-                .phoneId(null)
-                .phoneIndexMap(phoneIndexMap)
-                .build();
-        eventPublisher.publishEvent(indexEvent);
-        return mapper.toDto(phone);
-    }
-
-    /**
-     * Update a phone.
-     *
-     * @param phoneDTO the entity to save.
-     * @return the persisted entity.
-     */
-    public PhoneDTO update(PhoneDTO phoneDTO) {
-        log.debug("Request to update Phone : {}", phoneDTO);
-        Phone phone = save(phoneDTO);
+        repository.save(phone);
         PhoneIndex phoneIndex = phoneIndexMapper.toIndex(phone);
         searchRepository.save(phoneIndex);
         Map<String, Object> phoneIndexMap = createPhoneIndexToPhoneIndexMap(phoneIndex);
         final SavedPhoneIndexEvent indexEvent = SavedPhoneIndexEvent.builder()
                 .phoneIndexMap(phoneIndexMap)
-                .phoneId(phoneIndex.getId())
+                .phoneId(phoneDTO.getId() == null ? null : phoneIndex.getId())
+                .workPlaceId(phoneIndex.getWorkPlace().getId())
                 .build();
         eventPublisher.publishEvent(indexEvent);
         return mapper.toDto(phone);
@@ -118,13 +91,13 @@ public class PhoneService {
      * @param phoneIndex {@link PhoneIndex} instance
      * @return phoneMap
      */
-    private Map<String, Object> createPhoneIndexToPhoneIndexMap(PhoneIndex phoneIndex){
+    private Map<String, Object> createPhoneIndexToPhoneIndexMap(PhoneIndex phoneIndex) {
         Map<String, Object> phoneMap = new HashMap<>();
         phoneMap.put("number", phoneIndex.getNumber());
         phoneMap.put("id", phoneIndex.getId().toString());
         phoneMap.put("description", phoneIndex.getDescription());
         phoneMap.put("workPlace", null);
-        if (phoneIndex.getWorkPlace() != null){
+        if (phoneIndex.getWorkPlace() != null) {
             Map<String, Object> workPlaceMap = new HashMap<>();
             workPlaceMap.put("name", phoneIndex.getWorkPlace().getName());
             workPlaceMap.put("email", phoneIndex.getWorkPlace().getEmail());
@@ -136,16 +109,18 @@ public class PhoneService {
     }
 
     @EventListener
-    public void updateEmployeeInPhoneIndex(EmployeeService.SavedEmployeeIndexEvent  employeeIndexEvent) {
+    public void updateEmployeeInPhoneIndex(SavedEmployeeIndexEvent employeeIndexEvent) {
+        log.debug("Listening SavedEmployeeIndexEvent event to save EmployeeIndex with ID: {} in PhoneIndex",
+                employeeIndexEvent.getEmployeeId());
         if (employeeIndexEvent.getEmployeeId() != null) {
             try {
                 String updateCode = "for (entry in params.entrySet()){ if (entry.getKey() != \"ctx\") " +
                         "{ctx._source.employee[entry.getKey()] = entry.getValue()}}";
                 UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("phones")
-                  .setRefresh(true)
-                  .setAbortOnVersionConflict(true)
-                  .setScript(new Script(ScriptType.INLINE, "painless", updateCode, employeeIndexEvent.getParams()))
-                  .setQuery(QueryBuilders.matchQuery("employee.id", employeeIndexEvent.getEmployeeId()));
+                        .setRefresh(true)
+                        .setAbortOnVersionConflict(true)
+                        .setScript(new Script(ScriptType.INLINE, "painless", updateCode, employeeIndexEvent.getParams()))
+                        .setQuery(QueryBuilders.matchQuery("employee.id", employeeIndexEvent.getEmployeeId()));
                 highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -154,8 +129,8 @@ public class PhoneService {
     }
 
     @EventListener
-    public void deleteWorkPlaceInPhoneIndex(WorkPlaceService.RemovedWorkPlaceIndexEvent workPlaceIndexEvent) {
-        log.debug("Listening RemovedWorkPlaceIndexEvent event to delete WorkPlace in PhoneIndex with WorkPlaceIndex ID: {}",
+    public void deleteWorkPlaceInPhoneIndex(RemovedWorkPlaceIndexEvent workPlaceIndexEvent) {
+        log.debug("Listening RemovedWorkPlaceIndexEvent event to PhoneIndex with WorkPlaceIndex ID: {}",
                 workPlaceIndexEvent.getRemovedWorkPlaceIndexId());
         try {
             DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest(INDEX_NAME)
@@ -170,25 +145,43 @@ public class PhoneService {
     }
 
     /**
-     * Listen {@link SavedWorkPlaceIndexEvent} event to update workplace inside {@link EmployeeIndex} index
+     * Listen {@link SavedWorkPlaceIndexEvent} event to update workplace inside {@link PhoneIndex} index
+     *
      * @param workPlaceIndexEvent information about event
      */
-    @EventListener
-    public void updateWorkPlaceInEmployeeIndex(SavedWorkPlaceIndexEvent workPlaceIndexEvent) {
+    @EventListener(condition = "#workPlaceIndexEvent.workplaceId != null && !#workPlaceIndexEvent.phoneIds.isEmpty()")
+    public void updateWorkPlaceInPhoneIndex(SavedWorkPlaceIndexEvent workPlaceIndexEvent) {
         log.debug("Listening SavedWorkPlaceIndexEvent event to update WorkPlace in PhoneIndex with WorkPlaceIndex ID: {}",
                 workPlaceIndexEvent.getWorkplaceId());
         try {
             String updateCode = "for (entry in params.entrySet()){if (entry.getKey() != \"ctx\") " +
                     "{ctx._source.workPlace[entry.getKey()] = entry.getValue()}}";
             UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(INDEX_NAME)
-              .setRefresh(true)
-              .setAbortOnVersionConflict(true)
-              .setQuery(QueryBuilders.matchQuery("workPlace.id", workPlaceIndexEvent.getWorkplaceId().toString()))
-              .setScript(new Script(ScriptType.INLINE, "painless", updateCode, workPlaceIndexEvent.getWorkplaceMap()));
+                    .setRefresh(true)
+                    .setAbortOnVersionConflict(true)
+                    .setQuery(QueryBuilders.matchQuery("workPlace.id", workPlaceIndexEvent.getWorkplaceId().toString()))
+                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, workPlaceIndexEvent.getWorkplaceIndexMap()));
             highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Listen {@link SavedWorkPlaceIndexEvent} event to update workplace inside {@link PhoneIndex} index
+     *
+     * @param workPlaceIndexEvent information about event
+     */
+    @EventListener(condition = "#workPlaceIndexEvent.workplaceId == null && !#workPlaceIndexEvent.phoneIds.isEmpty()")
+    public void createWorkPlaceInPhoneIndex(SavedWorkPlaceIndexEvent workPlaceIndexEvent) {
+        log.debug("Listening SavedWorkPlaceIndexEvent event to create WorkPlace in PhoneIndex with WorkPlaceIndex ID: {}",
+                workPlaceIndexEvent.getWorkplaceId());
+        workPlaceIndexEvent.getPhoneIds().forEach(phoneId -> {
+            Phone phone = repository.findById(phoneId)
+                 .orElseThrow(() -> new NoSuchElementException("PhoneIndex with ID: " + phoneId + " not was found"));
+            PhoneIndex phoneIndex = phoneIndexMapper.toIndex(phone);
+            searchRepository.save(phoneIndex);
+        });
     }
 
     @EventListener
@@ -239,21 +232,22 @@ public class PhoneService {
         log.debug("Request to delete Phone : {}", number);
         repository.findPhoneByNumber(number).ifPresent(phone -> {
             repository.delete(phone);
-            PhoneIndex phoneIndex  = searchRepository.findPhoneIndexByNumber(number)
+            PhoneIndex phoneIndex = searchRepository.findPhoneIndexByNumber(number)
                     .orElseThrow(() -> new NoSuchElementException("PhoneIndex with number: " + number + " not was found"));
-                searchRepository.delete(phoneIndex);
-                final RemovedPhoneIndexEvent removedPhoneIndexEvent = RemovedPhoneIndexEvent.builder()
-                        .removedPhoneIndex(phoneIndex)
-                        .removedPhoneIndexId(phoneIndex.getId())
-                        .build();
-                eventPublisher.publishEvent(removedPhoneIndexEvent);
+            searchRepository.delete(phoneIndex);
+            final RemovedPhoneIndexEvent removedPhoneIndexEvent = RemovedPhoneIndexEvent.builder()
+                    .removedPhoneIndex(phoneIndex)
+                    .removedPhoneIndexId(phoneIndex.getId())
+                    .workPlaceId(phoneIndex.getWorkPlace().getId())
+                    .build();
+            eventPublisher.publishEvent(removedPhoneIndexEvent);
         });
     }
 
     /**
      * Change status for active or disable phone
      *
-     * @param id          phone identifier
+     * @param id     phone identifier
      * @param status true or false
      * @return true if changed status or false otherwise
      */
@@ -290,25 +284,27 @@ public class PhoneService {
     }
 
     /**
-     *  Class to register a saved {@link PhoneIndex} as event
+     * Class to register a saved {@link PhoneIndex} as event
      */
     @Data
     @Builder
     @AllArgsConstructor
     public static class SavedPhoneIndexEvent {
-        UUID phoneId;
-        Map<String,Object> phoneIndexMap;
+        private UUID phoneId;
+        private UUID workPlaceId;
+        private Map<String, Object> phoneIndexMap;
     }
 
     /**
-     *  Class to register a removed {@link PhoneIndex} as event
+     * Class to register a removed {@link PhoneIndex} as event
      */
     @Data
     @Builder
     @AllArgsConstructor
     public static class RemovedPhoneIndexEvent {
-        UUID removedPhoneIndexId;
-        PhoneIndex removedPhoneIndex;
+        private UUID removedPhoneIndexId;
+        private UUID workPlaceId;
+        private PhoneIndex removedPhoneIndex;
 
     }
 
