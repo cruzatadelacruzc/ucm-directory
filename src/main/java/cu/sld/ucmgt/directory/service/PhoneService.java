@@ -79,7 +79,7 @@ public class PhoneService {
         final SavedPhoneIndexEvent indexEvent = SavedPhoneIndexEvent.builder()
                 .phoneIndexMap(phoneIndexMap)
                 .phoneId(phoneDTO.getId() == null ? null : phoneIndex.getId())
-                .workPlaceId(phoneIndex.getWorkPlace().getId())
+                .workPlaceId(phoneIndex.getWorkPlace() != null ? phoneIndex.getWorkPlace().getId(): null)
                 .build();
         eventPublisher.publishEvent(indexEvent);
         return mapper.toDto(phone);

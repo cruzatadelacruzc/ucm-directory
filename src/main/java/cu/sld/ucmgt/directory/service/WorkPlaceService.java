@@ -143,7 +143,7 @@ public class WorkPlaceService {
         }
     }
 
-    @EventListener
+    @EventListener(condition = "#phoneIndexEvent.getWorkPlaceId() != null")
     public void savePhoneInWorkPlaceIndex(SavedPhoneIndexEvent phoneIndexEvent) {
         log.debug("Listening SavedPhoneIndexEvent event to save Phone in WorkPlaceIndex with PhoneIndex ID: {}",
                 phoneIndexEvent.getPhoneId());

@@ -250,7 +250,7 @@ public class EmployeeResourceIT extends PersonIT {
         assertThat(employeeId).isNotNull();
 
         // To save phone with a employee in elasticsearch
-        Phone phone = createPhoneOfEmployee(employee);
+        Phone phone = createPhoneOfEmployee(null);
         PhoneDTO phoneDTO = phoneMapper.toDto(phone);
         phoneDTO.setEmployeeId(UUID.fromString(employeeId));
         databaseSizeBeforeCreate = TestUtil.findAll(em, Phone.class).size();
