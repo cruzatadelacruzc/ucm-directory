@@ -265,6 +265,7 @@ public class PhoneService {
                 final SavedPhoneIndexEvent savedPhoneIndexEvent = SavedPhoneIndexEvent.builder()
                         .phoneId(null)
                         .phoneIndexMap(phoneIndexMap)
+                        .workPlaceId(phoneIndexToUpdate.getWorkPlace() != null ? phoneIndexToUpdate.getWorkPlace().getId() : null)
                         .build();
                 eventPublisher.publishEvent(savedPhoneIndexEvent);
             } else {
@@ -274,6 +275,8 @@ public class PhoneService {
                     final RemovedPhoneIndexEvent removedPhoneIndexEvent = RemovedPhoneIndexEvent.builder()
                             .removedPhoneIndex(phoneIndexToDisable)
                             .removedPhoneIndexId(phoneIndexToDisable.getId())
+                            .workPlaceId(phoneIndexToDisable.getWorkPlace() != null ?
+                                    phoneIndexToDisable.getWorkPlace().getId() : null)
                             .build();
                     eventPublisher.publishEvent(removedPhoneIndexEvent);
                 });

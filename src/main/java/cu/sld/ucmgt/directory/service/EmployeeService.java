@@ -183,7 +183,7 @@ public class EmployeeService {
      * @param workPlaceIndexEvent information about event
      */
     @EventListener(condition = "#workPlaceIndexEvent.workplaceId != null && !#workPlaceIndexEvent.employeeIds.isEmpty()")
-    public void updateWorkPlaceInEmployeeIndex(SavedWorkPlaceIndexEvent workPlaceIndexEvent) {
+    public void     updateWorkPlaceInEmployeeIndex(SavedWorkPlaceIndexEvent workPlaceIndexEvent) {
         log.debug("Listening SavedWorkPlaceIndexEvent event to update WorkPlace in EmployeeIndex with WorkPlaceIndex ID: {}",
                 workPlaceIndexEvent.getWorkplaceId());
         try {
