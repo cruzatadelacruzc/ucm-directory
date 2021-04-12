@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.reindex.DeleteByQueryRequest;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
@@ -184,15 +185,19 @@ public class PhoneService {
         });
     }
 
-    @EventListener
-    public void removeEmployeeIndexInPhoneIndex(RemovedEmployeeIndexEvent event) {
+    @EventListener(condition = "!#event.getPhoneIds().isEmpty()")
+    public void removeEmployeeIndexIntoPhoneIndex(RemovedEmployeeIndexEvent event) {
         log.debug("Listening RemovedEmployeeIndexEvent event to remove Employee in PhoneIndex with EmployeeIndex ID: {}",
                 event.getRemovedEmployeeId());
         try {
+            BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+            event.getPhoneIds().forEach(phoneId -> boolQueryBuilder
+                    .should(QueryBuilders.matchQuery("id", phoneId.toString())));
+
             DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest(INDEX_NAME)
                     .setRefresh(true)
                     .setAbortOnVersionConflict(true)
-                    .setQuery(QueryBuilders.matchQuery("employee.id", event.getRemovedEmployeeId().toString()));
+                    .setQuery(boolQueryBuilder);
             highLevelClient.deleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
         } catch (IOException exception) {
             log.error(exception.getMessage());

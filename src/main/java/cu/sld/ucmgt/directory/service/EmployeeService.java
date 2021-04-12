@@ -1,6 +1,7 @@
 package cu.sld.ucmgt.directory.service;
 
 import cu.sld.ucmgt.directory.domain.Employee;
+import cu.sld.ucmgt.directory.domain.Phone;
 import cu.sld.ucmgt.directory.domain.elasticsearch.EmployeeIndex;
 import cu.sld.ucmgt.directory.repository.EmployeeRepository;
 import cu.sld.ucmgt.directory.repository.NomenclatureRepository;
@@ -31,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -170,9 +172,12 @@ public class EmployeeService {
            EmployeeIndex employeeIndex = searchRepository.findById(employee.getId())
             .orElseThrow(() -> new NoSuchElementException("EmployeeIndex with ID: " + employee.getId() + " not was found"));
            searchRepository.delete(employeeIndex);
+           List<UUID> phoneIds = employee.getPhones().stream().map(Phone::getId).collect(Collectors.toList());
            final RemovedEmployeeIndexEvent removedEmployeeIndexEvent = RemovedEmployeeIndexEvent.builder()
-                   .removedEmployeeId(employeeIndex.getId())
+                   .phoneIds(phoneIds)
                    .removedEmployeeIndex(employeeIndex)
+                   .removedEmployeeId(employeeIndex.getId())
+                   .workPlaceId(employee.getWorkPlace() != null ? employee.getWorkPlace().getId() : null)
                    .build();
            eventPublisher.publishEvent(removedEmployeeIndexEvent);
         });
@@ -286,5 +291,7 @@ public class EmployeeService {
     public static class RemovedEmployeeIndexEvent{
         private UUID removedEmployeeId;
         private EmployeeIndex removedEmployeeIndex;
+        private UUID workPlaceId;
+        private List<UUID> phoneIds;
     }
 }

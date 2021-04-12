@@ -778,10 +778,16 @@ public class EmployeeResourceIT extends PersonIT {
         // To save phone with a employee in elasticsearch
         Phone phone = createPhoneOfEmployee(employee);
         PhoneDTO phoneDTO = phoneMapper.toDto(phone);
-        restMockMvc.perform(post("/api/phones").with(csrf())
+        MvcResult resultPhone = restMockMvc.perform(post("/api/phones").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(TestUtil.convertObjectToJsonBytes(phoneDTO)))
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                .andReturn();
+        String phoneId = resultPhone.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        assertThat(phoneId).isNotNull();
+
+        Phone phone1 = em.find(Phone.class, UUID.fromString(phoneId));
+        employee.setPhones(Collections.singleton(phone1));
 
         // Delete the employee
         restMockMvc.perform(delete("/api/employees/{id}", employee.getId()).with(csrf())

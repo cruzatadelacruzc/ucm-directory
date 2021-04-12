@@ -184,8 +184,8 @@ public class WorkPlaceService {
         }
     }
 
-    @EventListener
-    public void removeEmployeeIndexInWorkPlaceIndex(RemovedEmployeeIndexEvent event) {
+    @EventListener(condition = "#event.workPlaceId != null ")
+    public void removeEmployeeIndexIntoWorkPlaceIndex(RemovedEmployeeIndexEvent event) {
         log.debug("Listening RemovedEmployeeIndexEvent event to remove Employee in WorkPlaceIndex with EmployeeIndex ID: {}"
                 , event.getRemovedEmployeeId());
         try {
