@@ -5,24 +5,22 @@ import cu.sld.ucmgt.directory.domain.NomenclatureType;
 import cu.sld.ucmgt.directory.repository.NomenclatureRepository;
 import cu.sld.ucmgt.directory.service.dto.NomenclatureDTO;
 import cu.sld.ucmgt.directory.service.mapper.NomenclatureMapper;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.elasticsearch.ElasticsearchException;
-import org.elasticsearch.client.RequestOptions;
-import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.reindex.UpdateByQueryRequest;
-import org.elasticsearch.script.Script;
-import org.elasticsearch.script.ScriptType;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Optional;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -32,7 +30,7 @@ public class NomenclatureService {
 
     private final NomenclatureMapper mapper;
     private final NomenclatureRepository repository;
-    private final RestHighLevelClient highLevelClient;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * Save a nomenclature and update Employee indexes if store updated nomenclature.
@@ -88,34 +86,12 @@ public class NomenclatureService {
         BoolQueryBuilder query = new BoolQueryBuilder()
                 .should(QueryBuilders.matchQuery(filedName, oldNomenclatureName))
                 .should(QueryBuilders.matchQuery("parentDistrict", oldNomenclatureName));
-        updateNomenclatureInEmployeeIndex(query, updateCode);
-        updateNomenclatureInStudentIndex(query, updateCode);
-    }
-
-    private void updateNomenclatureInStudentIndex(QueryBuilder query, String updateCode) {
-        try {
-            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("students")
-                    .setRefresh(true)
-                    .setAbortOnVersionConflict(true)
-                    .setQuery(query)
-                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, Collections.emptyMap()));
-            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
-        } catch (ElasticsearchException | IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void updateNomenclatureInEmployeeIndex(QueryBuilder query, String updateCode) {
-        try {
-            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("employees")
-                    .setRefresh(true)
-                    .setAbortOnVersionConflict(true)
-                    .setQuery(query)
-                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, Collections.emptyMap()));
-            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
-        } catch (ElasticsearchException | IOException e) {
-            e.printStackTrace();
-        }
+        final SavedNomenclatureEvent savedNomenclatureEvent = SavedNomenclatureEvent.builder()
+                .defaultQuery(query)
+                .updateCode(updateCode)
+                .updatedNomenclature(newNomenclature)
+                .build();
+        eventPublisher.publishEvent(savedNomenclatureEvent);
     }
 
     /**
@@ -142,8 +118,10 @@ public class NomenclatureService {
         log.debug("Request to change nomenclature status to {} by ID {}", status, id);
         Optional<Nomenclature> nomenclatureToChange = repository.findById(id);
         if (nomenclatureToChange.isPresent()){
+            String oldNomenclatureName = nomenclatureToChange.get().getName();
             nomenclatureToChange.get().setActive(status);
             repository.save(nomenclatureToChange.get());
+            updateIndices(nomenclatureToChange.get(), oldNomenclatureName);
             return true;
         }
         return false;
@@ -249,5 +227,17 @@ public class NomenclatureService {
                                                                 NomenclatureType discriminator) {
         log.debug("Request to get a page of Nomenclature by status {} and discriminator {}", status, discriminator);
         return repository.findAllByActiveAndDiscriminator(pageable, status, discriminator).map(mapper::toDto);
+    }
+
+    /**
+     * Class to register a removed {@link Nomenclature} as event
+     */
+    @Data
+    @Builder
+    @AllArgsConstructor
+    public static class SavedNomenclatureEvent {
+        private String updateCode;
+        private BoolQueryBuilder defaultQuery;
+        private Nomenclature updatedNomenclature;
     }
 }

@@ -16,6 +16,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.index.query.BoolQueryBuilder;
@@ -251,6 +252,23 @@ public class EmployeeService {
     public Page<EmployeeDTO> getAllEmployees(Pageable pageable) {
         log.debug("Request to get all Employees");
         return repository.findAll(pageable).map(mapper::toDto);
+    }
+
+    @EventListener( condition = "#savedNomenclatureEvent.getUpdatedNomenclature() != null")
+    public void updateNomenclatureIntoStudentIndex(NomenclatureService.SavedNomenclatureEvent savedNomenclatureEvent) {
+        log.debug("Listening SavedNomenclatureEvent event to update Nomenclature with ID {} in EmployeeIndex.",
+                savedNomenclatureEvent.getUpdatedNomenclature().getId());
+        try {
+            UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(INDEX_NAME)
+                    .setRefresh(true)
+                    .setAbortOnVersionConflict(true)
+                    .setQuery(savedNomenclatureEvent.getDefaultQuery())
+                    .setScript(new Script(ScriptType.INLINE, "painless", savedNomenclatureEvent.getUpdateCode(),
+                            Collections.emptyMap()));
+            highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+        } catch (ElasticsearchException | IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @EventListener

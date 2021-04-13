@@ -398,7 +398,7 @@ public class NomenclatureResourceIT {
 
     @Test
     @Transactional
-    public void updateParentDistrictDisableWithEmployeeIndexAndStudentIndex() throws Exception {
+    public void updateDisableParentDistrictWithEmployeeIndexAndStudentIndex() throws Exception {
         // Initialize the database
         repository.saveAndFlush(nomenclature);
         int databaseSizeBeforeUpdate = repository.findAll().size();
