@@ -150,7 +150,7 @@ public class PhoneService {
      *
      * @param workPlaceIndexEvent information about event
      */
-    @EventListener(condition = "#workPlaceIndexEvent.workplaceId != null && !#workPlaceIndexEvent.phoneIds.isEmpty()")
+    @EventListener(condition = "#workPlaceIndexEvent.getWorkplaceId() != null && !#workPlaceIndexEvent.getPhoneIds().isEmpty()")
     public void updateWorkPlaceInPhoneIndex(SavedWorkPlaceIndexEvent workPlaceIndexEvent) {
         log.debug("Listening SavedWorkPlaceIndexEvent event to update WorkPlace in PhoneIndex with WorkPlaceIndex ID: {}",
                 workPlaceIndexEvent.getWorkplaceId());
@@ -173,7 +173,7 @@ public class PhoneService {
      *
      * @param workPlaceIndexEvent information about event
      */
-    @EventListener(condition = "#workPlaceIndexEvent.workplaceId == null && !#workPlaceIndexEvent.phoneIds.isEmpty()")
+    @EventListener(condition = "#workPlaceIndexEvent.getWorkplaceId() == null && !#workPlaceIndexEvent.getPhoneIds().isEmpty()")
     public void createWorkPlaceInPhoneIndex(SavedWorkPlaceIndexEvent workPlaceIndexEvent) {
         log.debug("Listening SavedWorkPlaceIndexEvent event to create WorkPlace in PhoneIndex with WorkPlaceIndex ID: {}",
                 workPlaceIndexEvent.getWorkplaceId());

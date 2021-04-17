@@ -145,8 +145,8 @@ public class WorkPlaceService {
 
     @EventListener(condition = "#phoneIndexEvent.getWorkPlaceId() != null")
     public void savePhoneInWorkPlaceIndex(SavedPhoneIndexEvent phoneIndexEvent) {
-        log.debug("Listening SavedPhoneIndexEvent event to save Phone in WorkPlaceIndex with PhoneIndex ID: {}",
-                phoneIndexEvent.getPhoneId());
+        log.debug("Listening SavedPhoneIndexEvent event to save Phone into WorkPlaceIndex with ID: {}",
+                phoneIndexEvent.getWorkPlaceId());
         try {
             // updating the phone belonging to workplaces
             String updateCode = "params.remove(\"ctx\");ctx._source.phones.add(params)";
@@ -167,7 +167,7 @@ public class WorkPlaceService {
         }
     }
 
-    @EventListener(condition = "#event.workPlaceId != null")
+    @EventListener(condition = "#event.getWorkPlaceId() != null")
     public void removePhoneIndexInWorkPlaceIndex(RemovedPhoneIndexEvent event) {
         log.debug("Listening RemovedPhoneIndexEvent event to remove Phone in WorkPlaceIndex with PhoneIndex ID: {}",
                 event.getRemovedPhoneIndexId());
@@ -184,7 +184,7 @@ public class WorkPlaceService {
         }
     }
 
-    @EventListener(condition = "#event.workPlaceId != null ")
+    @EventListener(condition = "#event.getWorkPlaceId() != null ")
     public void removeEmployeeIndexIntoWorkPlaceIndex(RemovedEmployeeIndexEvent event) {
         log.debug("Listening RemovedEmployeeIndexEvent event to remove Employee in WorkPlaceIndex with EmployeeIndex ID: {}"
                 , event.getRemovedEmployeeId());
