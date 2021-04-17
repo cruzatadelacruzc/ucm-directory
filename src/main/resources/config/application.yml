@@ -80,8 +80,6 @@ management:
           autotime:
             enabled: true
 spring:
-  autoconfigure:
-    exclude: org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchAutoConfiguration,org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration
   application:
     name: directory
   data:
@@ -121,11 +119,15 @@ spring:
       client:
         provider:
           oidc:
-            issuer-uri: http://localhost:9080/auth/realms/jhipster
+            issuer-uri: http://keycloak:9080/auth/realms/jhipster
         registration:
           oidc:
             client-id: internal
             client-secret: internal
+  elasticsearch:
+    rest:
+      username: elastic
+      password: elastic
 logging:
   file:
     name: target/directory.log
