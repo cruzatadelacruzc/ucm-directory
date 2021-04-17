@@ -86,7 +86,7 @@ public class WorkPlaceResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}.
      */
     @DeleteMapping("/workplaces/{id}")
-    public ResponseEntity<Void> deleteEmployee(@PathVariable(name = "id") UUID uid) {
+    public ResponseEntity<Void> deleteWorkPlace(@PathVariable(name = "id") UUID uid) {
         log.debug("REST request to delete WorkPlace : {}", uid);
         service.deleteWorkPlace(uid);
         return ResponseEntity.noContent()
