@@ -6,16 +6,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface NomenclatureRepository extends JpaRepository<Nomenclature, UUID>{
+public interface NomenclatureRepository extends JpaRepository<Nomenclature, UUID>, CustomNomenclatureRepository {
 
     Optional<Nomenclature> findNomenclatureByNameIgnoreCaseAndDiscriminatorAndParentDistrictNotNull(String name, NomenclatureType discriminator);
 
@@ -36,9 +33,5 @@ public interface NomenclatureRepository extends JpaRepository<Nomenclature, UUID
 
     Page<Nomenclature> findAllByParentDistrict_Id(Pageable pageable, UUID id);
 
-    Page<Nomenclature> findAllByActiveAndDiscriminator(Pageable pageable, Boolean active, NomenclatureType discriminator);
-
-    @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("UPDATE Nomenclature n SET n.active = :status WHERE n.id = :id OR n.parentDistrict.id = :id")
-    int updateByIdOrParentDistrict_Id(@Param("status") boolean status, @Param("id") UUID id);
+    Page<Nomenclature> findAllByDiscriminator(Pageable pageable, NomenclatureType discriminator);
 }
