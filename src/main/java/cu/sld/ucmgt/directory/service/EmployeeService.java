@@ -1,12 +1,14 @@
 package cu.sld.ucmgt.directory.service;
 
 import cu.sld.ucmgt.directory.domain.Employee;
+import cu.sld.ucmgt.directory.domain.NomenclatureType;
 import cu.sld.ucmgt.directory.domain.Phone;
 import cu.sld.ucmgt.directory.domain.elasticsearch.EmployeeIndex;
 import cu.sld.ucmgt.directory.repository.EmployeeRepository;
 import cu.sld.ucmgt.directory.repository.NomenclatureRepository;
 import cu.sld.ucmgt.directory.repository.WorkPlaceRepository;
 import cu.sld.ucmgt.directory.repository.search.EmployeeSearchRepository;
+import cu.sld.ucmgt.directory.service.NomenclatureService.SavedNomenclatureEvent;
 import cu.sld.ucmgt.directory.service.WorkPlaceService.SavedWorkPlaceIndexEvent;
 import cu.sld.ucmgt.directory.service.dto.EmployeeDTO;
 import cu.sld.ucmgt.directory.service.mapper.EmployeeIndexMapper;
@@ -188,7 +190,7 @@ public class EmployeeService {
      * Listen {@link SavedWorkPlaceIndexEvent} event to update workplace inside {@link EmployeeIndex} index
      * @param workPlaceIndexEvent information about event
      */
-    @EventListener(condition = "#workPlaceIndexEvent.workplaceId != null && !#workPlaceIndexEvent.employeeIds.isEmpty()")
+    @EventListener(condition = "#workPlaceIndexEvent.workplaceId != null && !#workPlaceIndexEvent.getEmployeeIds().isEmpty()")
     public void     updateWorkPlaceInEmployeeIndex(SavedWorkPlaceIndexEvent workPlaceIndexEvent) {
         log.debug("Listening SavedWorkPlaceIndexEvent event to update WorkPlace in EmployeeIndex with WorkPlaceIndex ID: {}",
                 workPlaceIndexEvent.getWorkplaceId());
@@ -210,7 +212,7 @@ public class EmployeeService {
      * Listen {@link SavedWorkPlaceIndexEvent} event to create workplace inside {@link EmployeeIndex} index
      * @param workPlaceIndexEvent information about event
      */
-    @EventListener(condition = "#workPlaceIndexEvent.getWorkplaceId() == null && !#workPlaceIndexEvent.employeeIds.isEmpty()")
+    @EventListener(condition = "#workPlaceIndexEvent.getWorkplaceId() == null && !#workPlaceIndexEvent.getEmployeeIds().isEmpty()")
     public void createWorkPlaceInEmployeeIndex(SavedWorkPlaceIndexEvent workPlaceIndexEvent) {
         log.debug("Listening SavedWorkPlaceIndexEvent event to create WorkPlace in EmployeeIndex with WorkPlaceIndex");
         try {
@@ -255,14 +257,38 @@ public class EmployeeService {
     }
 
     @EventListener( condition = "#savedNomenclatureEvent.getUpdatedNomenclature() != null")
-    public void updateNomenclatureIntoStudentIndex(NomenclatureService.SavedNomenclatureEvent savedNomenclatureEvent) {
+    public void updateNomenclatureIntoEmployeeIndex(SavedNomenclatureEvent savedNomenclatureEvent) {
         log.debug("Listening SavedNomenclatureEvent event to update Nomenclature with ID {} in EmployeeIndex.",
                 savedNomenclatureEvent.getUpdatedNomenclature().getId());
         try {
+            BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+            savedNomenclatureEvent.getCommonAssociationIds().forEach(commonAssociationIds -> boolQueryBuilder
+                            .should(QueryBuilders.matchQuery("id", commonAssociationIds.toString())));
+            if (savedNomenclatureEvent.getUpdatedNomenclature().getDiscriminator().equals(NomenclatureType.CATEGORIA)){
+                savedNomenclatureEvent.getUpdatedNomenclature().getEmployeesCategory()
+                    .forEach(employee -> boolQueryBuilder
+                            .should(QueryBuilders.matchQuery("id", employee.getId().toString())));
+            }
+            if (savedNomenclatureEvent.getUpdatedNomenclature().getDiscriminator().equals(NomenclatureType.CARGO)){
+                savedNomenclatureEvent.getUpdatedNomenclature().getEmployeesCategory()
+                        .forEach(employee -> boolQueryBuilder
+                                .should(QueryBuilders.matchQuery("id", employee.getId().toString())));
+            }
+            if (savedNomenclatureEvent.getUpdatedNomenclature().getDiscriminator().equals(NomenclatureType.PROFESION)){
+                savedNomenclatureEvent.getUpdatedNomenclature().getEmployeesCategory()
+                        .forEach(employee -> boolQueryBuilder
+                                .should(QueryBuilders.matchQuery("id", employee.getId().toString())));
+            }
+            if (savedNomenclatureEvent.getUpdatedNomenclature().getDiscriminator().equals(NomenclatureType.GRADO_CIENTIFICO)){
+                savedNomenclatureEvent.getUpdatedNomenclature().getEmployeesCategory()
+                        .forEach(employee -> boolQueryBuilder
+                                .should(QueryBuilders.matchQuery("id", employee.getId().toString())));
+            }
+
             UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(INDEX_NAME)
                     .setRefresh(true)
+                    .setQuery(boolQueryBuilder)
                     .setAbortOnVersionConflict(true)
-                    .setQuery(savedNomenclatureEvent.getDefaultQuery())
                     .setScript(new Script(ScriptType.INLINE, "painless", savedNomenclatureEvent.getUpdateCode(),
                             Collections.emptyMap()));
             highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);

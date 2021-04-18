@@ -14,7 +14,6 @@ public class NomenclatureDTO {
     private UUID id;
     @NotBlank
     private String name;
-    private Boolean active;
     private String description;
     private UUID parentDistrictId;
     private NomenclatureType discriminator;
@@ -37,7 +36,6 @@ public class NomenclatureDTO {
         return "NomenclatureDTO{" +
                 "uid=" + id +
                 ", name='" + name + '\'' +
-                ", active=" + active +
                 ", description='" + description + '\'' +
                 ", discriminator=" + discriminator +
                 ", parentDistrictId=" + parentDistrictId +

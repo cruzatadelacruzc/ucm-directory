@@ -29,20 +29,18 @@ public class Nomenclature implements Serializable {
     @NotBlank
     private String name;
 
-    private Boolean active;
-
     private String description;
 
     @Enumerated(value = EnumType.STRING)
     private NomenclatureType discriminator;
 
-    @ManyToOne()
+    @ManyToOne
     @JsonIgnoreProperties(value = "childrenDistrict", allowSetters = true)
     private Nomenclature parentDistrict;
 
     @OneToMany(mappedBy = "parentDistrict", orphanRemoval = true, cascade = CascadeType.PERSIST)
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
-    private Set<Nomenclature> childrenDistrict;
+    private Set<Nomenclature> childrenDistrict = new HashSet<>();
 
     @OneToMany(mappedBy = "district")
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
@@ -139,6 +137,16 @@ public class Nomenclature implements Serializable {
         return parentDistrict != null && discriminator.equals(NomenclatureType.DISTRITO);
     }
 
+    public void addNomenclatureDistrict(Nomenclature nomenclatureDistrict) {
+        this.childrenDistrict.add(nomenclatureDistrict);
+        nomenclatureDistrict.setParentDistrict(this);
+    }
+
+    public void addPeopleDistrict(Person person) {
+        this.peopleDistrict.add(person);
+        person.setDistrict(this);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -156,7 +164,6 @@ public class Nomenclature implements Serializable {
         return "Nomenclature{" +
                 "id=" + id +
                 ", name='" + name + '\'' +
-                ", active=" + active +
                 ", description='" + description + '\'' +
                 ", discriminator=" + discriminator +
                 '}';

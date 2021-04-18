@@ -1,5 +1,6 @@
 package cu.sld.ucmgt.directory.service;
 
+import cu.sld.ucmgt.directory.domain.NomenclatureType;
 import cu.sld.ucmgt.directory.domain.Student;
 import cu.sld.ucmgt.directory.domain.elasticsearch.StudentIndex;
 import cu.sld.ucmgt.directory.repository.NomenclatureRepository;
@@ -14,6 +15,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptType;
@@ -109,10 +112,23 @@ public class StudentService {
         log.debug("Listening SavedNomenclatureEvent event to update Nomenclature with ID {} in StudentIndex.",
                 savedNomenclatureEvent.getUpdatedNomenclature().getId());
         try {
+            BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+            savedNomenclatureEvent.getCommonAssociationIds().forEach(commonAssociationIds -> boolQueryBuilder
+                    .should(QueryBuilders.matchQuery("id", commonAssociationIds.toString())));
+            if (savedNomenclatureEvent.getUpdatedNomenclature().getDiscriminator().equals(NomenclatureType.TIPO)){
+                savedNomenclatureEvent.getUpdatedNomenclature().getStudentsKind()
+                        .forEach(student -> boolQueryBuilder
+                                .should(QueryBuilders.matchQuery("id", student.getId().toString())));
+            }
+            if (savedNomenclatureEvent.getUpdatedNomenclature().getDiscriminator().equals(NomenclatureType.CENTRO_ESTUDIO)){
+                savedNomenclatureEvent.getUpdatedNomenclature().getStudentsStudyCenter()
+                        .forEach(student -> boolQueryBuilder
+                                .should(QueryBuilders.matchQuery("id", student.getId().toString())));
+            }
             UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(INDEX_NAME)
                     .setRefresh(true)
+                    .setQuery(boolQueryBuilder)
                     .setAbortOnVersionConflict(true)
-                    .setQuery(savedNomenclatureEvent.getDefaultQuery())
                     .setScript(new Script(ScriptType.INLINE, "painless", savedNomenclatureEvent.getUpdateCode(),
                             Collections.emptyMap()));
             highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);

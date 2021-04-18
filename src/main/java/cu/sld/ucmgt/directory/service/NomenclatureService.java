@@ -10,17 +10,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -31,12 +27,15 @@ public class NomenclatureService {
     private final NomenclatureMapper mapper;
     private final NomenclatureRepository repository;
     private final ApplicationEventPublisher eventPublisher;
+    enum Action {
+        UPDATE,REMOVED
+    }
 
     /**
-     * Save a nomenclature and update Employee indexes if store updated nomenclature.
+     * Create a nomenclature.
      *
-     * @param nomenclatureDTO the entity to save.
-     * @return the persisted entity.
+     * @param nomenclatureDTO the entity to crate.
+     * @return {@link Nomenclature} the persisted entity.
      */
     public NomenclatureDTO create(NomenclatureDTO nomenclatureDTO) {
         log.debug("Request to create Nomenclature : {}", nomenclatureDTO);
@@ -48,50 +47,72 @@ public class NomenclatureService {
         return mapper.toDto(nomenclature);
     }
 
+    /**
+     * Update a nomenclature and update Employee indexes if store updated nomenclature.
+     * @param nomenclatureDTO the entity to crate.
+     * @return {@link Nomenclature} the persisted entity.
+     */
     public NomenclatureDTO update(NomenclatureDTO nomenclatureDTO) {
         log.debug("Request to update Nomenclature : {}", nomenclatureDTO);
         if (nomenclatureDTO.getParentDistrictId() != null) {
             nomenclatureDTO.setDiscriminator(NomenclatureType.DISTRITO);
         }
-
-        Optional<Nomenclature> nomenclatureToUpdate = repository.findById(nomenclatureDTO.getId());
+        Optional<Nomenclature> nomenclatureToUpdate = repository.findNomenclatureWithAssociationsById(nomenclatureDTO.getId());
         if (nomenclatureToUpdate.isPresent()) {
-            String oldNomenclatureName = nomenclatureToUpdate.get().getName();
             nomenclatureToUpdate.get().setName(nomenclatureDTO.getName());
-            nomenclatureToUpdate.get().setActive(nomenclatureDTO.getActive());
             nomenclatureToUpdate.get().setDescription(nomenclatureDTO.getDescription());
-            this.updateIndices(nomenclatureToUpdate.get(), oldNomenclatureName);
-            if (!nomenclatureToUpdate.get().isChildDistrict() && !nomenclatureToUpdate.get().getActive() &&
-                    nomenclatureToUpdate.get().getDiscriminator().equals(NomenclatureType.DISTRITO)) {
-                repository.updateByIdOrParentDistrict_Id(false, nomenclatureDTO.getId());
-            }
+            this.updateNomenclatureInIndices(nomenclatureToUpdate.get(), Action.UPDATE);
             return mapper.toDto(nomenclatureToUpdate.get());
         }
         return null;
     }
 
-    private void updateIndices(Nomenclature newNomenclature, String oldNomenclatureName) {
+    /**
+     * Set nomenclature value inside indices like: employee and student;
+     * @param newNomenclature updated
+     */
+    private void updateNomenclatureInIndices(Nomenclature newNomenclature, Action action) {
         String filedName = newNomenclature.getDiscriminator().getShortCode();
         String updateCode = "ctx._source." + filedName + "=null;";
-        if (newNomenclature.getActive()) {
+        if (action.equals(Action.UPDATE)) {
             updateCode = "ctx._source." + filedName + "=\"" + newNomenclature.getName() + "\"";
         }
-        if (!newNomenclature.isChildDistrict() &&
-                newNomenclature.getDiscriminator().equals(NomenclatureType.DISTRITO)) {
-            updateCode = "ctx._source.district=null;ctx._source.parentDistrict=null;";
-            if (newNomenclature.getActive()) {
-                updateCode = "ctx._source." + filedName + "=\"" + newNomenclature.getName() + "\"";
+        if (!newNomenclature.isChildDistrict() && newNomenclature.getDiscriminator().equals(NomenclatureType.DISTRITO)) {
+            updateCode = "ctx._source.parentDistrict=null;ctx._source.district=null;";
+            if (action.equals(Action.UPDATE)) {
+                updateCode = "ctx._source.district=\"" + newNomenclature.getName() + "\"";
+                if (!newNomenclature.getChildrenDistrict().isEmpty()) {
+                    updateCode = "ctx._source.parentDistrict=\"" + newNomenclature.getName() + "\"";
+                }
             }
         }
-        BoolQueryBuilder query = new BoolQueryBuilder()
-                .should(QueryBuilders.matchQuery(filedName, oldNomenclatureName))
-                .should(QueryBuilders.matchQuery("parentDistrict", oldNomenclatureName));
+        List<UUID> associationsIds = this.getAllAssociationIds(newNomenclature.getId());
         final SavedNomenclatureEvent savedNomenclatureEvent = SavedNomenclatureEvent.builder()
-                .defaultQuery(query)
                 .updateCode(updateCode)
                 .updatedNomenclature(newNomenclature)
+                .commonAssociationIds(associationsIds)
                 .build();
         eventPublisher.publishEvent(savedNomenclatureEvent);
+    }
+
+    private List<UUID> getAllAssociationIds(UUID nomenclatureId) {
+        List<UUID> associationsIds = new ArrayList<>();
+        Nomenclature nomenclatureWithAllAssociations = repository.findNomenclatureWithAssociationsById(nomenclatureId)
+                .orElseThrow(() -> new NoSuchElementException("Nomenclature with ID: " + nomenclatureId + " not was found"));
+        if (!nomenclatureWithAllAssociations.isChildDistrict() && nomenclatureWithAllAssociations.getDiscriminator().equals(NomenclatureType.DISTRITO)) {
+            Set<Nomenclature> children = nomenclatureWithAllAssociations.getChildrenDistrict();
+            for (Nomenclature childNomenclature : children) {
+                childNomenclature.getPeopleDistrict().forEach(person -> associationsIds.add(person.getId()));
+            }
+        } else {
+            if (nomenclatureWithAllAssociations.getDiscriminator().equals(NomenclatureType.DISTRITO)){
+                nomenclatureWithAllAssociations.getPeopleDistrict().forEach(person -> associationsIds.add(person.getId()));
+            }
+            if (nomenclatureWithAllAssociations.getDiscriminator().equals(NomenclatureType.ESPECIALIDAD)){
+                nomenclatureWithAllAssociations.getPeopleDistrict().forEach(person -> associationsIds.add(person.getId()));
+            }
+        }
+        return associationsIds;
     }
 
     /**
@@ -108,26 +129,6 @@ public class NomenclatureService {
     }
 
     /**
-     * Change status for active or disable nomenclature
-     *
-     * @param id          Nomenclature identifier
-     * @param status true or false
-     * @return true if changed status or false otherwise
-     */
-    public Boolean changeStatus(UUID id, boolean status) {
-        log.debug("Request to change nomenclature status to {} by ID {}", status, id);
-        Optional<Nomenclature> nomenclatureToChange = repository.findById(id);
-        if (nomenclatureToChange.isPresent()){
-            String oldNomenclatureName = nomenclatureToChange.get().getName();
-            nomenclatureToChange.get().setActive(status);
-            repository.save(nomenclatureToChange.get());
-            updateIndices(nomenclatureToChange.get(), oldNomenclatureName);
-            return true;
-        }
-        return false;
-    }
-
-    /**
      * Returns a Nomenclature given a name and discriminator
      *
      * @param name          Nomenclature name
@@ -138,6 +139,14 @@ public class NomenclatureService {
     public Optional<Nomenclature> findNomenclatureByNameAndDiscriminator(String name, NomenclatureType discriminator) {
         log.debug("Request to find a Nomenclature by Name {} and Discriminator {}", name, discriminator);
         return repository.findNomenclatureByNameIgnoreCaseAndDiscriminatorAndParentDistrictNull(name, discriminator);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Nomenclature> getNomenclatureByIdAndCheckParentDiscriminatorWithUniqueNameAndUniqueDiscriminator(String name,
+                                                                                          NomenclatureType discriminator,
+                                                                                          UUID id, boolean isParentDistrict) {
+        log.debug("Request to get a Nomenclature by ID {}, Name {} and Discriminator {}", id, name, discriminator);
+       return repository.findNomenclatureWithUniqueNameAndUniqueDiscriminator(name, discriminator, id, isParentDistrict);
     }
 
     /**
@@ -172,35 +181,44 @@ public class NomenclatureService {
     public void deleteNomenclature(UUID uid) {
         log.debug("Request to delete Nomenclature : {}", uid);
         repository.findNomenclatureWithAssociationsById(uid).ifPresent(nomenclature -> {
-
-            nomenclature.setActive(false);
-            this.updateIndices(nomenclature, nomenclature.getName());
-
-            if (nomenclature.getDiscriminator() == NomenclatureType.DISTRITO) {
-                new HashSet<>(nomenclature.getPeopleDistrict()).forEach(nomenclature::removePeopleDistrict);
-            } else if (nomenclature.getDiscriminator() == NomenclatureType.ESPECIALIDAD) {
-                new HashSet<>(nomenclature.getPeopleSpecialty()).forEach(nomenclature::removePeopleSpecialty);
-            } else if (nomenclature.getDiscriminator() == NomenclatureType.CATEGORIA) {
-                new HashSet<>(nomenclature.getEmployeesCategory()).forEach(nomenclature::removeEmployeesCategory);
-            } else if (nomenclature.getDiscriminator() == NomenclatureType.GRADO_CIENTIFICO) {
-                new HashSet<>(nomenclature.getEmployeesScientificDegree()).forEach(nomenclature::removeEmployeesScientificDegree);
-            } else if (nomenclature.getDiscriminator() == NomenclatureType.CATEGORIA_DOCENTE) {
-                new HashSet<>(nomenclature.getEmployeesTeachingCategory()).forEach(nomenclature::removeEmployeesTeachingCategory);
-            } else if (nomenclature.getDiscriminator() == NomenclatureType.CARGO) {
-                nomenclature.getEmployeesCharge().forEach(nomenclature::removeEmployeesCharge);
-                new HashSet<>(nomenclature.getEmployeesCharge()).forEach(nomenclature::removeEmployeesCharge);
-            } else if (nomenclature.getDiscriminator() == NomenclatureType.PROFESION) {
-                nomenclature.getEmployeesProfession().forEach(nomenclature::removeEmployeesProfession);
-                new HashSet<>(nomenclature.getEmployeesProfession()).forEach(nomenclature::removeEmployeesProfession);
-            } else if (nomenclature.getDiscriminator() == NomenclatureType.TIPO) {
-                nomenclature.getStudentsKind().forEach(nomenclature::removeStudentsKind);
-                new HashSet<>(nomenclature.getStudentsKind()).forEach(nomenclature::removeStudentsKind);
-            } else {
-                nomenclature.getStudentsStudyCenter().forEach(nomenclature::removeStudentsStudyCenter);
-                new HashSet<>(nomenclature.getStudentsStudyCenter()).forEach(nomenclature::removeStudentsStudyCenter);
-            }
+            this.updateNomenclatureInIndices(nomenclature, Action.REMOVED);
+           if (!nomenclature.getChildrenDistrict().isEmpty()) {
+               for (Nomenclature child : nomenclature.getChildrenDistrict()) {
+                   Nomenclature nomenclatureChild = repository.findNomenclatureWithAssociationsById(child.getId())
+                           .orElseThrow(() -> new NoSuchElementException("Nomenclature with ID: " + child.getId() + " not was found"));
+                   this.removeNomenclatureAssociations(nomenclatureChild);
+               }
+           }else {
+               this.removeNomenclatureAssociations(nomenclature);
+           }
             repository.delete(nomenclature);
         });
+    }
+
+    private void removeNomenclatureAssociations(Nomenclature nomenclature){
+        if (nomenclature.getDiscriminator() == NomenclatureType.DISTRITO) {
+            new HashSet<>(nomenclature.getPeopleDistrict()).forEach(nomenclature::removePeopleDistrict);
+        } else if (nomenclature.getDiscriminator() == NomenclatureType.ESPECIALIDAD) {
+            new HashSet<>(nomenclature.getPeopleSpecialty()).forEach(nomenclature::removePeopleSpecialty);
+        } else if (nomenclature.getDiscriminator() == NomenclatureType.CATEGORIA) {
+            new HashSet<>(nomenclature.getEmployeesCategory()).forEach(nomenclature::removeEmployeesCategory);
+        } else if (nomenclature.getDiscriminator() == NomenclatureType.GRADO_CIENTIFICO) {
+            new HashSet<>(nomenclature.getEmployeesScientificDegree()).forEach(nomenclature::removeEmployeesScientificDegree);
+        } else if (nomenclature.getDiscriminator() == NomenclatureType.CATEGORIA_DOCENTE) {
+            new HashSet<>(nomenclature.getEmployeesTeachingCategory()).forEach(nomenclature::removeEmployeesTeachingCategory);
+        } else if (nomenclature.getDiscriminator() == NomenclatureType.CARGO) {
+            nomenclature.getEmployeesCharge().forEach(nomenclature::removeEmployeesCharge);
+            new HashSet<>(nomenclature.getEmployeesCharge()).forEach(nomenclature::removeEmployeesCharge);
+        } else if (nomenclature.getDiscriminator() == NomenclatureType.PROFESION) {
+            nomenclature.getEmployeesProfession().forEach(nomenclature::removeEmployeesProfession);
+            new HashSet<>(nomenclature.getEmployeesProfession()).forEach(nomenclature::removeEmployeesProfession);
+        } else if (nomenclature.getDiscriminator() == NomenclatureType.TIPO) {
+            nomenclature.getStudentsKind().forEach(nomenclature::removeStudentsKind);
+            new HashSet<>(nomenclature.getStudentsKind()).forEach(nomenclature::removeStudentsKind);
+        } else {
+            nomenclature.getStudentsStudyCenter().forEach(nomenclature::removeStudentsStudyCenter);
+            new HashSet<>(nomenclature.getStudentsStudyCenter()).forEach(nomenclature::removeStudentsStudyCenter);
+        }
     }
 
     /**
@@ -218,15 +236,13 @@ public class NomenclatureService {
     /**
      * Get nomenclatures page given status and discriminator
      *
-     * @param status    false to disable or enable otherwise.
      * @param discriminator nomenclature discriminator
      * @param pageable the pagination information.
      * @return the list of entities.
      */
-    public Page<NomenclatureDTO> getAllByStatusAndDiscriminator(Pageable pageable, Boolean status,
-                                                                NomenclatureType discriminator) {
-        log.debug("Request to get a page of Nomenclature by status {} and discriminator {}", status, discriminator);
-        return repository.findAllByActiveAndDiscriminator(pageable, status, discriminator).map(mapper::toDto);
+    public Page<NomenclatureDTO> getAllByStatusAndDiscriminator(Pageable pageable,NomenclatureType discriminator) {
+        log.debug("Request to get a page of Nomenclature by discriminator {}", discriminator);
+        return repository.findAllByDiscriminator(pageable, discriminator).map(mapper::toDto);
     }
 
     /**
@@ -237,7 +253,7 @@ public class NomenclatureService {
     @AllArgsConstructor
     public static class SavedNomenclatureEvent {
         private String updateCode;
-        private BoolQueryBuilder defaultQuery;
+        private List<UUID> commonAssociationIds;
         private Nomenclature updatedNomenclature;
     }
 }

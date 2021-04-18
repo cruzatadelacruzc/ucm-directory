@@ -22,8 +22,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,7 +30,6 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 /**
  * Integration tests for the {@link StudentResource} REST controller.
@@ -86,7 +83,6 @@ public class StudentResourceIT extends PersonIT {
     public void createStudent() throws Exception {
         Nomenclature district = new Nomenclature();
         district.setName("Yateras");
-        district.setActive(true);
         district.setDescription("Municipio de residencia");
         district.setDiscriminator(NomenclatureType.DISTRITO);
         em.persist(district);

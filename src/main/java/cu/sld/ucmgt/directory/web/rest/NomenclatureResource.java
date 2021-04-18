@@ -2,14 +2,11 @@ package cu.sld.ucmgt.directory.web.rest;
 
 import cu.sld.ucmgt.directory.domain.NomenclatureType;
 import cu.sld.ucmgt.directory.service.NomenclatureService;
-import cu.sld.ucmgt.directory.service.dto.EmployeeDTO;
 import cu.sld.ucmgt.directory.service.dto.NomenclatureDTO;
-import cu.sld.ucmgt.directory.service.dto.WorkPlaceDTO;
 import cu.sld.ucmgt.directory.web.rest.errors.BadRequestAlertException;
 import cu.sld.ucmgt.directory.web.rest.util.HeaderUtil;
 import cu.sld.ucmgt.directory.web.rest.util.PaginationUtil;
 import cu.sld.ucmgt.directory.web.rest.util.ResponseUtil;
-import cu.sld.ucmgt.directory.web.rest.vm.ChangeStatusVM;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,7 +21,6 @@ import javax.validation.Valid;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -87,19 +83,6 @@ public class NomenclatureResource {
                         true, ENTITY_NAME,
                         nomenclatureSaved.getId().toString()))
                 .body(nomenclatureSaved);
-    }
-
-    /**
-     * {@code PUT  /nomenclatures/status} : Change status an existing nomenclature.
-     *
-     * @param changeStatusVM the information to change status.
-     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body boolean result
-     */
-    @PutMapping("/nomenclatures/status")
-    public ResponseEntity<Boolean> updateStatusNomenclature(@Valid @RequestBody ChangeStatusVM changeStatusVM) {
-        log.debug("REST request to update status Nomenclature : {}", changeStatusVM);
-        Boolean result = service.changeStatus(changeStatusVM.getId(), changeStatusVM.getStatus());
-        return ResponseEntity.ok().body(result);
     }
 
     /**
@@ -170,19 +153,17 @@ public class NomenclatureResource {
     }
 
     /**
-     * {@code GET  /nomenclatures/:status/:discriminator} : get a page of nomenclature by status and discriminator
+     * {@code GET  /nomenclatures/:discriminator} : get a page of nomenclature by status and discriminator
      *
-     * @param status   false to disable or enable otherwise.
      * @param discriminator nomenclature discriminator
      * @param pageable the pagination information.
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of nomenclatures in body.
      */
-    @GetMapping("/nomenclatures/{status}/{discriminator}")
-    public ResponseEntity<List<NomenclatureDTO>> getAllByStatusAndDiscriminator(Pageable pageable,
-                                                                       @PathVariable Boolean status,
+    @GetMapping("/nomenclatures/discriminator/{discriminator}")
+    public ResponseEntity<List<NomenclatureDTO>> getAllByDiscriminator(Pageable pageable,
                                                                        @PathVariable NomenclatureType discriminator) {
-        log.debug("REST request to get a page of Nomenclature by status {} and discriminator {}", status, discriminator);
-        Page<NomenclatureDTO> page = service.getAllByStatusAndDiscriminator(pageable, status, discriminator);
+        log.debug("REST request to get a page of Nomenclature by discriminator {}", discriminator);
+        Page<NomenclatureDTO> page = service.getAllByStatusAndDiscriminator(pageable, discriminator);
         HttpHeaders headers = PaginationUtil.generatePaginationHeaders(
                 ServletUriComponentsBuilder.fromCurrentRequest(),
                 page
@@ -192,14 +173,16 @@ public class NomenclatureResource {
 
     private void checkNomenclatureWithNameAndDiscriminatorExist(NomenclatureDTO nomenclatureDTO) {
         if (nomenclatureDTO.getParentDistrictId() != null &&
-                service.findNomenclatureChildByNameAndDiscriminator(nomenclatureDTO.getName(), nomenclatureDTO.getDiscriminator())
+                service.getNomenclatureByIdAndCheckParentDiscriminatorWithUniqueNameAndUniqueDiscriminator(
+                        nomenclatureDTO.getName(), nomenclatureDTO.getDiscriminator(), nomenclatureDTO.getId(), true)
                         .isPresent()) {
             throw new BadRequestAlertException("Child nomenclature name: " + nomenclatureDTO.getName() + " of type: "
                     + nomenclatureDTO.getDiscriminator() + " already used", ENTITY_NAME, "idexists");
         }
 
         if (nomenclatureDTO.getParentDistrictId() == null &&
-                service.findNomenclatureByNameAndDiscriminator(nomenclatureDTO.getName(), nomenclatureDTO.getDiscriminator())
+                service.getNomenclatureByIdAndCheckParentDiscriminatorWithUniqueNameAndUniqueDiscriminator(
+                        nomenclatureDTO.getName(), nomenclatureDTO.getDiscriminator(), nomenclatureDTO.getId(), false)
                         .isPresent()) {
             throw new BadRequestAlertException("Nomenclature name: " + nomenclatureDTO.getName() + " of type: "
                     + nomenclatureDTO.getDiscriminator() + " already used", ENTITY_NAME, "idexists");

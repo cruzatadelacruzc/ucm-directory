@@ -23,6 +23,7 @@ public interface NomenclatureRepository extends JpaRepository<Nomenclature, UUID
             "peopleDistrict",
             "peopleSpecialty",
             "employeesCategory",
+            "childrenDistrict",
             "employeesScientificDegree",
             "employeesTeachingCategory",
             "employeesProfession",
