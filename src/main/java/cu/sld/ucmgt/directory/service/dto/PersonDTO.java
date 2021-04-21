@@ -3,8 +3,6 @@ package cu.sld.ucmgt.directory.service.dto;
 import cu.sld.ucmgt.directory.domain.Gender;
 import lombok.Data;
 
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
@@ -20,7 +18,7 @@ import java.util.UUID;
 public abstract class PersonDTO implements Serializable {
     protected UUID id;
 
-    @Pattern(regexp = "(^[1-9]\\d{10}$)")
+    @Pattern(regexp = "(^[1-9]\\d{10}$)", message = "{validation.ci.malformed}")
     protected String ci;
     @NotBlank
     protected String name;
