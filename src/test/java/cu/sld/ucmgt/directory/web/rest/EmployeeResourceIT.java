@@ -303,7 +303,7 @@ public class EmployeeResourceIT extends PersonIT {
 
     @Test
     @Transactional
-    public void checkEndDateCanNotMoreThanStartDate() throws Exception {
+    public void checkEndDateCanNotBeGreaterStartDate() throws Exception {
         int databaseSizeBeforeCreate = TestUtil.findAll(em, Employee.class).size();
         // create employee with endDate more than startDate, which fails.
         employee.setEndDate(LocalDateTime.now(ZoneId.systemDefault()));

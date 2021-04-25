@@ -49,7 +49,7 @@ public class EmployeeResource {
             throw new BadRequestAlertException("A new employee cannot already have an ID", ENTITY_NAME, "idexists");
         }
 
-        if (employeeDTO.getStartDate().isAfter(employeeDTO.getEndDate())) {
+        if (employeeDTO.getEndDate() != null && employeeDTO.getStartDate().isAfter(employeeDTO.getEndDate())) {
             throw new BadRequestAlertException("End Date cannot be greater Start Date", ENTITY_NAME, "idexists");
         }
         EmployeeDTO employeeSaved = service.create(employeeDTO);
@@ -75,7 +75,7 @@ public class EmployeeResource {
             throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
         }
 
-        if (employeeDTO.getStartDate().isAfter(employeeDTO.getEndDate())) {
+        if (employeeDTO.getEndDate() != null && employeeDTO.getStartDate().isAfter(employeeDTO.getEndDate())) {
             throw new BadRequestAlertException("End Date cannot be greater Start Date", ENTITY_NAME, "idexists");
         }
 
