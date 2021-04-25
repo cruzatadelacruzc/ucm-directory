@@ -191,16 +191,20 @@ public class EmployeeService {
      * @param workPlaceIndexEvent information about event
      */
     @EventListener(condition = "#workPlaceIndexEvent.workplaceId != null && !#workPlaceIndexEvent.getEmployeeIds().isEmpty()")
-    public void     updateWorkPlaceInEmployeeIndex(SavedWorkPlaceIndexEvent workPlaceIndexEvent) {
+    public void updateWorkPlaceIntoEmployeeIndex(SavedWorkPlaceIndexEvent workPlaceIndexEvent) {
         log.debug("Listening SavedWorkPlaceIndexEvent event to update WorkPlace in EmployeeIndex with WorkPlaceIndex ID: {}",
                 workPlaceIndexEvent.getWorkplaceId());
         try {
+            BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+            workPlaceIndexEvent.getEmployeeIds().forEach(employeeId -> boolQueryBuilder
+                    .should(QueryBuilders.matchQuery("id", employeeId.toString())));
+
             String updateCode = "for (entry in params.entrySet()){if (entry.getKey() != \"ctx\") " +
                     "{ctx._source.workPlace[entry.getKey()] = entry.getValue()}}";
             UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(INDEX_NAME)
               .setRefresh(true)
               .setAbortOnVersionConflict(true)
-              .setQuery(QueryBuilders.matchQuery("workPlace.id", workPlaceIndexEvent.getWorkplaceId().toString()))
+              .setQuery(boolQueryBuilder)
               .setScript(new Script(ScriptType.INLINE, "painless", updateCode, workPlaceIndexEvent.getWorkplaceIndexMap()));
             highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
         } catch (IOException e) {
