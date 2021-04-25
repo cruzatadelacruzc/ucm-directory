@@ -9,6 +9,7 @@ import cu.sld.ucmgt.directory.repository.NomenclatureRepository;
 import cu.sld.ucmgt.directory.repository.WorkPlaceRepository;
 import cu.sld.ucmgt.directory.repository.search.EmployeeSearchRepository;
 import cu.sld.ucmgt.directory.service.NomenclatureService.SavedNomenclatureEvent;
+import cu.sld.ucmgt.directory.service.WorkPlaceService.RemovedWorkPlaceIndexEvent;
 import cu.sld.ucmgt.directory.service.WorkPlaceService.SavedWorkPlaceIndexEvent;
 import cu.sld.ucmgt.directory.service.dto.EmployeeDTO;
 import cu.sld.ucmgt.directory.service.mapper.EmployeeIndexMapper;
@@ -302,15 +303,18 @@ public class EmployeeService {
     }
 
     @EventListener
-    public void removeWorkPlaceInEmployeeIndex(WorkPlaceService.RemovedWorkPlaceIndexEvent workPlaceIndexEvent) {
+    public void removeWorkPlaceIntoEmployeeIndex(RemovedWorkPlaceIndexEvent workPlaceIndexEvent) {
         log.debug("Listening RemovedWorkPlaceIndexEvent event to remove WorkPlace in EmployeeIndex with WorkPlaceIndex ID: {}",
                 workPlaceIndexEvent.getRemovedWorkPlaceIndexId());
         try {
+            BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+            workPlaceIndexEvent.getRemovedWorkPlaceIndex().getEmployees().forEach(employeeId -> boolQueryBuilder
+                    .should(QueryBuilders.matchQuery("id", employeeId.toString())));
+
             UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(INDEX_NAME)
                     .setRefresh(true)
                     .setAbortOnVersionConflict(true)
-                    .setQuery(QueryBuilders.matchQuery("workPlace.id", workPlaceIndexEvent
-                            .getRemovedWorkPlaceIndexId().toString()))
+                    .setQuery(boolQueryBuilder)
                     .setScript(new Script(ScriptType.INLINE, "painless",
                             "ctx._source.workPlace=null", Collections.emptyMap()));
             highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
