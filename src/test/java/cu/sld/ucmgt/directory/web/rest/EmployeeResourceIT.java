@@ -303,7 +303,26 @@ public class EmployeeResourceIT extends PersonIT {
 
     @Test
     @Transactional
-    public void checkNameIsCanNotBlank() throws Exception {
+    public void checkEndDateCanNotMoreThanStartDate() throws Exception {
+        int databaseSizeBeforeCreate = TestUtil.findAll(em, Employee.class).size();
+        // create employee with endDate more than startDate, which fails.
+        employee.setEndDate(LocalDateTime.now(ZoneId.systemDefault()));
+        employee.setStartDate(LocalDateTime.now(ZoneId.systemDefault()).plusDays(2L));
+
+        EmployeeDTO employeeDTO = mapper.toDto(employee);
+        restMockMvc.perform(post("/api/employees").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(employeeDTO)))
+                .andExpect(status().isBadRequest());
+
+        // Validate the Employee in the database
+        List<Employee> employees = TestUtil.findAll(em, Employee.class);
+        assertThat(employees).hasSize(databaseSizeBeforeCreate);
+    }
+
+    @Test
+    @Transactional
+    public void checkNameCanNotBlank() throws Exception {
         int databaseSizeBeforeCreate = TestUtil.findAll(em, Employee.class).size();
 
         // Create the Employee, which fails.
@@ -341,7 +360,7 @@ public class EmployeeResourceIT extends PersonIT {
 
     @Test
     @Transactional
-    public void checkAddressIsCanNotBlank() throws Exception {
+    public void checkAddressCanNotBlank() throws Exception {
         int databaseSizeBeforeCreate = TestUtil.findAll(em, Employee.class).size();
 
         // Create the Employee, which fails.
@@ -360,7 +379,7 @@ public class EmployeeResourceIT extends PersonIT {
 
     @Test
     @Transactional
-    public void checkRaceIsCanNotBlank() throws Exception {
+    public void checkRaceCanNotBlank() throws Exception {
         int databaseSizeBeforeCreate = TestUtil.findAll(em, Employee.class).size();
 
         // Create the Employee, which fails.
@@ -379,7 +398,7 @@ public class EmployeeResourceIT extends PersonIT {
 
     @Test
     @Transactional
-    public void checkRegisterNumberIsCanNotBlank() throws Exception {
+    public void checkRegisterNumberCanNotBlank() throws Exception {
         int databaseSizeBeforeCreate = TestUtil.findAll(em, Employee.class).size();
 
         // Create the Employee, which fails.
@@ -436,7 +455,7 @@ public class EmployeeResourceIT extends PersonIT {
 
     @Test
     @Transactional
-    public void checkStartDateIsNotNull() throws Exception {
+    public void checkStartDateCanNotNull() throws Exception {
         int databaseSizeBeforeCreate = TestUtil.findAll(em, Employee.class).size();
 
         // Create the Employee, which fails.
@@ -455,7 +474,7 @@ public class EmployeeResourceIT extends PersonIT {
 
     @Test
     @Transactional
-    public void checkGraduateYearsIsCanNotLessThanZero() throws Exception {
+    public void checkGraduateYearsCanNotLessThanZero() throws Exception {
         int databaseSizeBeforeCreate = TestUtil.findAll(em, Employee.class).size();
 
         // Create the Employee, which fails.
@@ -474,7 +493,7 @@ public class EmployeeResourceIT extends PersonIT {
 
     @Test
     @Transactional
-    public void checkServiceYearsIsCanNotLessThanZero() throws Exception {
+    public void checkServiceYearsCanNotLessThanZero() throws Exception {
         int databaseSizeBeforeCreate = TestUtil.findAll(em, Employee.class).size();
 
         // Create the Employee, which fails.
@@ -493,7 +512,7 @@ public class EmployeeResourceIT extends PersonIT {
 
     @Test
     @Transactional
-    public void checkServiceYearsIsCanNotLessThanFourteen() throws Exception {
+    public void checkServiceYearsCanNotLessThanFourteen() throws Exception {
         int databaseSizeBeforeCreate = TestUtil.findAll(em, Employee.class).size();
 
         // Create the Employee, which fails.

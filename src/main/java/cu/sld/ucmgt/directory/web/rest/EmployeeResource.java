@@ -48,6 +48,10 @@ public class EmployeeResource {
         if (employeeDTO.getId() != null) {
             throw new BadRequestAlertException("A new employee cannot already have an ID", ENTITY_NAME, "idexists");
         }
+
+        if (employeeDTO.getStartDate().isAfter(employeeDTO.getEndDate())) {
+            throw new BadRequestAlertException("End Date cannot be greater Start Date", ENTITY_NAME, "idexists");
+        }
         EmployeeDTO employeeSaved = service.create(employeeDTO);
         return ResponseEntity.created(new URI("/api/employees/" + employeeSaved.getId()))
                 .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
@@ -69,6 +73,10 @@ public class EmployeeResource {
         log.debug("REST request to update Employee : {}", employeeDTO);
         if (employeeDTO.getId() == null) {
             throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
+        }
+
+        if (employeeDTO.getStartDate().isAfter(employeeDTO.getEndDate())) {
+            throw new BadRequestAlertException("End Date cannot be greater Start Date", ENTITY_NAME, "idexists");
         }
 
         EmployeeDTO employeeSaved = service.update(employeeDTO);
