@@ -97,7 +97,6 @@ public class PhoneService {
         phoneMap.put("number", phoneIndex.getNumber());
         phoneMap.put("id", phoneIndex.getId().toString());
         phoneMap.put("description", phoneIndex.getDescription());
-        phoneMap.put("workPlace", null);
         if (phoneIndex.getWorkPlace() != null) {
             Map<String, Object> workPlaceMap = new HashMap<>();
             workPlaceMap.put("name", phoneIndex.getWorkPlace().getName());
@@ -109,11 +108,10 @@ public class PhoneService {
         return phoneMap;
     }
 
-    @EventListener
+    @EventListener(condition = "#employeeIndexEvent.getEmployeeId() != null")
     public void updateEmployeeInPhoneIndex(SavedEmployeeIndexEvent employeeIndexEvent) {
         log.debug("Listening SavedEmployeeIndexEvent event to save EmployeeIndex with ID: {} in PhoneIndex",
                 employeeIndexEvent.getEmployeeId());
-        if (employeeIndexEvent.getEmployeeId() != null) {
             try {
                 String updateCode = "for (entry in params.entrySet()){ if (entry.getKey() != \"ctx\") " +
                         "{ctx._source.employee[entry.getKey()] = entry.getValue()}}";
@@ -126,7 +124,6 @@ public class PhoneService {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        }
     }
 
     @EventListener

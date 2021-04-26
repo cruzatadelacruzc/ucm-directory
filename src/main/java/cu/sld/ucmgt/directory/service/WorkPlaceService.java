@@ -114,12 +114,11 @@ public class WorkPlaceService {
         return workPlaceIndexMap;
     }
 
-    @EventListener
-    public void saveEmployeeIndexInWorkPlaceIndex(SavedEmployeeIndexEvent employeeIndexEvent) {
+    @EventListener(condition = "#employeeIndexEvent.getParams().get(\"workPlace\") != null")
+    public void saveEmployeeIntoWorkPlaceIndex(SavedEmployeeIndexEvent employeeIndexEvent) {
         log.debug("Listening SavedEmployeeIndexEvent event to save EmployeeIndex with ID: {} in WorkPlaceIndex",
                 employeeIndexEvent.getEmployeeId());
-        Object workPlaceMap = employeeIndexEvent.getParams().getOrDefault("workPlace", null);
-        if (workPlaceMap != null) {
+        Object workPlaceMap = employeeIndexEvent.getParams().get("workPlace");
             try {
                 String workPlaceId = (String) ((HashMap) workPlaceMap).get("id");
                 // avoid redundant data, employee.workplace equals current workplace
@@ -140,7 +139,6 @@ public class WorkPlaceService {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        }
     }
 
     @EventListener(condition = "#phoneIndexEvent.getWorkPlaceId() != null")

@@ -151,7 +151,6 @@ public class EmployeeService {
         params.put("category", employee.getCategory() != null ? employee.getCategory().getName() : null);
         params.put("specialty", employee.getSpecialty() != null ? employee.getSpecialty().getName() : null);
         params.put("profession", employee.getProfession() != null ? employee.getProfession().getName() : null);
-        params.put("workPlace", null);
         if (employee.getWorkPlace() != null) {
             Map<String, Object> workplaceMap = new HashMap<>();
             workplaceMap.put("name", employee.getWorkPlace().getName());
