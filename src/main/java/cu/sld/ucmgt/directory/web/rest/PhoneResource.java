@@ -83,12 +83,12 @@ public class PhoneResource {
     /**
      * {@code GET  /phones/:id} : get the "id" phone.
      *
-     * @param uid the id of the employeeDTO to retrieve.
+     * @param uid the id of the phoneDTO to retrieve.
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the phoneDTO
      * or with status {@code 404 (Not Found)}.
      */
     @GetMapping("/phones/{id}")
-    public ResponseEntity<PhoneDTO> getEmployee(@PathVariable(name = "id") UUID uid) {
+    public ResponseEntity<PhoneDTO> getPhone(@PathVariable(name = "id") UUID uid) {
         log.debug("REST request to get Phone : {}", uid);
         Optional<PhoneDTO> phoneFetched = service.getPhone(uid);
         return ResponseUtil.wrapOrNotFound(phoneFetched);

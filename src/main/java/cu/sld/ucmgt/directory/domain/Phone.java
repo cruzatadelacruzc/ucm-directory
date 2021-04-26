@@ -1,16 +1,16 @@
 package cu.sld.ucmgt.directory.domain;
 
-import lombok.*;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.Data;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.GenericGenerator;
 
+import javax.persistence.*;
+import javax.validation.constraints.Min;
+import java.io.Serializable;
 import java.util.Objects;
 import java.util.UUID;
-import javax.persistence.*;
-import java.io.Serializable;
-import javax.validation.constraints.Min;
 
 @Data
 @Entity
@@ -55,7 +55,7 @@ public class Phone extends AbstractAuditingEntity implements Serializable {
     @Override
     public String toString() {
         return "Phone{" +
-                "uid=" + id +
+                "id=" + id +
                 ", number=" + number +
                 ", active=" + active +
                 ", description='" + description + '\'' +
