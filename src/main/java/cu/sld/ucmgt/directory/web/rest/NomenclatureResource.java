@@ -1,12 +1,16 @@
 package cu.sld.ucmgt.directory.web.rest;
 
+import cu.sld.ucmgt.directory.domain.Nomenclature;
 import cu.sld.ucmgt.directory.domain.NomenclatureType;
 import cu.sld.ucmgt.directory.service.NomenclatureService;
+import cu.sld.ucmgt.directory.service.criteria.NomenclatureCriteria;
 import cu.sld.ucmgt.directory.service.dto.NomenclatureDTO;
 import cu.sld.ucmgt.directory.web.rest.errors.BadRequestAlertException;
 import cu.sld.ucmgt.directory.web.rest.util.HeaderUtil;
 import cu.sld.ucmgt.directory.web.rest.util.PaginationUtil;
 import cu.sld.ucmgt.directory.web.rest.util.ResponseUtil;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,7 +37,7 @@ public class NomenclatureResource {
     @Value("${application.clientApp.name}")
     private String applicationName;
     private final NomenclatureService service;
-    private static final String ENTITY_NAME = "directoryNomenclature";
+    private static final String ENTITY_NAME = "Nomenclature";
 
     /**
      * {@code POST  /nomenclatures} : Create a new nomenclature.
@@ -47,7 +51,7 @@ public class NomenclatureResource {
     public ResponseEntity<NomenclatureDTO> createNomenclature(@Valid @RequestBody NomenclatureDTO nomenclatureDTO) throws URISyntaxException {
         log.debug("REST request to create Nomenclature : {}", nomenclatureDTO);
         if (nomenclatureDTO.getId() != null) {
-            throw new BadRequestAlertException("A new nomenclature cannot already have an ID", ENTITY_NAME, "idexists");
+            throw new BadRequestAlertException("A new nomenclature cannot already have an ID", ENTITY_NAME, "idexists", nomenclatureDTO.getId().toString());
         }
 
         this.checkNomenclatureWithNameAndDiscriminatorExist(nomenclatureDTO);
@@ -72,7 +76,7 @@ public class NomenclatureResource {
     public ResponseEntity<NomenclatureDTO> updateNomenclature(@Valid @RequestBody NomenclatureDTO nomenclatureDTO) {
         log.debug("REST request to update Nomenclature : {}", nomenclatureDTO);
         if (nomenclatureDTO.getId() == null) {
-            throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
+            throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull", "idnull");
         }
 
         this.checkNomenclatureWithNameAndDiscriminatorExist(nomenclatureDTO);
@@ -171,21 +175,43 @@ public class NomenclatureResource {
         return ResponseEntity.ok().headers(headers).body(page.getContent());
     }
 
+    /**
+     * {@code GET  /products} : get all the filtered products.
+     *
+     * @param pageable the pagination information.
+     * @param criteria the criteria which the requested entities should match.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of products in body.
+     */
+    @ApiOperation(value = "Filtered Nomenclatures list with pagination and logical operator join", response = List.class)
+    @GetMapping("/nomenclatures/filtered/{join}")
+    public ResponseEntity<List<NomenclatureDTO>> getAllFilteredNomenclatures(
+            @ApiParam(value = "Logical operators (AND-OR) for join expressions")
+            @PathVariable String join, NomenclatureCriteria criteria, Pageable pageable)
+    {
+        if (!(join.equalsIgnoreCase("AND") || join.equalsIgnoreCase("OR"))) {
+            throw new BadRequestAlertException("Wrong logical operator", ENTITY_NAME, "badoperatorjoin", join);
+        }
+        Page<NomenclatureDTO> page = service.findByCriteria(join, criteria, pageable);
+        HttpHeaders headers = PaginationUtil.generatePaginationHeaders(
+                ServletUriComponentsBuilder.fromCurrentRequest(),
+                page
+        );
+        return ResponseEntity.ok().headers(headers).body(page.getContent());
+    }
+
     private void checkNomenclatureWithNameAndDiscriminatorExist(NomenclatureDTO nomenclatureDTO) {
         if (nomenclatureDTO.getParentDistrictId() != null &&
                 service.getNomenclatureByIdAndCheckParentDiscriminatorWithUniqueNameAndUniqueDiscriminator(
                         nomenclatureDTO.getName(), nomenclatureDTO.getDiscriminator(), nomenclatureDTO.getId(), true)
                         .isPresent()) {
-            throw new BadRequestAlertException("Child nomenclature name: " + nomenclatureDTO.getName() + " of type: "
-                    + nomenclatureDTO.getDiscriminator() + " already used", ENTITY_NAME, "idexists");
+            throw new BadRequestAlertException("Child nomenclature " + nomenclatureDTO.getName() + " of type: "
+                    + nomenclatureDTO.getDiscriminator() + " already used", ENTITY_NAME, "nomenclatureexists", nomenclatureDTO.getName());
         }
-
-        if (nomenclatureDTO.getParentDistrictId() == null &&
-                service.getNomenclatureByIdAndCheckParentDiscriminatorWithUniqueNameAndUniqueDiscriminator(
-                        nomenclatureDTO.getName(), nomenclatureDTO.getDiscriminator(), nomenclatureDTO.getId(), false)
-                        .isPresent()) {
-            throw new BadRequestAlertException("Nomenclature name: " + nomenclatureDTO.getName() + " of type: "
-                    + nomenclatureDTO.getDiscriminator() + " already used", ENTITY_NAME, "idexists");
+        Optional<Nomenclature> parentDistrict = service.getNomenclatureByIdAndCheckParentDiscriminatorWithUniqueNameAndUniqueDiscriminator(
+                nomenclatureDTO.getName(), nomenclatureDTO.getDiscriminator(), nomenclatureDTO.getId(), false);
+        if (nomenclatureDTO.getParentDistrictId() == null && parentDistrict.isPresent()) {
+            throw new BadRequestAlertException("Nomenclature " + nomenclatureDTO.getName() + " of type: "
+                    + nomenclatureDTO.getDiscriminator() + " already used", ENTITY_NAME, "nomenclatureexists", parentDistrict.get().getName());
         }
     }
 

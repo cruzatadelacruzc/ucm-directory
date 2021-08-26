@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -59,6 +60,7 @@ public class NomenclatureResourceIT {
     private static final String DEFAULT_DESCRIPTION = "municipio";
 
     private static final NomenclatureType DEFAULT_DISCRIMINATOR = NomenclatureType.DISTRITO;
+    private static final NomenclatureType UPDATE_DISCRIMINATOR = NomenclatureType.CARGO;
 
     private static final String ENDPOINT_RESPONSE_PARAMETERS_KEY = "X-directoryApp-params";
 
@@ -684,5 +686,323 @@ public class NomenclatureResourceIT {
                 .andExpect(jsonPath("$.[*].discriminator").value(DEFAULT_DISCRIMINATOR.toString()))
                 .andExpect(jsonPath("$.[*].description").value(DEFAULT_DESCRIPTION));
     }
+
+    /**
+     * Executes the search with And operator, and checks that the default entity is returned.
+     */
+    private void defaultNomenclatureShouldBeFoundWithAndOperator(String filter) throws Exception {
+        restMockMvc.perform(get("/api/nomenclatures/filtered/and?sort=id,desc&" + filter))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$.[*].id").value(hasItem(nomenclatureParentDistrict.getId().toString())))
+                .andExpect(jsonPath("$.[*].description").value(hasItem(DEFAULT_DESCRIPTION)))
+                .andExpect(jsonPath("$.[*].discriminator").value(hasItem(DEFAULT_DISCRIMINATOR.toString())))
+                .andExpect(jsonPath("$.[*].name").value(hasItem(UPDATE_NAME)));
+    }
+
+    /**
+     * Executes the search with And operator, and checks that the default entity is not returned.
+     */
+    private void defaultNomenclatureShouldNotBeFoundWithAndOperator(String filter) throws Exception {
+        restMockMvc.perform(get("/api/nomenclatures/filtered/and?sort=id,desc&" + filter))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    /**
+     * Executes the search with Or operator, and checks that the default entity is returned.
+     */
+    private void defaultNomenclatureShouldBeFoundWithOrOperator(String filter) throws Exception {
+        restMockMvc.perform(get("/api/nomenclatures/filtered/or?sort=id,desc&" + filter))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$.[*].id").value(hasItem(nomenclatureParentDistrict.getId().toString())))
+                .andExpect(jsonPath("$.[*].description").value(hasItem(DEFAULT_DESCRIPTION)))
+                .andExpect(jsonPath("$.[*].discriminator").value(hasItem(DEFAULT_DISCRIMINATOR.toString())))
+                .andExpect(jsonPath("$.[*].name").value(hasItem(UPDATE_NAME)));
+    }
+
+    /**
+     * Executes the search with Or operator, and checks that the default entity is not returned.
+     */
+    private void defaultNomenclatureShouldNotBeFoundWithOrOperator(String filter) throws Exception {
+        restMockMvc.perform(get("/api/nomenclatures/filtered/or?sort=id,desc&" + filter))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    @Transactional
+    public void getNomenclaturesByIdFiltering() throws Exception {
+        // Initialize the database
+        repository.flush();
+
+        UUID id = nomenclatureParentDistrict.getId();
+
+        defaultNomenclatureShouldBeFoundWithAndOperator("id.equals=" + id);
+        defaultNomenclatureShouldBeFoundWithOrOperator("id.equals=" + id);
+
+        defaultNomenclatureShouldNotBeFoundWithAndOperator("id.notEquals=" + id);
+        defaultNomenclatureShouldNotBeFoundWithOrOperator("id.notEquals=" + id);
+
+
+        defaultNomenclatureShouldBeFoundWithAndOperator("id.in=" + id + "," + UUID.randomUUID().toString());
+        defaultNomenclatureShouldBeFoundWithOrOperator("id.in=" + id + "," + UUID.randomUUID().toString());
+
+        defaultNomenclatureShouldNotBeFoundWithAndOperator("id.notIn=" + id + "," + UUID.randomUUID().toString());
+        defaultNomenclatureShouldNotBeFoundWithOrOperator("id.notIn=" + id + "," + UUID.randomUUID().toString());
+
+        defaultNomenclatureShouldBeFoundWithAndOperator("id.specified=true");
+        defaultNomenclatureShouldBeFoundWithOrOperator("id.specified=true");
+
+        defaultNomenclatureShouldNotBeFoundWithAndOperator("id.specified=false");
+        defaultNomenclatureShouldNotBeFoundWithOrOperator("id.specified=false");
+    }
+
+    @Test
+    @Transactional
+    void getAllNomenclaturesByNameIsEqualToSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(nomenclatureParentDistrict);
+
+        // Get all the nomenclatureList where name equals to UPDATE_NAME
+        defaultNomenclatureShouldBeFoundWithAndOperator("name.equals=" + UPDATE_NAME);
+        defaultNomenclatureShouldBeFoundWithOrOperator("name.equals=" + UPDATE_NAME);
+
+        // Get all the nomenclatureList where name equals to DEFAULT_NAME
+        defaultNomenclatureShouldNotBeFoundWithAndOperator("name.equals=" + DEFAULT_NAME);
+        defaultNomenclatureShouldNotBeFoundWithOrOperator("name.equals=" + DEFAULT_NAME);
+    }
+
+    @Test
+    @Transactional
+    void getAllNomenclaturesByNameIsNotEqualToSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(nomenclatureParentDistrict);
+
+        // Get all the nomenclatureList where name not equals to UPDATE_NAME
+        defaultNomenclatureShouldNotBeFoundWithAndOperator("name.notEquals=" + UPDATE_NAME);
+        defaultNomenclatureShouldNotBeFoundWithOrOperator("name.notEquals=" + UPDATE_NAME);
+
+        // Get all the nomenclatureList where name not equals to DEFAULT_NAME
+        defaultNomenclatureShouldBeFoundWithAndOperator("name.notEquals=" + DEFAULT_NAME);
+        defaultNomenclatureShouldBeFoundWithOrOperator("name.notEquals=" + DEFAULT_NAME);
+    }
+
+    @Test
+    @Transactional
+    void getAllNomenclaturesByNameIsInShouldWork() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(nomenclatureParentDistrict);
+
+        // Get all the nomenclatureList where name in UPDATED_NAME or DEFAULT_NAME
+        defaultNomenclatureShouldBeFoundWithAndOperator("name.in=" + DEFAULT_NAME + "," + UPDATE_NAME);
+        defaultNomenclatureShouldBeFoundWithOrOperator("name.in=" + DEFAULT_NAME + "," + UPDATE_NAME);
+
+        // Get all the nomenclatureList where name equals to DEFAULT_NAME
+        defaultNomenclatureShouldNotBeFoundWithAndOperator("name.in=" + DEFAULT_NAME);
+        defaultNomenclatureShouldNotBeFoundWithOrOperator("name.in=" + DEFAULT_NAME);
+    }
+
+    @Test
+    @Transactional
+    void getAllNomenclaturesByNameIsNullOrNotNull() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(nomenclatureParentDistrict);
+
+        // Get all the nomenclatureList where name is not null
+        defaultNomenclatureShouldBeFoundWithAndOperator("name.specified=true");
+        defaultNomenclatureShouldBeFoundWithOrOperator("name.specified=true");
+
+        // Get all the nomenclatureList where name is null
+        defaultNomenclatureShouldNotBeFoundWithAndOperator("name.specified=false");
+        defaultNomenclatureShouldNotBeFoundWithOrOperator("name.specified=false");
+    }
+
+    @Test
+    @Transactional
+    void getAllNomenclaturesByNameContainsSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(nomenclatureParentDistrict);
+
+        // Get all the nomenclatureList where name contains UPDATE_NAME
+        defaultNomenclatureShouldBeFoundWithAndOperator("name.contains=" + UPDATE_NAME);
+        defaultNomenclatureShouldBeFoundWithOrOperator("name.contains=" + UPDATE_NAME);
+
+        // Get all the nomenclatureList where name contains DEFAULT_NAME
+        defaultNomenclatureShouldNotBeFoundWithAndOperator("name.contains=" + DEFAULT_NAME);
+        defaultNomenclatureShouldNotBeFoundWithOrOperator("name.contains=" + DEFAULT_NAME);
+    }
+
+    @Test
+    @Transactional
+    void getAllNomenclaturesByNameNotContainsSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(nomenclatureParentDistrict);
+
+        // Get all the nomenclatureList where name does not contain UPDATE_NAME
+        defaultNomenclatureShouldNotBeFoundWithAndOperator("name.doesNotContain=" + UPDATE_NAME);
+        defaultNomenclatureShouldNotBeFoundWithOrOperator("name.doesNotContain=" + UPDATE_NAME);
+
+        // Get all the nomenclatureList where name does not contain DEFAULT_NAME
+        defaultNomenclatureShouldBeFoundWithAndOperator("name.doesNotContain=" + DEFAULT_NAME);
+        defaultNomenclatureShouldBeFoundWithOrOperator("name.doesNotContain=" + DEFAULT_NAME);
+    }
+
+    @Test
+    @Transactional
+    void getAllNomenclaturesByDescriptionIsEqualToSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(nomenclatureParentDistrict);
+
+        // Get all the nomenclatureList where description equals to DEFAULT_DESCRIPTION
+        defaultNomenclatureShouldBeFoundWithAndOperator("description.equals=" + DEFAULT_DESCRIPTION);
+        defaultNomenclatureShouldBeFoundWithOrOperator("description.equals=" + DEFAULT_DESCRIPTION);
+
+        // Get all the nomenclatureList where description equals to UPDATE_DESCRIPTION
+        defaultNomenclatureShouldNotBeFoundWithAndOperator("description.equals=" + UPDATE_DESCRIPTION);
+        defaultNomenclatureShouldNotBeFoundWithOrOperator("description.equals=" + UPDATE_DESCRIPTION);
+    }
+
+    @Test
+    @Transactional
+    void getAllNomenclaturesByDescriptionIsNotEqualToSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(nomenclatureParentDistrict);
+
+        // Get all the nomenclatureList where description not equals to UPDATE_DESCRIPTION
+        defaultNomenclatureShouldBeFoundWithAndOperator("description.notEquals=" + UPDATE_DESCRIPTION);
+        defaultNomenclatureShouldBeFoundWithOrOperator("description.notEquals=" + UPDATE_DESCRIPTION);
+
+        // Get all the nomenclatureList where description not equals to DEFAULT_DESCRIPTION
+        defaultNomenclatureShouldNotBeFoundWithAndOperator("description.notEquals=" + DEFAULT_DESCRIPTION);
+        defaultNomenclatureShouldNotBeFoundWithOrOperator("description.notEquals=" + DEFAULT_DESCRIPTION);
+    }
+
+    @Test
+    @Transactional
+    void getAllNomenclaturesByDescriptionIsInShouldWork() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(nomenclatureParentDistrict);
+
+        // Get all the nomenclatureList where description in UPDATE_DESCRIPTION or DEFAULT_NAME
+        defaultNomenclatureShouldBeFoundWithAndOperator("description.in=" + DEFAULT_DESCRIPTION + "," + UPDATE_DESCRIPTION);
+        defaultNomenclatureShouldBeFoundWithOrOperator("description.in=" + DEFAULT_DESCRIPTION + "," + UPDATE_DESCRIPTION);
+
+        // Get all the nomenclatureList where description equals to DEFAULT_DESCRIPTION
+        defaultNomenclatureShouldNotBeFoundWithAndOperator("description.in=" + UPDATE_DESCRIPTION);
+        defaultNomenclatureShouldNotBeFoundWithOrOperator("description.in=" + UPDATE_DESCRIPTION);
+    }
+
+    @Test
+    @Transactional
+    void getAllNomenclaturesByDescriptionIsNullOrNotNull() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(nomenclatureParentDistrict);
+
+        // Get all the nomenclatureList where description is not null
+        defaultNomenclatureShouldBeFoundWithAndOperator("description.specified=true");
+        defaultNomenclatureShouldBeFoundWithOrOperator("description.specified=true");
+
+        // Get all the nomenclatureList where description is null
+        defaultNomenclatureShouldNotBeFoundWithAndOperator("description.specified=false");
+        defaultNomenclatureShouldNotBeFoundWithOrOperator("description.specified=false");
+    }
+
+    @Test
+    @Transactional
+    void getAllNomenclaturesByDescriptionContainsSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(nomenclatureParentDistrict);
+
+        // Get all the nomenclatureList where description contains DEFAULT_DESCRIPTION
+        defaultNomenclatureShouldBeFoundWithAndOperator("description.contains=" + DEFAULT_DESCRIPTION);
+        defaultNomenclatureShouldBeFoundWithOrOperator("description.contains=" + DEFAULT_DESCRIPTION);
+
+        // Get all the nomenclatureList where description contains UPDATE_DESCRIPTION
+        defaultNomenclatureShouldNotBeFoundWithAndOperator("description.contains=" + UPDATE_DESCRIPTION);
+        defaultNomenclatureShouldNotBeFoundWithOrOperator("description.contains=" + UPDATE_DESCRIPTION);
+    }
+
+    @Test
+    @Transactional
+    void getAllNomenclaturesByDescriptionNotContainsSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(nomenclatureParentDistrict);
+
+        // Get all the nomenclatureList where description does not contain UPDATE_NAME
+        defaultNomenclatureShouldNotBeFoundWithAndOperator("description.doesNotContain=" + DEFAULT_DESCRIPTION);
+        defaultNomenclatureShouldNotBeFoundWithOrOperator("description.doesNotContain=" + DEFAULT_DESCRIPTION);
+
+        // Get all the nomenclatureList where description does not contain UPDATE_DESCRIPTION
+        defaultNomenclatureShouldBeFoundWithAndOperator("description.doesNotContain=" + UPDATE_DESCRIPTION);
+        defaultNomenclatureShouldBeFoundWithOrOperator("description.doesNotContain=" + UPDATE_DESCRIPTION);
+    }
+
+    @Test
+    @Transactional
+    void getAllNomenclaturesByDiscriminatorIsEqualToSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(nomenclatureParentDistrict);
+
+        // Get all the nomenclatureList where discriminator equals to DEFAULT_DISCRIMINATOR
+        defaultNomenclatureShouldBeFoundWithAndOperator("discriminator.equals=" + DEFAULT_DISCRIMINATOR);
+        defaultNomenclatureShouldBeFoundWithOrOperator("discriminator.equals=" + DEFAULT_DISCRIMINATOR);
+
+        // Get all the nomenclatureList where discriminator equals to UPDATE_DISCRIMINATOR
+        defaultNomenclatureShouldNotBeFoundWithAndOperator("discriminator.equals=" + UPDATE_DISCRIMINATOR);
+        defaultNomenclatureShouldNotBeFoundWithOrOperator("discriminator.equals=" + UPDATE_DISCRIMINATOR);
+    }
+
+    @Test
+    @Transactional
+    void getAllNomenclaturesByDiscriminatorIsNotEqualToSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(nomenclatureParentDistrict);
+
+        // Get all the nomenclatureList where discriminator not equals to DEFAULT_DISCRIMINATOR
+        defaultNomenclatureShouldNotBeFoundWithAndOperator("discriminator.notEquals=" + DEFAULT_DISCRIMINATOR);
+        defaultNomenclatureShouldNotBeFoundWithOrOperator("discriminator.notEquals=" + DEFAULT_DISCRIMINATOR);
+
+        // Get all the nomenclatureList where discriminator not equals to UPDATE_DISCRIMINATOR
+        defaultNomenclatureShouldBeFoundWithAndOperator("discriminator.notEquals=" + UPDATE_DISCRIMINATOR);
+        defaultNomenclatureShouldBeFoundWithOrOperator("discriminator.notEquals=" + UPDATE_DISCRIMINATOR);
+    }
+
+    @Test
+    @Transactional
+    void getAllNomenclaturesByDiscriminatorIsInShouldWork() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(nomenclatureParentDistrict);
+
+        // Get all the nomenclatureList where discriminator in UPDATED_NAME or DEFAULT_NAME
+        defaultNomenclatureShouldBeFoundWithAndOperator("discriminator.in=" + DEFAULT_DISCRIMINATOR + "," + UPDATE_DISCRIMINATOR);
+        defaultNomenclatureShouldBeFoundWithOrOperator("discriminator.in=" + DEFAULT_DISCRIMINATOR + "," + UPDATE_DISCRIMINATOR);
+
+        // Get all the nomenclatureList where discriminator equals to DEFAULT_NAME
+        defaultNomenclatureShouldNotBeFoundWithAndOperator("discriminator.in=" + UPDATE_DISCRIMINATOR);
+        defaultNomenclatureShouldNotBeFoundWithOrOperator("discriminator.in=" + UPDATE_DISCRIMINATOR);
+    }
+
+    @Test
+    @Transactional
+    void getAllNomenclaturesByDiscriminatorIsNullOrNotNull() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(nomenclatureParentDistrict);
+
+        // Get all the nomenclatureList where discriminator is not null
+        defaultNomenclatureShouldBeFoundWithAndOperator("discriminator.specified=true");
+        defaultNomenclatureShouldBeFoundWithOrOperator("discriminator.specified=true");
+
+        // Get all the nomenclatureList where discriminator is null
+        defaultNomenclatureShouldNotBeFoundWithAndOperator("discriminator.specified=false");
+        defaultNomenclatureShouldNotBeFoundWithOrOperator("discriminator.specified=false");
+    }
+
+
 
 }

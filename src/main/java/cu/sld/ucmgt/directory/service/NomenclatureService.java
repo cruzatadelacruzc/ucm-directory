@@ -2,7 +2,9 @@ package cu.sld.ucmgt.directory.service;
 
 import cu.sld.ucmgt.directory.domain.Nomenclature;
 import cu.sld.ucmgt.directory.domain.NomenclatureType;
+import cu.sld.ucmgt.directory.domain.Nomenclature_;
 import cu.sld.ucmgt.directory.repository.NomenclatureRepository;
+import cu.sld.ucmgt.directory.service.criteria.NomenclatureCriteria;
 import cu.sld.ucmgt.directory.service.dto.NomenclatureDTO;
 import cu.sld.ucmgt.directory.service.mapper.NomenclatureMapper;
 import lombok.AllArgsConstructor;
@@ -13,16 +15,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.criteria.JoinType;
 import java.util.*;
 
 @Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class NomenclatureService {
+public class NomenclatureService extends QueryService<Nomenclature> {
 
     private final NomenclatureMapper mapper;
     private final NomenclatureRepository repository;
@@ -243,6 +247,66 @@ public class NomenclatureService {
     public Page<NomenclatureDTO> getAllByStatusAndDiscriminator(Pageable pageable,NomenclatureType discriminator) {
         log.debug("Request to get a page of Nomenclature by discriminator {}", discriminator);
         return repository.findAllByDiscriminator(pageable, discriminator).map(mapper::toDto);
+    }
+
+    /**
+     * Return a {@link List} of {@link NomenclatureDTO} which matches the criteria from the database.
+     * @param operator_union Logical operator to join expression: AND - OR
+     * @param criteria The object which holds all the filters, which the entities should match.
+     * @return the matching entities.
+     */
+    public Page<NomenclatureDTO> findByCriteria(String operator_union, NomenclatureCriteria criteria, Pageable page) {
+        log.debug("find by criteria : {}, page: {}", criteria, page);
+        final Specification<Nomenclature> specification = createSpecification(operator_union, criteria);
+        return repository.findAll(specification, page).map(mapper::toDto);
+    }
+
+    /**
+     * Function to convert {@link NomenclatureCriteria} to a {@link Specification}
+     * @param operator_union Logical operator to join expression: AND - OR
+     * @param criteria The object which holds all the filters, which the entities should match.
+     * @return the matching {@link Specification} of the entity.
+     */
+    private Specification<Nomenclature> createSpecification(String operator_union, NomenclatureCriteria criteria) {
+        Specification<Nomenclature> specification = Specification.where(null);
+        if (criteria != null) {
+            if (operator_union.equalsIgnoreCase("AND")) {
+                if (criteria.getId() != null) {
+                    specification = specification.and(buildSpecification(criteria.getId(), Nomenclature_.id));
+                }
+                if (criteria.getName() != null) {
+                    specification = specification.and(buildStringSpecification(criteria.getName(), Nomenclature_.name));
+                }
+                if (criteria.getDescription() != null) {
+                    specification = specification.and(buildStringSpecification(criteria.getDescription(), Nomenclature_.description));
+                }
+                if (criteria.getDiscriminator() != null) {
+                    specification = specification.and(buildSpecification(criteria.getDiscriminator(), Nomenclature_.discriminator));
+                }
+                if (criteria.getParentDistrictName() != null) {
+                    specification = specification.and(buildSpecification(criteria.getParentDistrictName(),
+                            root -> root.join(Nomenclature_.parentDistrict, JoinType.LEFT).get(Nomenclature_.name)));
+                }
+            } else {
+                if (criteria.getId() != null) {
+                    specification = specification.or(buildSpecification(criteria.getId(), Nomenclature_.id));
+                }
+                if (criteria.getName() != null) {
+                    specification = specification.or(buildStringSpecification(criteria.getName(), Nomenclature_.name));
+                }
+                if (criteria.getDescription() != null) {
+                    specification = specification.or(buildStringSpecification(criteria.getDescription(), Nomenclature_.description));
+                }
+                if (criteria.getDiscriminator() != null) {
+                    specification = specification.or(buildSpecification(criteria.getDiscriminator(), Nomenclature_.discriminator));
+                }
+                if (criteria.getParentDistrictName() != null) {
+                    specification = specification.or(buildSpecification(criteria.getParentDistrictName(),
+                            root -> root.join(Nomenclature_.parentDistrict, JoinType.LEFT).get(Nomenclature_.name)));
+                }
+            }
+        }
+        return specification;
     }
 
     /**

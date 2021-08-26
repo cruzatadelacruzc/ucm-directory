@@ -6,13 +6,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface NomenclatureRepository extends JpaRepository<Nomenclature, UUID>, CustomNomenclatureRepository {
+public interface NomenclatureRepository extends JpaRepository<Nomenclature, UUID>, CustomNomenclatureRepository, JpaSpecificationExecutor<Nomenclature> {
 
     Optional<Nomenclature> findNomenclatureByNameIgnoreCaseAndDiscriminatorAndParentDistrictNotNull(String name, NomenclatureType discriminator);
 

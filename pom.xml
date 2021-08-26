@@ -25,11 +25,13 @@
 		<org.mapstruct.version>1.4.2.Final</org.mapstruct.version>
 		<springfox.swagger.version>3.0.0</springfox.swagger.version>
 		<org.projectlombok.version>1.18.8</org.projectlombok.version>
+		<maven-clean-plugin.version>3.1.0</maven-clean-plugin.version>
 		<git-commit-id-plugin.version>4.0.0</git-commit-id-plugin.version>
 		<maven-javadoc-plugin.version>3.2.0</maven-javadoc-plugin.version>
 		<jhipster-dependencies.version>3.9.0</jhipster-dependencies.version>
 		<maven-surefire-plugin.version>3.0.0-M4</maven-surefire-plugin.version>
 		<maven-failsafe-plugin.version>3.0.0-M4</maven-failsafe-plugin.version>
+		<hibernate-jpamodelgen.version>5.4.22.Final</hibernate-jpamodelgen.version>
 		<junit.itReportFolder>${project.build.directory}/test-results</junit.itReportFolder>
 	</properties>
 
@@ -159,6 +161,11 @@
 			<artifactId>spring-boot-starter-aop</artifactId>
 			<version>2.3.5.RELEASE</version>
 		</dependency>
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-jpamodelgen</artifactId>
+			<scope>provided</scope>
+		</dependency>
 		<!--Test dependencies-->
 		<dependency>
 			<groupId>com.tngtech.archunit</groupId>
@@ -234,12 +241,21 @@
 							<artifactId>lombok</artifactId>
 							<version>${org.projectlombok.version}</version>
 						</path>
+						<path>
+							<groupId>org.hibernate</groupId>
+							<artifactId>hibernate-jpamodelgen</artifactId>
+							<version>${hibernate-jpamodelgen.version}</version>
+						</path>
 					</annotationProcessorPaths>
 				</configuration>
 			</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<artifactId>maven-clean-plugin</artifactId>
+				<version>${maven-clean-plugin.version}</version>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -370,6 +386,10 @@
 				<dependency>
 					<groupId>org.springframework.boot</groupId>
 					<artifactId>spring-boot-starter-undertow</artifactId>
+				</dependency>
+				<dependency>
+					<groupId>org.hibernate</groupId>
+					<artifactId>hibernate-jpamodelgen</artifactId>
 				</dependency>
 			</dependencies>
 			<properties>
