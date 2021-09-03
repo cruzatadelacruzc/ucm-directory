@@ -1003,6 +1003,19 @@ public class NomenclatureResourceIT {
         defaultNomenclatureShouldNotBeFoundWithOrOperator("discriminator.specified=false");
     }
 
-
+    @Test
+    @Transactional
+    public void getAllDistrictsWithParentDistrictName() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(nomenclature);
+        restMockMvc.perform(get("/api/nomenclatures?sort=id,asc"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$.[1].id").value(nomenclature.getId().toString()))
+                .andExpect(jsonPath("$.[1].name").value(DEFAULT_NAME))
+                .andExpect(jsonPath("$.[1].discriminator").value(DEFAULT_DISCRIMINATOR.toString()))
+                .andExpect(jsonPath("$.[1].description").value(DEFAULT_DESCRIPTION))
+                .andExpect(jsonPath("$.[1].parentDistrictName").value(nomenclatureParentDistrict.getName()));
+    }
 
 }
