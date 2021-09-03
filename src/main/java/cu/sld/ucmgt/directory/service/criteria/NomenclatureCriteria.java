@@ -45,7 +45,7 @@ public class NomenclatureCriteria implements Serializable {
     private StringFilter name;
     private StringFilter description;
     private StringFilter parentDistrictName;
-    private NomenclatureTypeFilter discriminator;
+    private StringFilter discriminator;
 
     public NomenclatureCriteria() {}
 

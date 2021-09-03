@@ -281,7 +281,7 @@ public class NomenclatureService extends QueryService<Nomenclature> {
                     specification = specification.and(buildStringSpecification(criteria.getDescription(), Nomenclature_.description));
                 }
                 if (criteria.getDiscriminator() != null) {
-                    specification = specification.and(buildSpecification(criteria.getDiscriminator(), Nomenclature_.discriminator));
+                    specification = specification.and(buildAsStringSpecification(criteria.getDiscriminator(), Nomenclature_.discriminator));
                 }
                 if (criteria.getParentDistrictName() != null) {
                     specification = specification.and(buildSpecification(criteria.getParentDistrictName(),
@@ -298,7 +298,7 @@ public class NomenclatureService extends QueryService<Nomenclature> {
                     specification = specification.or(buildStringSpecification(criteria.getDescription(), Nomenclature_.description));
                 }
                 if (criteria.getDiscriminator() != null) {
-                    specification = specification.or(buildSpecification(criteria.getDiscriminator(), Nomenclature_.discriminator));
+                    specification = specification.or(buildAsStringSpecification(criteria.getDiscriminator(), Nomenclature_.discriminator));
                 }
                 if (criteria.getParentDistrictName() != null) {
                     specification = specification.or(buildSpecification(criteria.getParentDistrictName(),
