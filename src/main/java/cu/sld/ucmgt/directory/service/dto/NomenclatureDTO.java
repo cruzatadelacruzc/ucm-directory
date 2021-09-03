@@ -16,6 +16,7 @@ public class NomenclatureDTO {
     private String name;
     private String description;
     private UUID parentDistrictId;
+    private String parentDistrictName;
     private NomenclatureType discriminator;
 
     @Override
@@ -39,6 +40,7 @@ public class NomenclatureDTO {
                 ", description='" + description + '\'' +
                 ", discriminator=" + discriminator +
                 ", parentDistrictId=" + parentDistrictId +
+                ", parentDistrictName=" + parentDistrictName +
                 '}';
     }
 }
