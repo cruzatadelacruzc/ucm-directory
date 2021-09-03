@@ -160,7 +160,7 @@ public class NomenclatureService extends QueryService<Nomenclature> {
      * @return the entity.
      */
     @Transactional(readOnly = true)
-    public Optional<NomenclatureDTO> getNomenclatures(UUID uid) {
+    public Optional<NomenclatureDTO> getNomenclature(UUID uid) {
         log.debug("Request to get Nomenclature : {}", uid);
         return repository.findById(uid).map(mapper::toDto);
     }

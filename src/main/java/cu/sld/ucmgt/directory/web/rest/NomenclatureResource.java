@@ -117,12 +117,12 @@ public class NomenclatureResource {
     @GetMapping("/nomenclatures/{id}")
     public ResponseEntity<NomenclatureDTO> getNomenclature(@PathVariable(name = "id") UUID uid) {
         log.debug("REST request to get Nomenclatures : {}", uid);
-        Optional<NomenclatureDTO> nomenclatureFetched = service.getNomenclatures(uid);
+        Optional<NomenclatureDTO> nomenclatureFetched = service.getNomenclature(uid);
         return ResponseUtil.wrapOrNotFound(nomenclatureFetched);
     }
 
     /**
-     * {@code GET  /nomenclatures} : get all the workplace.
+     * {@code GET  /nomenclatures} : get all the nomenclatures.
      *
      * @param pageable the pagination information.
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of nomenclatures in body.
