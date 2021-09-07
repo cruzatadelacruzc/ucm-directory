@@ -60,7 +60,7 @@ public class NomenclatureResource {
         return ResponseEntity.created(new URI("/api/nomenclatures/" + nomenclatureSaved.getId()))
                 .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
                         true, ENTITY_NAME,
-                        nomenclatureSaved.getId().toString()))
+                        nomenclatureSaved.getName()))
                 .body(nomenclatureSaved);
     }
 
@@ -85,7 +85,7 @@ public class NomenclatureResource {
         return ResponseEntity.ok()
                 .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
                         true, ENTITY_NAME,
-                        nomenclatureSaved.getId().toString()))
+                        nomenclatureSaved.getName()))
                 .body(nomenclatureSaved);
     }
 
