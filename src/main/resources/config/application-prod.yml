@@ -16,7 +16,7 @@ eureka:
     prefer-ip-address: true
   client:
     service-url:
-      defaultZone: http://admin:${application.registry-config.password}@localhost:8761/eureka/
+      defaultZone: http://admin:${application.registry-config.password}@jhipster-registry:8761/eureka/
 
 management:
   metrics:
@@ -34,12 +34,29 @@ spring:
       enabled: false
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
-    url: jdbc:postgresql://localhost:5432/directory
+    url: jdbc:postgresql://postgresql:5432/directory
     username: postgres
     password: postgres
     hikari:
       poolName: Hikari
       auto-commit: false
+  security:
+    oauth2:
+      client:
+        registration:
+          oidc:
+            provider: keycloak
+            client-id: internal
+            client-secret: internal
+            scope: openid,profile,email
+        provider:
+          keycloak:
+            issuer-uri: http://keycloak:9080/auth/realms/jhipster
+  elasticsearch:
+    rest:
+      username: elastic
+      password: elastic
+      uris: http://elasticsearch:9200
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQL10Dialect
     show-sql: false

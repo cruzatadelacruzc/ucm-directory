@@ -11,7 +11,7 @@ spring:
     name: directory
   cloud:
     config:
-      uri: http://admin:${application.registry-config.password}@localhost:8761/config
+      uri: http://admin:${application.registry-config.password}@192.168.1.10:8761/config
       name: directory # name of the config server's property source (file.yml) that we want to use
       label: master # toggle to switch to a different version of the configuration as stored in git
       # it can be set to any label, branch or commit of the configuration source Git repository

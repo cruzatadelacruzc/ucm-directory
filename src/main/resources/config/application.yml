@@ -114,17 +114,20 @@ spring:
   security:
     oauth2:
       client:
-        provider:
-          oidc:
-            issuer-uri: http://keycloak:9080/auth/realms/jhipster
         registration:
           oidc:
+            provider: keycloak
             client-id: internal
             client-secret: internal
+            scope: openid,profile,email
+        provider:
+          keycloak:
+            issuer-uri: http://keycloak:9080/auth/realms/jhipster
   elasticsearch:
     rest:
       username: elastic
       password: elastic
+      uris: http://localhost:9200
 logging:
   file:
     name: target/directory.log

@@ -8,14 +8,16 @@
 # ===================================================================
 logging:
   level:
-    cu.sld.ucmgt.directory: debug
+    cu.sld.ucmgt.directory: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: DEBUG
 
 eureka:
   instance:
     prefer-ip-address: true
   client:
     service-url:
-      defaultZone: http://admin:${application.registry-config.password}@localhost:8761/eureka/
+      defaultZone: http://admin:${application.registry-config.password}@192.168.1.10:8761/eureka/
 
 management:
   health:
@@ -34,7 +36,7 @@ spring:
       indent-output: true
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
-    url: jdbc:postgresql://localhost:5433/directory
+    url: jdbc:postgresql://192.168.1.10:5432/directory
     username: postgres
     password: postgres
     hikari:
@@ -47,6 +49,23 @@ spring:
     cache-duration: PT1S # 1 second, see the ISO 8601 standard
   thymeleaf:
     cache: false
+  security:
+    oauth2:
+      client:
+        registration:
+          oidc:
+            provider: keycloak
+            client-id: internal
+            client-secret: internal
+            scope: openid,profile,email
+        provider:
+          keycloak:
+            issuer-uri: http://keycloak:9080/auth/realms/jhipster
+  elasticsearch:
+    rest:
+      username: elastic
+      password: elastic
+      uris: http://192.168.1.10:9200
 server:
   port: 8081
 
@@ -54,6 +73,13 @@ server:
 # App specific properties
 # ===================================================================
 application:
+#  cors:
+#    allowed-origins: 'http://localhost:3000'
+#    allowed-methods: '*'
+#    allowed-headers: '*'
+#    exposed-headers: 'Authorization,Link,X-Total-Count,X-${application.clientApp.name}-alert,X-${application.clientApp.name}-error,X-${application.clientApp.name}-params'
+#    allow-credentials: true
+#    max-age: 1800
   cache: # Cache configuration
     time-to-live-seconds: 3600
     backup-count: 1
