@@ -42,7 +42,7 @@ public final class HeaderUtil {
      * @return a {@link HttpHeaders} object.
      */
     public static HttpHeaders createEntityExecutedAlert(String applicationName, boolean enableTranslation, String entityName, String param) {
-        String message = enableTranslation ? applicationName + "." + entityName + ".created"
+        String message = enableTranslation ? applicationName + ":" + entityName + ".created"
                 : "The " + entityName + " is executed with identifier " + param;
         return createAlert(applicationName, message, param);
     }
@@ -57,7 +57,7 @@ public final class HeaderUtil {
      * @return a {@link HttpHeaders} object.
      */
     public static HttpHeaders createEntityUpdateAlert(String applicationName, boolean enableTranslation, String entityName, String param) {
-        String message = enableTranslation ? applicationName + "." + entityName + ".updated"
+        String message = enableTranslation ? applicationName + ":" + entityName + ".updated"
                 : "The " + entityName + " is updated with identifier " + param;
         return createAlert(applicationName, message, param);
     }
@@ -71,7 +71,7 @@ public final class HeaderUtil {
      * @return a {@link HttpHeaders} object.
      */
     public static HttpHeaders createEntityDeletionAlert(String applicationName, boolean enableTranslation, String entityName, String param) {
-        String message = enableTranslation ? applicationName + "." + entityName + ".deleted" : "A "
+        String message = enableTranslation ? applicationName + ":" + entityName + ".deleted" : "A "
                 + entityName + " is deleted with identifier " + param;
         return createAlert(applicationName, message, param);
     }
@@ -81,19 +81,19 @@ public final class HeaderUtil {
      *
      * @param applicationName a {@link String} object.
      * @param enableTranslation a boolean.
+     * @param params a {@link String} object.
      * @param entityName a {@link String} object.
      * @param errorKey a {@link String} object.
      * @param defaultMessage a {@link String} object.
      * @return a {@link HttpHeaders} object.
      */
-    public static HttpHeaders createFailureAlert(String applicationName, boolean enableTranslation, String entityName, String errorKey, String defaultMessage) {
+    public static HttpHeaders createFailureAlert(String applicationName, boolean enableTranslation, String entityName, String errorKey, String defaultMessage, String params) {
         log.error("Entity processing failed, {}", defaultMessage);
-
-        String message = enableTranslation ? "error." + errorKey : defaultMessage;
-
+        String message = enableTranslation ? "error:" + errorKey : defaultMessage;
         HttpHeaders headers = new HttpHeaders();
         headers.add("X-" + applicationName + "-error", message);
-        headers.add("X-" + applicationName + "-params", entityName);
+        headers.add("X-" + applicationName + "-params", params);
+        headers.add("X-" + applicationName + "-entityName", entityName);
         return headers;
     }
 }
