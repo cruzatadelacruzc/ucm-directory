@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html html xmlns:th="http://www.thymeleaf.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.thymeleaf.org" th:lang="${#locale.language}" lang="en">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-    <title>Directory microservice homepage</title>
+    <title th:text="#{index.head.title}">Directory microservice homepage</title>
     <style>
         ::-moz-selection {
             background: #b3d4fc;
@@ -72,11 +73,11 @@
 </head>
 <body>
 <div class="container">
-    <h1>Welcome, Java API Directory!</h1>
+    <h1 th:text="#{index.title}">Welcome, Java API Directory!</h1>
 
     <ul>
-        <li>It does not have a front-end. The front-end should be generated on a Golf uaa</li>
-        <li>It is serving REST APIs, under the '/api' URLs.</li>
+        <li th:text="#{index.text1}">It does not have a front-end. The front-end should be generated on a Gateway</li>
+        <li th:text="#{index.text2}">It is serving REST APIs, under the '/api' URLs.</li>
     </ul>
 
 </div>
