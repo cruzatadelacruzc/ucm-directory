@@ -128,9 +128,12 @@ public class NomenclatureResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of nomenclatures in body.
      */
     @GetMapping("/nomenclatures")
-    public ResponseEntity<List<NomenclatureDTO>> getAllNomenclatures(Pageable pageable) {
+    public ResponseEntity<List<NomenclatureDTO>> getAllNomenclatures(
+            Pageable pageable,
+            @RequestParam(name = "unpaged", required = false) boolean unpaged
+    ) {
         log.debug("REST request to get a page of Nomenclature");
-        Page<NomenclatureDTO> page = service.getAllNomenclatures(pageable);
+        Page<NomenclatureDTO> page = service.getAllNomenclatures(unpaged ? Pageable.unpaged(): pageable);
         HttpHeaders headers = PaginationUtil.generatePaginationHeaders(
                 ServletUriComponentsBuilder.fromCurrentRequest(),
                 page
