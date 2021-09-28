@@ -168,9 +168,9 @@ public class NomenclatureResource {
      */
     @GetMapping("/nomenclatures/discriminator/{discriminator}")
     public ResponseEntity<List<NomenclatureDTO>> getAllByDiscriminator(Pageable pageable,
-                                                                       @PathVariable NomenclatureType discriminator) {
+          @PathVariable NomenclatureType discriminator, @RequestParam(name = "unpaged", required = false) boolean unpaged) {
         log.debug("REST request to get a page of Nomenclature by discriminator {}", discriminator);
-        Page<NomenclatureDTO> page = service.getAllByStatusAndDiscriminator(pageable, discriminator);
+        Page<NomenclatureDTO> page = service.getAllByStatusAndDiscriminator(unpaged ? Pageable.unpaged(): pageable, discriminator);
         HttpHeaders headers = PaginationUtil.generatePaginationHeaders(
                 ServletUriComponentsBuilder.fromCurrentRequest(),
                 page

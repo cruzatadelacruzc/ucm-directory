@@ -710,6 +710,30 @@ public class NomenclatureResourceIT {
                 .andExpect(jsonPath("$.[*].description").value(DEFAULT_DESCRIPTION));
     }
 
+    @Test
+    @Transactional
+    public void getAllByDiscriminatorUnpaged() throws Exception{
+        // Initialize the database
+        repository.deleteAll();
+        Nomenclature nomenclatureChild = new Nomenclature();
+        nomenclatureChild.setName(DEFAULT_NAME);
+        nomenclatureChild.setDiscriminator(DEFAULT_DISCRIMINATOR);
+        nomenclatureChild.setDescription(DEFAULT_DESCRIPTION);
+        repository.saveAndFlush(nomenclatureChild);
+
+        MvcResult resultNomenclature = restMockMvc.perform(get("/api/nomenclatures/discriminator/{discriminator}?unpaged=true",
+                nomenclatureChild.getDiscriminator()))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$.[*].id").value(nomenclatureChild.getId().toString()))
+                .andExpect(jsonPath("$.[*].name").value(DEFAULT_NAME))
+                .andExpect(jsonPath("$.[*].discriminator").value(DEFAULT_DISCRIMINATOR.toString()))
+                .andExpect(jsonPath("$.[*].description").value(DEFAULT_DESCRIPTION))
+                .andReturn();
+
+        assertThat(resultNomenclature.getResponse().getHeader("X-Pageable")).isEqualTo("false");
+    }
+
     /**
      * Executes the search with And operator, and checks that the default entity is returned.
      */
