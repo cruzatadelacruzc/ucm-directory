@@ -4,6 +4,7 @@ import cu.sld.ucmgt.directory.domain.NomenclatureType;
 import lombok.Data;
 
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Size;
 import java.util.UUID;
 
 /**
@@ -12,8 +13,9 @@ import java.util.UUID;
 @Data
 public class NomenclatureDTO {
     private UUID id;
-    @NotBlank
+    @NotBlank(message = "error:NotBlank")
     private String name;
+    @Size(max = 255, message = "error:Size")
     private String description;
     private UUID parentDistrictId;
     private String parentDistrictName;
