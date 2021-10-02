@@ -65,6 +65,9 @@ public class NomenclatureService extends QueryService<Nomenclature> {
         if (nomenclatureToUpdate.isPresent()) {
             nomenclatureToUpdate.get().setName(nomenclatureDTO.getName());
             nomenclatureToUpdate.get().setDescription(nomenclatureDTO.getDescription());
+            Nomenclature parentNomenclature = new Nomenclature();
+            parentNomenclature.setId(nomenclatureDTO.getParentDistrictId());
+            nomenclatureToUpdate.get().setParentDistrict(parentNomenclature);
             this.updateNomenclatureInIndices(nomenclatureToUpdate.get(), Action.UPDATE);
             return mapper.toDto(nomenclatureToUpdate.get());
         }

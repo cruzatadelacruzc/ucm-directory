@@ -269,6 +269,9 @@ public class NomenclatureResourceIT {
     @Transactional
     public void updateNomenclature() throws Exception {
         // Initialize the database
+        Nomenclature parentNomenclatureToUpdate = new Nomenclature();
+        parentNomenclatureToUpdate.setName("Pepe");
+        repository.save(parentNomenclatureToUpdate);
         repository.saveAndFlush(nomenclature);
 
         int databaseSizeBeforeUpdate = repository.findAll().size();
@@ -280,6 +283,7 @@ public class NomenclatureResourceIT {
 
         updatedNomenclature.setName(UPDATE_NAME);
         updatedNomenclature.setDescription(UPDATE_DESCRIPTION);
+        updatedNomenclature.setParentDistrict(parentNomenclatureToUpdate);
 
         NomenclatureDTO nomenclatureDTO = mapper.toDto(updatedNomenclature);
         restMockMvc.perform(put("/api/nomenclatures").with(csrf())
@@ -293,6 +297,8 @@ public class NomenclatureResourceIT {
         assertThat(testNomenclature.getName()).isEqualTo(UPDATE_NAME);
         assertThat(testNomenclature.getDescription()).isEqualTo(UPDATE_DESCRIPTION);
         assertThat(testNomenclature.getDiscriminator()).isEqualTo(DEFAULT_DISCRIMINATOR);
+        assertThat(testNomenclature.getParentDistrict().getId())
+                .isEqualTo(parentNomenclatureToUpdate.getId());
     }
 
 
