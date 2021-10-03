@@ -179,11 +179,11 @@ public class NomenclatureResource {
     }
 
     /**
-     * {@code GET  /products} : get all the filtered products.
+     * {@code GET  /nomenclatures} : get all the filtered nomenclatures.
      *
      * @param pageable the pagination information.
      * @param criteria the criteria which the requested entities should match.
-     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of products in body.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of nomenclatures in body.
      */
     @ApiOperation(value = "Filtered Nomenclatures list with pagination and logical operator join", response = List.class)
     @GetMapping("/nomenclatures/filtered/{join}")
