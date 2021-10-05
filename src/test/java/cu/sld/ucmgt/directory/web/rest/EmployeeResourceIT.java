@@ -34,10 +34,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
+import java.time.*;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -944,5 +941,173 @@ public class EmployeeResourceIT extends PersonIT {
                 .andExpect(jsonPath("$.[*].endDate").value(hasItem(DEFAULT_END_DATE.toString())))
                 .andExpect(jsonPath("$.[*].isGraduatedBySector").value(hasItem(DEFAULT_IS_GRADUATE_BY_SECTOR)))
                 .andExpect(jsonPath("$.[*].startDate").value(hasItem(DEFAULT_START_DATE.toString())));
+    }
+
+    /**
+     * Executes the search with And operator and checks that the default entity is returned.
+     */
+    private void defaultEmployeeShouldBeFoundWithAndOperator(String filter) throws Exception {
+        restMockMvc.perform(get("/api/employees/filtered/and?sort=id,desc&" + filter))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$.[*].id").value(hasItem(employee.getId().toString())))
+                .andExpect(jsonPath("$.[*].ci").value(hasItem(DEFAULT_CI)))
+                .andExpect(jsonPath("$.[*].age").value(hasItem(DEFAULT_AGE)))
+                .andExpect(jsonPath("$.[*].name").value(hasItem(DEFAULT_NAME)))
+                .andExpect(jsonPath("$.[*].race").value(hasItem(DEFAULT_RACE)))
+                .andExpect(jsonPath("$.[*].email").value(hasItem(DEFAULT_EMAIL)))
+                .andExpect(jsonPath("$.[*].address").value(hasItem(DEFAULT_ADDRESS)))
+                .andExpect(jsonPath("$.[*].gender").value(hasItem(DEFAULT_GENDER.toString())))
+                .andExpect(jsonPath("$.[*].serviceYears").value(hasItem(DEFAULT_SERVICE_YEAR)))
+                .andExpect(jsonPath("$.[*].graduateYears").value(hasItem(DEFAULT_GRADUATE_YEAR)))
+                .andExpect(jsonPath("$.[*].endDate").value(hasItem(DEFAULT_END_DATE.toString())))
+                .andExpect(jsonPath("$.[*].firstLastName").value(hasItem(DEFAULT_FIRST_LAST_NAME)))
+                .andExpect(jsonPath("$.[*].birthdate").value(hasItem(DEFAULT_BIRTHDATE.toString())))
+                .andExpect(jsonPath("$.[*].registerNumber").value(hasItem(DEFAULT_REGISTER_NUMBER)))
+                .andExpect(jsonPath("$.[*].secondLastName").value(hasItem(DEFAULT_SECOND_LAST_NAME)))
+                .andExpect(jsonPath("$.[*].professionalNumber").value(hasItem(DEFAULT_PROFESSIONAL_NUMBER)))
+                .andExpect(jsonPath("$.[*].isGraduatedBySector").value(hasItem(DEFAULT_IS_GRADUATE_BY_SECTOR)))
+                .andExpect(jsonPath("$.[*].startDate").value(hasItem(DEFAULT_START_DATE.toString())));
+    }
+
+    /**
+     * Executes the search with And operator and checks that the default entity is not returned.
+     */
+    private void defaultEmployeeShouldNotBeFoundWithAndOperator(String filter) throws Exception {
+        restMockMvc.perform(get("/api/employees/filtered/and?sort=id,desc&" + filter))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    /**
+     * Executes the search with Or operator and checks that the default entity is returned.
+     */
+    private void defaultNomenclatureShouldBeFoundWithOrOperator(String filter) throws Exception {
+        restMockMvc.perform(get("/api/employees/filtered/or?sort=id,desc&" + filter))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.[*].id").value(hasItem(employee.getId().toString())))
+                .andExpect(jsonPath("$.[*].ci").value(hasItem(DEFAULT_CI)))
+                .andExpect(jsonPath("$.[*].age").value(hasItem(DEFAULT_AGE)))
+                .andExpect(jsonPath("$.[*].name").value(hasItem(DEFAULT_NAME)))
+                .andExpect(jsonPath("$.[*].race").value(hasItem(DEFAULT_RACE)))
+                .andExpect(jsonPath("$.[*].email").value(hasItem(DEFAULT_EMAIL)))
+                .andExpect(jsonPath("$.[*].address").value(hasItem(DEFAULT_ADDRESS)))
+                .andExpect(jsonPath("$.[*].gender").value(hasItem(DEFAULT_GENDER.toString())))
+                .andExpect(jsonPath("$.[*].serviceYears").value(hasItem(DEFAULT_SERVICE_YEAR)))
+                .andExpect(jsonPath("$.[*].graduateYears").value(hasItem(DEFAULT_GRADUATE_YEAR)))
+                .andExpect(jsonPath("$.[*].endDate").value(hasItem(DEFAULT_END_DATE.toString())))
+                .andExpect(jsonPath("$.[*].firstLastName").value(hasItem(DEFAULT_FIRST_LAST_NAME)))
+                .andExpect(jsonPath("$.[*].birthdate").value(hasItem(DEFAULT_BIRTHDATE.toString())))
+                .andExpect(jsonPath("$.[*].registerNumber").value(hasItem(DEFAULT_REGISTER_NUMBER)))
+                .andExpect(jsonPath("$.[*].secondLastName").value(hasItem(DEFAULT_SECOND_LAST_NAME)))
+                .andExpect(jsonPath("$.[*].professionalNumber").value(hasItem(DEFAULT_PROFESSIONAL_NUMBER)))
+                .andExpect(jsonPath("$.[*].isGraduatedBySector").value(hasItem(DEFAULT_IS_GRADUATE_BY_SECTOR)))
+                .andExpect(jsonPath("$.[*].startDate").value(hasItem(DEFAULT_START_DATE.toString())));
+    }
+
+    /**
+     * Executes the search with Or operator and checks that the default entity is not returned.
+     */
+    private void defaultEmployeeShouldNotBeFoundWithOrOperator(String filter) throws Exception {
+        restMockMvc.perform(get("/api/employees/filtered/or?sort=id,desc&" + filter))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    @Transactional
+    public void getEmployeesByIdFiltering() throws Exception {
+        // Initialize the database
+        em.persist(employee);
+        em.flush();
+
+        UUID id = employee.getId();
+
+        defaultEmployeeShouldBeFoundWithAndOperator("id.equals=" + id);
+        defaultNomenclatureShouldBeFoundWithOrOperator("id.equals=" + id);
+
+        defaultEmployeeShouldNotBeFoundWithAndOperator("id.notEquals=" + id);
+        defaultEmployeeShouldNotBeFoundWithOrOperator("id.notEquals=" + id);
+
+
+        defaultEmployeeShouldBeFoundWithAndOperator("id.in=" + id + "," + UUID.randomUUID().toString());
+        defaultNomenclatureShouldBeFoundWithOrOperator("id.in=" + id + "," + UUID.randomUUID().toString());
+
+        defaultEmployeeShouldNotBeFoundWithAndOperator("id.notIn=" + id + "," + UUID.randomUUID().toString());
+        defaultEmployeeShouldNotBeFoundWithOrOperator("id.notIn=" + id + "," + UUID.randomUUID().toString());
+
+        defaultEmployeeShouldBeFoundWithAndOperator("id.specified=true");
+        defaultNomenclatureShouldBeFoundWithOrOperator("id.specified=true");
+
+        defaultEmployeeShouldNotBeFoundWithAndOperator("id.specified=false");
+        defaultEmployeeShouldNotBeFoundWithOrOperator("id.specified=false");
+    }
+
+    @Test
+    @Transactional
+    void getAllEmployeesByBirthdateIsEqualToSomething() throws Exception {
+        // Initialize the database
+        em.persist(employee);
+        em.flush();
+
+        // Get all the employeeList where birthdate equals to UPDATE_BIRTHDATE
+        defaultEmployeeShouldBeFoundWithAndOperator("birthdate.equals=" + DEFAULT_BIRTHDATE);
+        defaultNomenclatureShouldBeFoundWithOrOperator("birthdate.equals=" + DEFAULT_BIRTHDATE);
+
+        // Get all the employeeList where birthdate equals to DEFAULT_BIRTHDATE
+        defaultEmployeeShouldNotBeFoundWithAndOperator("birthdate.equals=" + UPDATE_BIRTHDATE);
+        defaultEmployeeShouldNotBeFoundWithOrOperator("birthdate.equals=" + UPDATE_BIRTHDATE);
+    }
+
+    @Test
+    @Transactional
+    void getAllEmployeesByBirthdateIsNotEqualToSomething() throws Exception {
+        // Initialize the database
+        em.persist(employee);
+        em.flush();
+
+        // Get all the employeeList where birthdate not equals to UPDATE_BIRTHDATE
+        defaultEmployeeShouldNotBeFoundWithAndOperator("birthdate.notEquals=" + DEFAULT_BIRTHDATE);
+        defaultEmployeeShouldNotBeFoundWithOrOperator("birthdate.notEquals=" + DEFAULT_BIRTHDATE);
+
+        // Get all the employeeList where birthdate not equals to DEFAULT_BIRTHDATE
+        defaultEmployeeShouldBeFoundWithAndOperator("birthdate.notEquals=" + UPDATE_BIRTHDATE);
+        defaultNomenclatureShouldBeFoundWithOrOperator("birthdate.notEquals=" + UPDATE_BIRTHDATE);
+    }
+
+    @Test
+    @Transactional
+    void getAllEmployeesByBirthdateIsIsInShouldWork() throws Exception {
+        // Initialize the database
+        em.persist(employee);
+        em.flush();
+
+        // Get all the employeeList where name not equals to UPDATE_BIRTHDATE
+        defaultEmployeeShouldNotBeFoundWithAndOperator("birthdate.in=" + UPDATE_BIRTHDATE + "," + LocalDate.now());
+        defaultEmployeeShouldNotBeFoundWithOrOperator("birthdate.in=" + UPDATE_BIRTHDATE + "," + LocalDate.now());
+
+        // Get all the employeeList where name not equals to DEFAULT_BIRTHDATE
+        defaultEmployeeShouldBeFoundWithAndOperator("birthdate.in=" + UPDATE_BIRTHDATE + "," + DEFAULT_BIRTHDATE);
+        defaultNomenclatureShouldBeFoundWithOrOperator("birthdate.in=" + UPDATE_BIRTHDATE + "," + DEFAULT_BIRTHDATE);
+    }
+
+    @Test
+    @Transactional
+    void getAllEmployeesByBirthdateIsIsGreaterThanShouldWork() throws Exception {
+        // Initialize the database
+        em.persist(employee);
+        em.flush();
+
+        // Get all the employeeList where name not equals to UPDATE_BIRTHDATE
+        defaultEmployeeShouldNotBeFoundWithAndOperator("birthdate.greaterThan=" + UPDATE_BIRTHDATE);
+        defaultEmployeeShouldNotBeFoundWithOrOperator("birthdate.greaterThan=" + UPDATE_BIRTHDATE);
+
+        // Get all the employeeList where name not equals to DEFAULT_BIRTHDATE
+        defaultEmployeeShouldBeFoundWithAndOperator("birthdate.greaterThan=" + DEFAULT_BIRTHDATE.minusDays(1L));
+        defaultNomenclatureShouldBeFoundWithOrOperator("birthdate.greaterThan=" + DEFAULT_BIRTHDATE.minusDays(1L));
     }
 }

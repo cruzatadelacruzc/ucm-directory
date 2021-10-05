@@ -1,11 +1,14 @@
 package cu.sld.ucmgt.directory.web.rest;
 
 import cu.sld.ucmgt.directory.service.EmployeeService;
+import cu.sld.ucmgt.directory.service.criteria.EmployeeCriteria;
 import cu.sld.ucmgt.directory.service.dto.EmployeeDTO;
 import cu.sld.ucmgt.directory.web.rest.errors.BadRequestAlertException;
 import cu.sld.ucmgt.directory.web.rest.util.HeaderUtil;
 import cu.sld.ucmgt.directory.web.rest.util.PaginationUtil;
 import cu.sld.ucmgt.directory.web.rest.util.ResponseUtil;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,7 +35,7 @@ public class EmployeeResource {
     @Value("${application.clientApp.name}")
     private String applicationName;
     private final EmployeeService service;
-    private static final String ENTITY_NAME = "directoryEmployee";
+    private static final String ENTITY_NAME = "Employee";
 
     /**
      * {@code POST  /employees} : Create a new employee.
@@ -46,11 +49,11 @@ public class EmployeeResource {
     public ResponseEntity<EmployeeDTO> createEmployee(@Valid @RequestBody EmployeeDTO employeeDTO) throws URISyntaxException {
         log.debug("REST request to save Employee : {}", employeeDTO);
         if (employeeDTO.getId() != null) {
-            throw new BadRequestAlertException("A new employee cannot already have an ID", ENTITY_NAME, "idexists");
+            throw new BadRequestAlertException("A new employee cannot already have an ID", ENTITY_NAME, "idexists", employeeDTO.getId().toString());
         }
 
         if (employeeDTO.getEndDate() != null && employeeDTO.getStartDate().isAfter(employeeDTO.getEndDate())) {
-            throw new BadRequestAlertException("End Date cannot be greater Start Date", ENTITY_NAME, "idexists");
+            throw new BadRequestAlertException("End Date greater than Start Date", ENTITY_NAME, "enddategt", employeeDTO.getEndDate().toString());
         }
         EmployeeDTO employeeSaved = service.create(employeeDTO);
         return ResponseEntity.created(new URI("/api/employees/" + employeeSaved.getId()))
@@ -72,11 +75,11 @@ public class EmployeeResource {
     public ResponseEntity<EmployeeDTO> updateEmployee(@Valid @RequestBody EmployeeDTO employeeDTO){
         log.debug("REST request to update Employee : {}", employeeDTO);
         if (employeeDTO.getId() == null) {
-            throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
+            throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull", "idnull");
         }
 
         if (employeeDTO.getEndDate() != null && employeeDTO.getStartDate().isAfter(employeeDTO.getEndDate())) {
-            throw new BadRequestAlertException("End Date cannot be greater Start Date", ENTITY_NAME, "idexists");
+            throw new BadRequestAlertException("End Date greater than Start Date", ENTITY_NAME, "enddategt",employeeDTO.getEndDate().toString());
         }
 
         EmployeeDTO employeeSaved = service.update(employeeDTO);
@@ -129,6 +132,30 @@ public class EmployeeResource {
     public ResponseEntity<List<EmployeeDTO>> getAllEmployees(Pageable pageable) {
         log.debug("REST request to get a page of Employees");
         Page<EmployeeDTO> page = service.getAllEmployees(pageable);
+        HttpHeaders headers = PaginationUtil.generatePaginationHeaders(
+                ServletUriComponentsBuilder.fromCurrentRequest(),
+                page
+        );
+        return ResponseEntity.ok().headers(headers).body(page.getContent());
+    }
+
+    /**
+     * {@code GET  /employees} : get all the filtered employees.
+     *
+     * @param pageable the pagination information.
+     * @param criteria the criteria which the requested entities should match.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of employees in body.
+     */
+    @ApiOperation(value = "Filtered Employees list with pagination and logical operator join", response = List.class)
+    @GetMapping("/employees/filtered/{join}")
+    public ResponseEntity<List<EmployeeDTO>> getAllFilteredEmployees(
+            @ApiParam(value = "Logical operators (AND-OR) for join expressions")
+            @PathVariable String join, EmployeeCriteria criteria, Pageable pageable)
+    {
+        if (!(join.equalsIgnoreCase("AND") || join.equalsIgnoreCase("OR"))) {
+            throw new BadRequestAlertException("Wrong logical operator", ENTITY_NAME, "badoperatorjoin", join);
+        }
+        Page<EmployeeDTO> page = service.findByCriteria(join, criteria, pageable);
         HttpHeaders headers = PaginationUtil.generatePaginationHeaders(
                 ServletUriComponentsBuilder.fromCurrentRequest(),
                 page

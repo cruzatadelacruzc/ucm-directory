@@ -1,8 +1,6 @@
 package cu.sld.ucmgt.directory.service;
 
-import cu.sld.ucmgt.directory.domain.Employee;
-import cu.sld.ucmgt.directory.domain.NomenclatureType;
-import cu.sld.ucmgt.directory.domain.Phone;
+import cu.sld.ucmgt.directory.domain.*;
 import cu.sld.ucmgt.directory.domain.elasticsearch.EmployeeIndex;
 import cu.sld.ucmgt.directory.repository.EmployeeRepository;
 import cu.sld.ucmgt.directory.repository.NomenclatureRepository;
@@ -11,6 +9,7 @@ import cu.sld.ucmgt.directory.repository.search.EmployeeSearchRepository;
 import cu.sld.ucmgt.directory.service.NomenclatureService.SavedNomenclatureEvent;
 import cu.sld.ucmgt.directory.service.WorkPlaceService.RemovedWorkPlaceIndexEvent;
 import cu.sld.ucmgt.directory.service.WorkPlaceService.SavedWorkPlaceIndexEvent;
+import cu.sld.ucmgt.directory.service.criteria.EmployeeCriteria;
 import cu.sld.ucmgt.directory.service.dto.EmployeeDTO;
 import cu.sld.ucmgt.directory.service.mapper.EmployeeIndexMapper;
 import cu.sld.ucmgt.directory.service.mapper.EmployeeMapper;
@@ -31,9 +30,11 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.criteria.JoinType;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -42,7 +43,7 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class EmployeeService {
+public class EmployeeService extends QueryService<Employee>{
 
     private final EmployeeMapper mapper;
     private final EmployeeRepository repository;
@@ -320,6 +321,205 @@ public class EmployeeService {
         } catch (IOException exception) {
             exception.printStackTrace();
         }
+    }
+
+    /**
+     * Return a {@link List} of {@link EmployeeDTO} which matches the criteria from the database.
+     * @param operator_union Logical operator to join expression: AND - OR
+     * @param criteria The object which holds all the filters, which the entities should match.
+     * @return the matching entities.
+     */
+    public Page<EmployeeDTO> findByCriteria(String operator_union, EmployeeCriteria criteria, Pageable page) {
+        final Specification<Employee> specification = createSpecification(operator_union, criteria);
+        return repository.findAll(specification, page).map(mapper::toDto);
+    }
+
+    /**
+     * Function to convert {@link EmployeeCriteria} to a {@link Specification}
+     * @param operator_union Logical operator to join expression: AND - OR
+     * @param criteria The object which holds all the filters, which the entities should match.
+     * @return the matching {@link Specification} of the entity.
+     */
+    private Specification<Employee> createSpecification(String operator_union, EmployeeCriteria criteria) {
+        Specification<Employee> specification = Specification.where(null);
+        if (criteria != null) {
+            if (operator_union.equalsIgnoreCase("AND")) {
+                if (criteria.getId() != null) {
+                    specification = specification.and(buildSpecification(criteria.getId(), Employee_.id));
+                }
+                if (criteria.getAge() != null) {
+                    specification = specification.and(buildRangeSpecification(criteria.getAge(), Employee_.age));
+                }
+                if (criteria.getName() != null) {
+                    specification = specification.and(buildSpecification(criteria.getName(), Employee_.name));
+                }
+                if (criteria.getRace() != null) {
+                    specification = specification.and(buildSpecification(criteria.getRace(), Employee_.race));
+                }
+                if (criteria.getEmail() != null) {
+                    specification = specification.and(buildSpecification(criteria.getEmail(), Employee_.email));
+                }
+                if (criteria.getGender() != null) {
+                    specification = specification.and(buildSpecification(criteria.getGender(), Employee_.gender));
+                }
+                if (criteria.getAddress() != null) {
+                    specification = specification.and(buildSpecification(criteria.getAddress(), Employee_.address));
+                }
+                if (criteria.getDistrictName() != null) {
+                    specification = specification.and(buildSpecification(criteria.getDistrictName(),
+                            root -> root.join(Employee_.district, JoinType.LEFT).get(Nomenclature_.name)));
+                }
+                if (criteria.getBirthdate() != null) {
+                    specification = specification.and(buildRangeSpecification(criteria.getBirthdate(), Employee_.birthdate));
+                }
+                if (criteria.getSpecialtyName() != null) {
+                    specification = specification.and(buildSpecification(criteria.getSpecialtyName(),
+                            root -> root.join(Employee_.specialty, JoinType.LEFT).get(Nomenclature_.name)));
+                }
+                if (criteria.getFirstLastName() != null) {
+                    specification = specification.and(buildSpecification(criteria.getFirstLastName(), Employee_.firstLastName));
+                }
+                if (criteria.getSecondLastName() != null) {
+                    specification = specification.and(buildSpecification(criteria.getSecondLastName(), Employee_.secondLastName));
+                }
+                if (criteria.getBossWorkPlace() != null) {
+                    specification = specification.and(buildSpecification(criteria.getBossWorkPlace(), Employee_.bossWorkPlace));
+                }
+                if (criteria.getCategoryName() != null) {
+                    specification = specification.and(buildSpecification(criteria.getCategoryName(),
+                            root -> root.join(Employee_.category).get(Nomenclature_.name)));
+                }
+                if (criteria.getChargeName() != null) {
+                    specification = specification.and(buildSpecification(criteria.getChargeName(),
+                            root -> root.join(Employee_.charge, JoinType.LEFT).get(Nomenclature_.name)));
+                }
+                if (criteria.getEndDate() != null) {
+                    specification = specification.and(buildRangeSpecification(criteria.getEndDate(), Employee_.endDate));
+                }
+                if (criteria.getGraduateYears() != null) {
+                    specification = specification.and(buildRangeSpecification(criteria.getGraduateYears(), Employee_.graduateYears));
+                }
+                if (criteria.getIsGraduatedBySector() != null) {
+                    specification = specification.and(buildSpecification(criteria.getIsGraduatedBySector(), Employee_.isGraduatedBySector));
+                }
+                if (criteria.getProfessionalNumber() != null) {
+                    specification = specification.and(buildSpecification(criteria.getProfessionalNumber(), Employee_.professionalNumber));
+                }
+                if (criteria.getProfessionName() != null) {
+                    specification = specification.and(buildSpecification(criteria.getProfessionName(),
+                            root -> root.join(Employee_.profession, JoinType.LEFT).get(Nomenclature_.name)));
+                }
+                if (criteria.getRegisterNumber() != null) {
+                    specification = specification.and(buildSpecification(criteria.getRegisterNumber(), Employee_.registerNumber));
+                }
+                if (criteria.getScientificDegreeName() != null) {
+                    specification = specification.and(buildSpecification(criteria.getScientificDegreeName(),
+                            root -> root.join(Employee_.scientificDegree, JoinType.LEFT).get(Nomenclature_.name)));
+                }
+                if (criteria.getServiceYears() != null) {
+                    specification = specification.and(buildSpecification(criteria.getServiceYears(), Employee_.serviceYears));
+                }
+                if (criteria.getStartDate() != null) {
+                    specification = specification.and(buildRangeSpecification(criteria.getStartDate(), Employee_.startDate));
+                }
+                if (criteria.getTeachingCategoryName() != null) {
+                    specification = specification.and(buildSpecification(criteria.getTeachingCategoryName(),
+                            root -> root.join(Employee_.teachingCategory, JoinType.LEFT).get(Nomenclature_.name)));
+                }
+                if (criteria.getWorkPlaceName() != null) {
+                    specification = specification.and(buildSpecification(criteria.getWorkPlaceName(),
+                            root -> root.join(Employee_.workPlace, JoinType.LEFT).get(WorkPlace_.name)));
+                }
+            } else {
+                if (criteria.getId() != null) {
+                    specification = specification.or(buildSpecification(criteria.getId(), Employee_.id));
+                }
+                if (criteria.getAge() != null) {
+                    specification = specification.or(buildRangeSpecification(criteria.getAge(), Employee_.age));
+                }
+                if (criteria.getName() != null) {
+                    specification = specification.or(buildSpecification(criteria.getName(), Employee_.name));
+                }
+                if (criteria.getRace() != null) {
+                    specification = specification.or(buildSpecification(criteria.getRace(), Employee_.race));
+                }
+                if (criteria.getEmail() != null) {
+                    specification = specification.or(buildSpecification(criteria.getEmail(), Employee_.email));
+                }
+                if (criteria.getGender() != null) {
+                    specification = specification.or(buildSpecification(criteria.getGender(), Employee_.gender));
+                }
+                if (criteria.getAddress() != null) {
+                    specification = specification.or(buildSpecification(criteria.getAddress(), Employee_.address));
+                }
+                if (criteria.getDistrictName() != null) {
+                    specification = specification.or(buildSpecification(criteria.getDistrictName(),
+                            root -> root.join(Employee_.district, JoinType.LEFT).get(Nomenclature_.name)));
+                }
+                if (criteria.getBirthdate() != null) {
+                    specification = specification.or(buildRangeSpecification(criteria.getBirthdate(), Employee_.birthdate));
+                }
+                if (criteria.getSpecialtyName() != null) {
+                    specification = specification.or(buildSpecification(criteria.getSpecialtyName(),
+                            root -> root.join(Employee_.specialty, JoinType.LEFT).get(Nomenclature_.name)));
+                }
+                if (criteria.getFirstLastName() != null) {
+                    specification = specification.or(buildSpecification(criteria.getFirstLastName(), Employee_.firstLastName));
+                }
+                if (criteria.getSecondLastName() != null) {
+                    specification = specification.or(buildSpecification(criteria.getSecondLastName(), Employee_.secondLastName));
+                }
+                if (criteria.getBossWorkPlace() != null) {
+                    specification = specification.or(buildSpecification(criteria.getBossWorkPlace(), Employee_.bossWorkPlace));
+                }
+                if (criteria.getCategoryName() != null) {
+                    specification = specification.or(buildSpecification(criteria.getCategoryName(),
+                            root -> root.join(Employee_.category).get(Nomenclature_.name)));
+                }
+                if (criteria.getChargeName() != null) {
+                    specification = specification.or(buildSpecification(criteria.getChargeName(),
+                            root -> root.join(Employee_.charge, JoinType.LEFT).get(Nomenclature_.name)));
+                }
+                if (criteria.getEndDate() != null) {
+                    specification = specification.or(buildRangeSpecification(criteria.getEndDate(), Employee_.endDate));
+                }
+                if (criteria.getGraduateYears() != null) {
+                    specification = specification.or(buildRangeSpecification(criteria.getGraduateYears(), Employee_.graduateYears));
+                }
+                if (criteria.getIsGraduatedBySector() != null) {
+                    specification = specification.or(buildSpecification(criteria.getIsGraduatedBySector(), Employee_.isGraduatedBySector));
+                }
+                if (criteria.getProfessionalNumber() != null) {
+                    specification = specification.or(buildSpecification(criteria.getProfessionalNumber(), Employee_.professionalNumber));
+                }
+                if (criteria.getProfessionName() != null) {
+                    specification = specification.or(buildSpecification(criteria.getProfessionName(),
+                            root -> root.join(Employee_.profession, JoinType.LEFT).get(Nomenclature_.name)));
+                }
+                if (criteria.getRegisterNumber() != null) {
+                    specification = specification.or(buildSpecification(criteria.getRegisterNumber(), Employee_.registerNumber));
+                }
+                if (criteria.getScientificDegreeName() != null) {
+                    specification = specification.or(buildSpecification(criteria.getScientificDegreeName(),
+                            root -> root.join(Employee_.scientificDegree, JoinType.LEFT).get(Nomenclature_.name)));
+                }
+                if (criteria.getServiceYears() != null) {
+                    specification = specification.or(buildSpecification(criteria.getServiceYears(), Employee_.serviceYears));
+                }
+                if (criteria.getStartDate() != null) {
+                    specification = specification.or(buildRangeSpecification(criteria.getStartDate(), Employee_.startDate));
+                }
+                if (criteria.getTeachingCategoryName() != null) {
+                    specification = specification.or(buildSpecification(criteria.getTeachingCategoryName(),
+                            root -> root.join(Employee_.teachingCategory, JoinType.LEFT).get(Nomenclature_.name)));
+                }
+                if (criteria.getWorkPlaceName() != null) {
+                    specification = specification.or(buildSpecification(criteria.getWorkPlaceName(),
+                            root -> root.join(Employee_.workPlace, JoinType.LEFT).get(WorkPlace_.name)));
+                }
+            }
+        }
+        return specification;
     }
 
     /**
