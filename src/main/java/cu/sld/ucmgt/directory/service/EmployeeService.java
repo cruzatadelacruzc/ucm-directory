@@ -43,7 +43,7 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class EmployeeService extends QueryService<Employee>{
+public class EmployeeService extends QueryService<Employee> {
 
     private final EmployeeMapper mapper;
     private final EmployeeRepository repository;
@@ -172,23 +172,24 @@ public class EmployeeService extends QueryService<Employee>{
     public void deleteEmployee(UUID uid) {
         log.debug("Request to delete Employee : {}", uid);
         repository.findById(uid).ifPresent(employee -> {
-           repository.delete(employee);
-           EmployeeIndex employeeIndex = searchRepository.findById(employee.getId())
-            .orElseThrow(() -> new NoSuchElementException("EmployeeIndex with ID: " + employee.getId() + " not was found"));
-           searchRepository.delete(employeeIndex);
-           List<UUID> phoneIds = employee.getPhones().stream().map(Phone::getId).collect(Collectors.toList());
-           final RemovedEmployeeIndexEvent removedEmployeeIndexEvent = RemovedEmployeeIndexEvent.builder()
-                   .phoneIds(phoneIds)
-                   .removedEmployeeIndex(employeeIndex)
-                   .removedEmployeeId(employeeIndex.getId())
-                   .workPlaceId(employee.getWorkPlace() != null ? employee.getWorkPlace().getId() : null)
-                   .build();
-           eventPublisher.publishEvent(removedEmployeeIndexEvent);
+            repository.delete(employee);
+            EmployeeIndex employeeIndex = searchRepository.findById(employee.getId())
+                    .orElseThrow(() -> new NoSuchElementException("EmployeeIndex with ID: " + employee.getId() + " not was found"));
+            searchRepository.delete(employeeIndex);
+            List<UUID> phoneIds = employee.getPhones().stream().map(Phone::getId).collect(Collectors.toList());
+            final RemovedEmployeeIndexEvent removedEmployeeIndexEvent = RemovedEmployeeIndexEvent.builder()
+                    .phoneIds(phoneIds)
+                    .removedEmployeeIndex(employeeIndex)
+                    .removedEmployeeId(employeeIndex.getId())
+                    .workPlaceId(employee.getWorkPlace() != null ? employee.getWorkPlace().getId() : null)
+                    .build();
+            eventPublisher.publishEvent(removedEmployeeIndexEvent);
         });
     }
 
     /**
      * Listen {@link SavedWorkPlaceIndexEvent} event to update workplace inside {@link EmployeeIndex} index
+     *
      * @param workPlaceIndexEvent information about event
      */
     @EventListener(condition = "#workPlaceIndexEvent.workplaceId != null && !#workPlaceIndexEvent.getEmployeeIds().isEmpty()")
@@ -203,10 +204,10 @@ public class EmployeeService extends QueryService<Employee>{
             String updateCode = "for (entry in params.entrySet()){if (entry.getKey() != \"ctx\") " +
                     "{ctx._source.workPlace[entry.getKey()] = entry.getValue()}}";
             UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(INDEX_NAME)
-              .setRefresh(true)
-              .setAbortOnVersionConflict(true)
-              .setQuery(boolQueryBuilder)
-              .setScript(new Script(ScriptType.INLINE, "painless", updateCode, workPlaceIndexEvent.getWorkplaceIndexMap()));
+                    .setRefresh(true)
+                    .setAbortOnVersionConflict(true)
+                    .setQuery(boolQueryBuilder)
+                    .setScript(new Script(ScriptType.INLINE, "painless", updateCode, workPlaceIndexEvent.getWorkplaceIndexMap()));
             highLevelClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
         } catch (IOException e) {
             e.printStackTrace();
@@ -215,15 +216,16 @@ public class EmployeeService extends QueryService<Employee>{
 
     /**
      * Listen {@link SavedWorkPlaceIndexEvent} event to create workplace inside {@link EmployeeIndex} index
+     *
      * @param workPlaceIndexEvent information about event
      */
     @EventListener(condition = "#workPlaceIndexEvent.getWorkplaceId() == null && !#workPlaceIndexEvent.getEmployeeIds().isEmpty()")
     public void createWorkPlaceInEmployeeIndex(SavedWorkPlaceIndexEvent workPlaceIndexEvent) {
         log.debug("Listening SavedWorkPlaceIndexEvent event to create WorkPlace in EmployeeIndex with WorkPlaceIndex");
         try {
-                BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
-                workPlaceIndexEvent.getEmployeeIds().forEach(employeeId -> boolQueryBuilder
-                        .should(QueryBuilders.matchQuery("id", employeeId.toString())));
+            BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+            workPlaceIndexEvent.getEmployeeIds().forEach(employeeId -> boolQueryBuilder
+                    .should(QueryBuilders.matchQuery("id", employeeId.toString())));
             String updateCode = "params.remove(\"ctx\");ctx._source.workPlace=params;";
             UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(INDEX_NAME)
                     .setRefresh(true)
@@ -261,30 +263,30 @@ public class EmployeeService extends QueryService<Employee>{
         return repository.findAll(pageable).map(mapper::toDto);
     }
 
-    @EventListener( condition = "#savedNomenclatureEvent.getUpdatedNomenclature() != null")
+    @EventListener(condition = "#savedNomenclatureEvent.getUpdatedNomenclature() != null")
     public void updateNomenclatureIntoEmployeeIndex(SavedNomenclatureEvent savedNomenclatureEvent) {
         log.debug("Listening SavedNomenclatureEvent event to update Nomenclature with ID {} in EmployeeIndex.",
                 savedNomenclatureEvent.getUpdatedNomenclature().getId());
         try {
             BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
             savedNomenclatureEvent.getCommonAssociationIds().forEach(commonAssociationIds -> boolQueryBuilder
-                            .should(QueryBuilders.matchQuery("id", commonAssociationIds.toString())));
-            if (savedNomenclatureEvent.getUpdatedNomenclature().getDiscriminator().equals(NomenclatureType.CATEGORIA)){
-                savedNomenclatureEvent.getUpdatedNomenclature().getEmployeesCategory()
-                    .forEach(employee -> boolQueryBuilder
-                            .should(QueryBuilders.matchQuery("id", employee.getId().toString())));
-            }
-            if (savedNomenclatureEvent.getUpdatedNomenclature().getDiscriminator().equals(NomenclatureType.CARGO)){
+                    .should(QueryBuilders.matchQuery("id", commonAssociationIds.toString())));
+            if (savedNomenclatureEvent.getUpdatedNomenclature().getDiscriminator().equals(NomenclatureType.CATEGORIA)) {
                 savedNomenclatureEvent.getUpdatedNomenclature().getEmployeesCategory()
                         .forEach(employee -> boolQueryBuilder
                                 .should(QueryBuilders.matchQuery("id", employee.getId().toString())));
             }
-            if (savedNomenclatureEvent.getUpdatedNomenclature().getDiscriminator().equals(NomenclatureType.PROFESION)){
+            if (savedNomenclatureEvent.getUpdatedNomenclature().getDiscriminator().equals(NomenclatureType.CARGO)) {
                 savedNomenclatureEvent.getUpdatedNomenclature().getEmployeesCategory()
                         .forEach(employee -> boolQueryBuilder
                                 .should(QueryBuilders.matchQuery("id", employee.getId().toString())));
             }
-            if (savedNomenclatureEvent.getUpdatedNomenclature().getDiscriminator().equals(NomenclatureType.GRADO_CIENTIFICO)){
+            if (savedNomenclatureEvent.getUpdatedNomenclature().getDiscriminator().equals(NomenclatureType.PROFESION)) {
+                savedNomenclatureEvent.getUpdatedNomenclature().getEmployeesCategory()
+                        .forEach(employee -> boolQueryBuilder
+                                .should(QueryBuilders.matchQuery("id", employee.getId().toString())));
+            }
+            if (savedNomenclatureEvent.getUpdatedNomenclature().getDiscriminator().equals(NomenclatureType.GRADO_CIENTIFICO)) {
                 savedNomenclatureEvent.getUpdatedNomenclature().getEmployeesCategory()
                         .forEach(employee -> boolQueryBuilder
                                 .should(QueryBuilders.matchQuery("id", employee.getId().toString())));
@@ -325,8 +327,9 @@ public class EmployeeService extends QueryService<Employee>{
 
     /**
      * Return a {@link List} of {@link EmployeeDTO} which matches the criteria from the database.
+     *
      * @param operator_union Logical operator to join expression: AND - OR
-     * @param criteria The object which holds all the filters, which the entities should match.
+     * @param criteria       The object which holds all the filters, which the entities should match.
      * @return the matching entities.
      */
     public Page<EmployeeDTO> findByCriteria(String operator_union, EmployeeCriteria criteria, Pageable page) {
@@ -336,8 +339,9 @@ public class EmployeeService extends QueryService<Employee>{
 
     /**
      * Function to convert {@link EmployeeCriteria} to a {@link Specification}
+     *
      * @param operator_union Logical operator to join expression: AND - OR
-     * @param criteria The object which holds all the filters, which the entities should match.
+     * @param criteria       The object which holds all the filters, which the entities should match.
      * @return the matching {@link Specification} of the entity.
      */
     private Specification<Employee> createSpecification(String operator_union, EmployeeCriteria criteria) {
@@ -347,23 +351,26 @@ public class EmployeeService extends QueryService<Employee>{
                 if (criteria.getId() != null) {
                     specification = specification.and(buildSpecification(criteria.getId(), Employee_.id));
                 }
+                if (criteria.getCi() != null) {
+                    specification = specification.and(buildStringSpecification(criteria.getCi(), Employee_.ci));
+                }
                 if (criteria.getAge() != null) {
                     specification = specification.and(buildRangeSpecification(criteria.getAge(), Employee_.age));
                 }
                 if (criteria.getName() != null) {
-                    specification = specification.and(buildSpecification(criteria.getName(), Employee_.name));
+                    specification = specification.and(buildStringSpecification(criteria.getName(), Employee_.name));
                 }
                 if (criteria.getRace() != null) {
-                    specification = specification.and(buildSpecification(criteria.getRace(), Employee_.race));
+                    specification = specification.and(buildStringSpecification(criteria.getRace(), Employee_.race));
                 }
                 if (criteria.getEmail() != null) {
-                    specification = specification.and(buildSpecification(criteria.getEmail(), Employee_.email));
+                    specification = specification.and(buildStringSpecification(criteria.getEmail(), Employee_.email));
                 }
                 if (criteria.getGender() != null) {
                     specification = specification.and(buildSpecification(criteria.getGender(), Employee_.gender));
                 }
                 if (criteria.getAddress() != null) {
-                    specification = specification.and(buildSpecification(criteria.getAddress(), Employee_.address));
+                    specification = specification.and(buildStringSpecification(criteria.getAddress(), Employee_.address));
                 }
                 if (criteria.getDistrictName() != null) {
                     specification = specification.and(buildSpecification(criteria.getDistrictName(),
@@ -377,10 +384,10 @@ public class EmployeeService extends QueryService<Employee>{
                             root -> root.join(Employee_.specialty, JoinType.LEFT).get(Nomenclature_.name)));
                 }
                 if (criteria.getFirstLastName() != null) {
-                    specification = specification.and(buildSpecification(criteria.getFirstLastName(), Employee_.firstLastName));
+                    specification = specification.and(buildStringSpecification(criteria.getFirstLastName(), Employee_.firstLastName));
                 }
                 if (criteria.getSecondLastName() != null) {
-                    specification = specification.and(buildSpecification(criteria.getSecondLastName(), Employee_.secondLastName));
+                    specification = specification.and(buildStringSpecification(criteria.getSecondLastName(), Employee_.secondLastName));
                 }
                 if (criteria.getBossWorkPlace() != null) {
                     specification = specification.and(buildSpecification(criteria.getBossWorkPlace(), Employee_.bossWorkPlace));
@@ -403,21 +410,21 @@ public class EmployeeService extends QueryService<Employee>{
                     specification = specification.and(buildSpecification(criteria.getIsGraduatedBySector(), Employee_.isGraduatedBySector));
                 }
                 if (criteria.getProfessionalNumber() != null) {
-                    specification = specification.and(buildSpecification(criteria.getProfessionalNumber(), Employee_.professionalNumber));
+                    specification = specification.and(buildStringSpecification(criteria.getProfessionalNumber(), Employee_.professionalNumber));
                 }
                 if (criteria.getProfessionName() != null) {
                     specification = specification.and(buildSpecification(criteria.getProfessionName(),
                             root -> root.join(Employee_.profession, JoinType.LEFT).get(Nomenclature_.name)));
                 }
                 if (criteria.getRegisterNumber() != null) {
-                    specification = specification.and(buildSpecification(criteria.getRegisterNumber(), Employee_.registerNumber));
+                    specification = specification.and(buildStringSpecification(criteria.getRegisterNumber(), Employee_.registerNumber));
                 }
                 if (criteria.getScientificDegreeName() != null) {
                     specification = specification.and(buildSpecification(criteria.getScientificDegreeName(),
                             root -> root.join(Employee_.scientificDegree, JoinType.LEFT).get(Nomenclature_.name)));
                 }
                 if (criteria.getServiceYears() != null) {
-                    specification = specification.and(buildSpecification(criteria.getServiceYears(), Employee_.serviceYears));
+                    specification = specification.and(buildRangeSpecification(criteria.getServiceYears(), Employee_.serviceYears));
                 }
                 if (criteria.getStartDate() != null) {
                     specification = specification.and(buildRangeSpecification(criteria.getStartDate(), Employee_.startDate));
@@ -434,23 +441,26 @@ public class EmployeeService extends QueryService<Employee>{
                 if (criteria.getId() != null) {
                     specification = specification.or(buildSpecification(criteria.getId(), Employee_.id));
                 }
+                if (criteria.getCi() != null) {
+                    specification = specification.or(buildStringSpecification(criteria.getCi(), Employee_.ci));
+                }
                 if (criteria.getAge() != null) {
                     specification = specification.or(buildRangeSpecification(criteria.getAge(), Employee_.age));
                 }
                 if (criteria.getName() != null) {
-                    specification = specification.or(buildSpecification(criteria.getName(), Employee_.name));
+                    specification = specification.or(buildStringSpecification(criteria.getName(), Employee_.name));
                 }
                 if (criteria.getRace() != null) {
-                    specification = specification.or(buildSpecification(criteria.getRace(), Employee_.race));
+                    specification = specification.or(buildStringSpecification(criteria.getRace(), Employee_.race));
                 }
                 if (criteria.getEmail() != null) {
-                    specification = specification.or(buildSpecification(criteria.getEmail(), Employee_.email));
+                    specification = specification.or(buildStringSpecification(criteria.getEmail(), Employee_.email));
                 }
                 if (criteria.getGender() != null) {
                     specification = specification.or(buildSpecification(criteria.getGender(), Employee_.gender));
                 }
                 if (criteria.getAddress() != null) {
-                    specification = specification.or(buildSpecification(criteria.getAddress(), Employee_.address));
+                    specification = specification.or(buildStringSpecification(criteria.getAddress(), Employee_.address));
                 }
                 if (criteria.getDistrictName() != null) {
                     specification = specification.or(buildSpecification(criteria.getDistrictName(),
@@ -464,10 +474,10 @@ public class EmployeeService extends QueryService<Employee>{
                             root -> root.join(Employee_.specialty, JoinType.LEFT).get(Nomenclature_.name)));
                 }
                 if (criteria.getFirstLastName() != null) {
-                    specification = specification.or(buildSpecification(criteria.getFirstLastName(), Employee_.firstLastName));
+                    specification = specification.or(buildStringSpecification(criteria.getFirstLastName(), Employee_.firstLastName));
                 }
                 if (criteria.getSecondLastName() != null) {
-                    specification = specification.or(buildSpecification(criteria.getSecondLastName(), Employee_.secondLastName));
+                    specification = specification.or(buildStringSpecification(criteria.getSecondLastName(), Employee_.secondLastName));
                 }
                 if (criteria.getBossWorkPlace() != null) {
                     specification = specification.or(buildSpecification(criteria.getBossWorkPlace(), Employee_.bossWorkPlace));
@@ -490,21 +500,21 @@ public class EmployeeService extends QueryService<Employee>{
                     specification = specification.or(buildSpecification(criteria.getIsGraduatedBySector(), Employee_.isGraduatedBySector));
                 }
                 if (criteria.getProfessionalNumber() != null) {
-                    specification = specification.or(buildSpecification(criteria.getProfessionalNumber(), Employee_.professionalNumber));
+                    specification = specification.or(buildStringSpecification(criteria.getProfessionalNumber(), Employee_.professionalNumber));
                 }
                 if (criteria.getProfessionName() != null) {
                     specification = specification.or(buildSpecification(criteria.getProfessionName(),
                             root -> root.join(Employee_.profession, JoinType.LEFT).get(Nomenclature_.name)));
                 }
                 if (criteria.getRegisterNumber() != null) {
-                    specification = specification.or(buildSpecification(criteria.getRegisterNumber(), Employee_.registerNumber));
+                    specification = specification.or(buildStringSpecification(criteria.getRegisterNumber(), Employee_.registerNumber));
                 }
                 if (criteria.getScientificDegreeName() != null) {
                     specification = specification.or(buildSpecification(criteria.getScientificDegreeName(),
                             root -> root.join(Employee_.scientificDegree, JoinType.LEFT).get(Nomenclature_.name)));
                 }
                 if (criteria.getServiceYears() != null) {
-                    specification = specification.or(buildSpecification(criteria.getServiceYears(), Employee_.serviceYears));
+                    specification = specification.or(buildRangeSpecification(criteria.getServiceYears(), Employee_.serviceYears));
                 }
                 if (criteria.getStartDate() != null) {
                     specification = specification.or(buildRangeSpecification(criteria.getStartDate(), Employee_.startDate));
@@ -523,23 +533,23 @@ public class EmployeeService extends QueryService<Employee>{
     }
 
     /**
-     *  Class to register a saved {@link EmployeeIndex} as event
+     * Class to register a saved {@link EmployeeIndex} as event
      */
     @Data
     @Builder
     @AllArgsConstructor
-    public static class SavedEmployeeIndexEvent{
-       private String employeeId;
-       private Map<String,Object> params;
+    public static class SavedEmployeeIndexEvent {
+        private String employeeId;
+        private Map<String, Object> params;
     }
 
     /**
-     *  Class to register a removed {@link EmployeeIndex} as event
+     * Class to register a removed {@link EmployeeIndex} as event
      */
     @Data
     @Builder
     @AllArgsConstructor
-    public static class RemovedEmployeeIndexEvent{
+    public static class RemovedEmployeeIndexEvent {
         private UUID removedEmployeeId;
         private EmployeeIndex removedEmployeeIndex;
         private UUID workPlaceId;

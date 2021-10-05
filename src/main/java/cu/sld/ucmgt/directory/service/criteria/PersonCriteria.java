@@ -25,6 +25,7 @@ public class PersonCriteria implements Serializable {
     protected static final long serialVersionUID = 1L;
 
     protected UUIDFilter id;
+    private StringFilter ci;
     protected IntegerFilter age;
     protected StringFilter name;
     protected StringFilter race;
@@ -42,6 +43,7 @@ public class PersonCriteria implements Serializable {
 
     public PersonCriteria(PersonCriteria criteria) {
         this.id = criteria.id == null ?  null : criteria.id.copy();
+        this.ci = criteria.ci == null ?  null : criteria.ci.copy();
         this.age = criteria.age == null ? null: criteria.age.copy();
         this.race = criteria.race == null ? null: criteria.race.copy();
         this.name  = criteria.name == null ? null: criteria.name.copy();
@@ -66,6 +68,7 @@ public class PersonCriteria implements Serializable {
         PersonCriteria that = (PersonCriteria) o;
         return id.equals(that.id) &&
                 Objects.equals(age, that.age) &&
+                Objects.equals(ci, that.ci) &&
                 Objects.equals(name, that.name) &&
                 Objects.equals(race, that.race) &&
                 Objects.equals(email, that.email) &&
@@ -81,6 +84,7 @@ public class PersonCriteria implements Serializable {
     @Override
     public int hashCode() {
         int result = id != null ? id.hashCode() : 0;
+        result = 31 * result + (ci != null ? ci.hashCode() : 0);
         result = 31 * result + (age != null ? age.hashCode() : 0);
         result = 31 * result + (name != null ? name.hashCode() : 0);
         result = 31 * result + (race != null ? race.hashCode() : 0);
@@ -99,6 +103,7 @@ public class PersonCriteria implements Serializable {
     public String toString() {
         return "PersonCriteria{" +
                 "id=" + id +
+                ", ci=" + ci +
                 ", age=" + age +
                 ", name=" + name +
                 ", race=" + race +

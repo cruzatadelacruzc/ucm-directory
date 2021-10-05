@@ -4,9 +4,7 @@ import com.google.common.collect.ImmutableList;
 import cu.sld.ucmgt.directory.DirectoryApp;
 import cu.sld.ucmgt.directory.TestUtil;
 import cu.sld.ucmgt.directory.config.TestSecurityConfiguration;
-import cu.sld.ucmgt.directory.domain.Employee;
-import cu.sld.ucmgt.directory.domain.Phone;
-import cu.sld.ucmgt.directory.domain.WorkPlace;
+import cu.sld.ucmgt.directory.domain.*;
 import cu.sld.ucmgt.directory.domain.elasticsearch.EmployeeIndex;
 import cu.sld.ucmgt.directory.domain.elasticsearch.PhoneIndex;
 import cu.sld.ucmgt.directory.domain.elasticsearch.WorkPlaceIndex;
@@ -1097,17 +1095,63 @@ public class EmployeeResourceIT extends PersonIT {
 
     @Test
     @Transactional
-    void getAllEmployeesByBirthdateIsIsGreaterThanShouldWork() throws Exception {
+    void getAllEmployeesByBirthdateIsGreaterThanShouldWork() throws Exception {
         // Initialize the database
         em.persist(employee);
         em.flush();
 
-        // Get all the employeeList where name not equals to UPDATE_BIRTHDATE
+        // Get all the employeeList where birthdate not equals to UPDATE_BIRTHDATE
         defaultEmployeeShouldNotBeFoundWithAndOperator("birthdate.greaterThan=" + UPDATE_BIRTHDATE);
         defaultEmployeeShouldNotBeFoundWithOrOperator("birthdate.greaterThan=" + UPDATE_BIRTHDATE);
 
-        // Get all the employeeList where name not equals to DEFAULT_BIRTHDATE
+        // Get all the employeeList where birthdate not equals to DEFAULT_BIRTHDATE
         defaultEmployeeShouldBeFoundWithAndOperator("birthdate.greaterThan=" + DEFAULT_BIRTHDATE.minusDays(1L));
         defaultNomenclatureShouldBeFoundWithOrOperator("birthdate.greaterThan=" + DEFAULT_BIRTHDATE.minusDays(1L));
+    }
+
+    @Test
+    @Transactional
+    void getAllEmployeesByGenderIsGreaterThanShouldWork() throws Exception {
+        // Initialize the database
+        em.persist(employee);
+        em.flush();
+
+        // Get all the employeeList where gender not equals to UPDATE_GENDER
+        defaultEmployeeShouldNotBeFoundWithAndOperator("gender.equals=" + UPDATE_GENDER);
+        defaultEmployeeShouldNotBeFoundWithOrOperator("gender.equals=" + UPDATE_GENDER);
+
+        // Get all the employeeList where gender not equals to DEFAULT_GENDER
+        defaultEmployeeShouldBeFoundWithAndOperator("gender.equals=" + DEFAULT_GENDER);
+        defaultNomenclatureShouldBeFoundWithOrOperator("gender.equals=" + DEFAULT_GENDER);
+    }
+
+    @Test
+    @Transactional
+    void searchAllEmployeesByCIAndNameAndWorkPlaceAndSpecialtyAndRegisterNumberIsIsGreaterThanShouldWork() throws Exception {
+        // Initialize the database
+        Nomenclature specialty =  new Nomenclature();
+        specialty.setName("Medicine");
+        specialty.setDiscriminator(NomenclatureType.ESPECIALIDAD);
+        specialty.setDescription("Health profession");
+        em.persist(specialty);
+        employee.setSpecialty(specialty);
+
+        WorkPlace tic = new WorkPlace();
+        tic.setName("TIC");
+        tic.setActive(true);
+        tic.setDescription("Technology of Communication and Information");
+        tic.setEmail("tic@mail.com");
+        em.persist(tic);
+        tic.addEmployee(employee);
+
+        em.persist(employee);
+        em.flush();
+        String filter = "ci.contains=paramName&registerNumber.contains=paramName&name.contains=paramName" +
+                "&specialtyName.contains=paramName&workPlaceName.contains=paramName&page=0&size=20&sort=name,asc";
+        // Get all the employeeList where ci, registerNumber, name,specialtyName and workPlaceName not equals to UPDATE_NAME
+        defaultEmployeeShouldNotBeFoundWithOrOperator(filter.replaceAll("paramName", UPDATE_NAME));
+
+        // Get all the employeeList where name not equals to DEFAULT_NAME
+        defaultNomenclatureShouldBeFoundWithOrOperator(filter.replaceAll("paramName", DEFAULT_NAME));
     }
 }
