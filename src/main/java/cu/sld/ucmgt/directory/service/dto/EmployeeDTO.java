@@ -6,7 +6,6 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
-import java.time.ZonedDateTime;
 import java.util.UUID;
 
 /**
@@ -15,16 +14,16 @@ import java.util.UUID;
 @Data
 public class EmployeeDTO extends PersonDTO {
 
-    @NotNull
+    @NotNull(message = "error:NotNull")
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private Boolean bossWorkPlace;
-    @Min(value = 0)
+    @Min(value = 0, message = "error:Min")
     private Integer graduateYears;
     private Boolean isGraduatedBySector;
-    @Min(value = 0)
+    @Min(value = 0, message = "error:Min")
     private Integer serviceYears;
-    @NotBlank
+    @NotBlank(message = "error:NotBlank")
     protected String registerNumber;
     protected String professionalNumber;
     private UUID workPlaceId;

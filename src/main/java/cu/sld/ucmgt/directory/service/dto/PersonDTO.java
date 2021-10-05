@@ -18,20 +18,20 @@ import java.util.UUID;
 public abstract class PersonDTO implements Serializable {
     protected UUID id;
 
-    @Pattern(regexp = "(^[1-9]\\d{10}$)", message = "{validation.ci.malformed}")
+    @Pattern(regexp = "(^[1-9]\\d{10}$)", /*message = "{validation.ci.malformed}"*/ message = "error:Pattern")
     protected String ci;
-    @NotBlank
+    @NotBlank(message = "error:NotBlank")
     protected String name;
-    @NotBlank
+    @NotBlank(message = "error:NotBlank")
     protected String address;
     protected String firstLastName;
     protected String secondLastName;
-    @Email
+    @Email(message = "error:Email")
     protected String email;
     protected Gender gender;
-    @Min(value = 14)
+    @Min(value = 14, message = "error:Min")
     protected Integer age;
-    @NotBlank
+    @NotBlank(message = "error:NotBlank")
     protected String race;
     protected UUID districtId;
     protected UUID specialtyId;

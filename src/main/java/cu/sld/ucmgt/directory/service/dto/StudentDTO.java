@@ -11,11 +11,11 @@ import java.util.UUID;
  */
 @Data
 public class StudentDTO extends PersonDTO {
-    @NotBlank
+    @NotBlank(message = "error:NotBlank")
     private String classRoom;
-    @Min(value = 1)
+    @Min(value = 1, message = "error:Min")
     private Integer universityYear;
-    @NotBlank
+    @NotBlank(message = "error:NotBlank")
     private String residence;
     private UUID kindId;
     private UUID studyCenterId;
