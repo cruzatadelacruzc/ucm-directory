@@ -2,11 +2,9 @@ package cu.sld.ucmgt.directory.service.mapper;
 
 import cu.sld.ucmgt.directory.domain.Employee;
 import cu.sld.ucmgt.directory.service.dto.EmployeeDTO;
-import org.mapstruct.IterableMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -34,6 +32,14 @@ public interface EmployeeMapper extends EntityMapper<EmployeeDTO, Employee> {
     @Mapping(source = "profession.id", target = "professionId")
     @Mapping(source = "scientificDegree.id", target = "scientificDegreeId")
     @Mapping(source = "teachingCategory.id", target = "teachingCategoryId")
+    @Mapping(source = "charge.name", target = "chargeName")
+    @Mapping(source = "district.name", target = "districtName")
+    @Mapping(source = "category.name", target = "categoryName")
+    @Mapping(source = "workPlace.name", target = "workPlaceName")
+    @Mapping(source = "specialty.name", target = "specialtyName")
+    @Mapping(source = "profession.name", target = "professionName")
+    @Mapping(source = "scientificDegree.name", target = "scientificDegreeName")
+    @Mapping(source = "teachingCategory.name", target = "teachingCategoryName")
     EmployeeDTO toDto(Employee entity);
 
     default Employee fromId(UUID id) {

@@ -37,6 +37,9 @@ public abstract class PersonDTO implements Serializable {
     protected UUID specialtyId;
     protected LocalDate birthdate;
 
+    protected String districtName;
+    protected String specialtyName;
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -63,6 +66,8 @@ public abstract class PersonDTO implements Serializable {
                 ", age=" + age +
                 ", race='" + race + '\'' +
                 ", districtId=" + districtId +
+                ", districtName=" + districtName +
+                ", specialtyName=" + specialtyName +
                 '}';
     }
 }

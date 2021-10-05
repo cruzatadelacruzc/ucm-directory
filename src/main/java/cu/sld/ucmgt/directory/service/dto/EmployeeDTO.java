@@ -24,14 +24,21 @@ public class EmployeeDTO extends PersonDTO {
     @Min(value = 0, message = "error:Min")
     private Integer serviceYears;
     @NotBlank(message = "error:NotBlank")
-    protected String registerNumber;
-    protected String professionalNumber;
+    private String registerNumber;
+    private String professionalNumber;
     private UUID workPlaceId;
     private UUID categoryId;
     private UUID scientificDegreeId;
     private UUID teachingCategoryId;
     private UUID chargeId;
     private UUID professionId;
+
+    private String workPlaceName;
+    private String categoryName;
+    private String scientificDegreeName;
+    private String teachingCategoryName;
+    private String chargeName;
+    private String professionName;
 
     @Override
     public boolean equals(Object o) {
@@ -75,6 +82,12 @@ public class EmployeeDTO extends PersonDTO {
                 ", registerNumber='" + registerNumber + '\'' +
                 ", professionalNumber='" + professionalNumber + '\'' +
                 ", professionId=" + professionId +
+                ", workPlaceName=" + workPlaceName +
+                ", categoryName=" + categoryName +
+                ", scientificDegreeName=" + scientificDegreeName +
+                ", teachingCategoryName=" + teachingCategoryName +
+                ", chargeName=" + chargeName +
+                ", professionName=" + professionName +
                 '}';
     }
 }
