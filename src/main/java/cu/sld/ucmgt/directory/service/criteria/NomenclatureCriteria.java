@@ -1,7 +1,6 @@
 package cu.sld.ucmgt.directory.service.criteria;
 
 import cu.sld.ucmgt.directory.domain.Nomenclature;
-import cu.sld.ucmgt.directory.domain.NomenclatureType;
 import cu.sld.ucmgt.directory.service.filter.Filter;
 import cu.sld.ucmgt.directory.service.filter.StringFilter;
 import cu.sld.ucmgt.directory.service.filter.UUIDFilter;
@@ -16,28 +15,12 @@ import java.util.Objects;
  * in {@link NomenclatureResource} to receive all the possible filtering options from
  * the Http GET request parameters.
  * For example the following could be a valid request:
- * {@code /nomenclature?id.greaterThan=5&attr1.contains=something&attr2.specified=false}
+ * {@code /nomenclatures?id.greaterThan=5&attr1.contains=something&attr2.specified=false}
  * As Spring is unable to properly convert the types, unless specific {@link Filter} class are used, we need to use
  * fix type specific filters.
  */
 @Data
 public class NomenclatureCriteria implements Serializable {
-
-    /**
-     * Class for filtering NomenclatureType
-     */
-    public static class NomenclatureTypeFilter extends Filter<NomenclatureType> {
-        public NomenclatureTypeFilter() {
-        }
-
-        public NomenclatureTypeFilter(NomenclatureTypeFilter filter) {
-            super(filter);
-        }
-
-        public NomenclatureTypeFilter copy() {
-            return new NomenclatureTypeFilter(this);
-        }
-    }
 
     private static final long serialVersionUID = 1L;
 
