@@ -128,6 +128,12 @@ public class EmployeeResourceIT extends PersonIT {
     @Transactional
     public void createEmployee() throws Exception {
         int databaseSizeBeforeCreate = TestUtil.findAll(em, Employee.class).size();
+        Nomenclature district = new Nomenclature();
+        district.setName("Guantanamo");
+        district.setDescription("State");
+        district.setDiscriminator(NomenclatureType.DISTRITO);
+        em.persist(district);
+        employee.setDistrict(district);
         EmployeeDTO employeeDTO = mapper.toDto(employee);
 
         restMockMvc.perform(post("/api/employees").with(csrf())
@@ -139,6 +145,7 @@ public class EmployeeResourceIT extends PersonIT {
         assertThat(employees).hasSize(databaseSizeBeforeCreate + 1);
         Employee testEmployee = employees.get(employees.size() - 1);
         testEmployeeIsCreated(testEmployee);
+        assertThat(testEmployee.getDistrict().getId()).isEqualTo(district.getId());
 
         Iterable<EmployeeIndex> employeeIndices = employeeSearchRepository.findAll();
         EmployeeIndex testEmployeeIndex = employeeIndices.iterator().next();
