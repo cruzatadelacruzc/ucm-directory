@@ -248,7 +248,7 @@ public class EmployeeService extends QueryService<Employee> {
     @Transactional(readOnly = true)
     public Optional<EmployeeDTO> getEmployee(UUID uid) {
         log.debug("Request to get Employee : {}", uid);
-        return repository.findById(uid).map(mapper::toDto);
+        return repository.findEmployeeWithAssociationsById(uid).map(mapper::toDto);
     }
 
     /**
