@@ -33,7 +33,7 @@ public class WorkPlaceResource {
     @Value("${application.clientApp.name}")
     private String applicationName;
     private final WorkPlaceService service;
-    private static final String ENTITY_NAME = "directoryWorkPlace";
+    private static final String ENTITY_NAME = "WorkPlace";
 
     /**
      * {@code POST  /workplaces} : Create a new workplace.
@@ -47,7 +47,7 @@ public class WorkPlaceResource {
     public ResponseEntity<WorkPlaceDTO> createWorkPlace(@Valid @RequestBody WorkPlaceDTO workPlaceDTO) throws URISyntaxException {
         log.debug("REST request to save Workplace : {}", workPlaceDTO);
         if (workPlaceDTO.getId() != null) {
-            throw new BadRequestAlertException("A new workplace cannot already have an ID", ENTITY_NAME, "idexists");
+            throw new BadRequestAlertException("A new workplace cannot already have an ID", ENTITY_NAME, "idexists", workPlaceDTO.getId().toString());
         }
         WorkPlaceDTO workPlaceSaved = service.save(workPlaceDTO);
         return ResponseEntity.created(new URI("/api/workplaces/" + workPlaceSaved.getId()))
@@ -69,7 +69,7 @@ public class WorkPlaceResource {
     public ResponseEntity<WorkPlaceDTO> updateWorkPlace(@Valid @RequestBody WorkPlaceDTO workPlaceDTO) {
         log.debug("REST request to update Employee : {}", workPlaceDTO);
         if (workPlaceDTO.getId() == null) {
-            throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
+            throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull", "idnull");
         }
         WorkPlaceDTO workPlaceSaved = service.save(workPlaceDTO);
         return ResponseEntity.ok()

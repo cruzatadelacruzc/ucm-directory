@@ -12,10 +12,13 @@ public class FieldErrorVM implements Serializable {
 
     private final String message;
 
-    public FieldErrorVM(String dto, String field, String message) {
+    private final String code;
+
+    public FieldErrorVM(String dto, String field, String message, String code) {
         this.objectName = dto;
         this.field = field;
         this.message = message;
+        this.code = code;
     }
 
     public String getObjectName() {
@@ -30,4 +33,7 @@ public class FieldErrorVM implements Serializable {
         return message;
     }
 
+    public String getCode() {
+        return code;
+    }
 }
