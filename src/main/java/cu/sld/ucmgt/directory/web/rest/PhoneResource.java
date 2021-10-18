@@ -33,7 +33,7 @@ public class PhoneResource {
     @Value("${application.clientApp.name}")
     private String applicationName;
     private final PhoneService service;
-    private static final String ENTITY_NAME = "directoryPhone";
+    private static final String ENTITY_NAME = "Phone";
 
     /**
      * {@code POST  /phones} : Create a new phone.
@@ -47,12 +47,12 @@ public class PhoneResource {
     public ResponseEntity<PhoneDTO> createPhone(@Valid @RequestBody PhoneDTO phoneDTO) throws URISyntaxException {
         log.debug("REST request to save Phone : {}", phoneDTO);
         if (phoneDTO.getId() != null) {
-            throw new BadRequestAlertException("A new phone cannot already have an ID", ENTITY_NAME, "idexists");
+            throw new BadRequestAlertException("A new phone cannot already have an ID", ENTITY_NAME, "idexists", phoneDTO.getId().toString());
         }
 
         if ((phoneDTO.getWorkPlaceId() == null && phoneDTO.getEmployeeId() == null) ||
             (phoneDTO.getWorkPlaceId() != null && phoneDTO.getEmployeeId() != null)) {
-            throw new BadRequestAlertException("Phone below to WorkPlace or Employee", ENTITY_NAME, "relationshipnull");
+            throw new BadRequestAlertException("Phone below to WorkPlace or Employee", ENTITY_NAME, "relationshipnull", phoneDTO.getNumber().toString());
         }
 
         PhoneDTO phoneSaved = service.save(phoneDTO);
@@ -125,11 +125,11 @@ public class PhoneResource {
     public ResponseEntity<PhoneDTO> updatePhone(@Valid @RequestBody PhoneDTO phoneDTO) {
         log.debug("REST request to update Phone : {}", phoneDTO);
         if (phoneDTO.getId() == null) {
-            throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
+            throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull", "idnull");
         }
         if ((phoneDTO.getWorkPlaceId() == null && phoneDTO.getEmployeeId() == null) ||
                 (phoneDTO.getWorkPlaceId() != null && phoneDTO.getEmployeeId() != null)) {
-            throw new BadRequestAlertException("Phone below to WorkPlace or Employee", ENTITY_NAME, "relationshipnull");
+            throw new BadRequestAlertException("Phone below to WorkPlace or Employee", ENTITY_NAME, "relationshipnull", phoneDTO.getNumber().toString());
         }
         PhoneDTO phoneSaved = service.save(phoneDTO);
         return ResponseEntity.ok()

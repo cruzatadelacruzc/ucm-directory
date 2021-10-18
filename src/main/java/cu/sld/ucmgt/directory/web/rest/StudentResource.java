@@ -32,7 +32,7 @@ public class StudentResource {
     @Value("${application.clientApp.name}")
     private String applicationName;
     private final StudentService service;
-    private static final String ENTITY_NAME = "directoryStudent";
+    private static final String ENTITY_NAME = "Student";
 
     /**
      * {@code POST  /students} : Create a new student.
@@ -46,7 +46,7 @@ public class StudentResource {
     public ResponseEntity<StudentDTO> createStudent(@Valid @RequestBody StudentDTO studentDTO) throws URISyntaxException {
         log.debug("REST request to save Student : {}", studentDTO);
         if (studentDTO.getId() != null) {
-            throw new BadRequestAlertException("A new student cannot already have an ID", ENTITY_NAME, "idexists");
+            throw new BadRequestAlertException("A new student cannot already have an ID", ENTITY_NAME, "idexists", studentDTO.getId().toString());
         }
         StudentDTO studentSaved = service.save(studentDTO);
         return ResponseEntity.created(new URI("/api/students/" + studentSaved.getId()))
@@ -68,7 +68,7 @@ public class StudentResource {
     public ResponseEntity<StudentDTO> updateStudent(@Valid @RequestBody StudentDTO studentDTO){
         log.debug("REST request to update Student : {}", studentDTO);
         if (studentDTO.getId() == null) {
-            throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
+            throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull", "idnull");
         }
 
         StudentDTO studentSaved = service.save(studentDTO);

@@ -15,10 +15,10 @@ import java.util.UUID;
 public class WorkPlaceDTO implements Serializable {
 
     private UUID id;
-    @NotBlank
+    @NotBlank(message = "error:NotBlank")
     private String name;
 
-    @Email
+    @Email(message = "error:Email")
     private String email;
 
     private Boolean active = false;

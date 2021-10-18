@@ -5,6 +5,7 @@ import cu.sld.ucmgt.directory.service.UniqueValue;
 import lombok.Data;
 
 import javax.validation.constraints.Min;
+import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.Objects;
 import java.util.UUID;
@@ -17,9 +18,10 @@ import java.util.UUID;
 public class PhoneDTO implements Serializable {
 
     private UUID id;
-    @Min(value = 1)
+    @Min(value = 1, message = "error:Min")
     private Integer number;
     private Boolean active = false;
+    @Size(max = 255, message = "error:Size")
     private String description;
     private UUID employeeId;
     private UUID workPlaceId;
