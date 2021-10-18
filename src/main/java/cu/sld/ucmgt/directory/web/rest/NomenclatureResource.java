@@ -179,7 +179,7 @@ public class NomenclatureResource {
     }
 
     /**
-     * {@code GET  /nomenclatures} : get all the filtered nomenclatures.
+     * {@code GET  /nomenclatures/filtered/{join}} : get all the filtered nomenclatures.
      *
      * @param pageable the pagination information.
      * @param criteria the criteria which the requested entities should match.
