@@ -6,6 +6,7 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -32,6 +33,7 @@ public class EmployeeDTO extends PersonDTO {
     private UUID teachingCategoryId;
     private UUID chargeId;
     private UUID professionId;
+    private Set<Integer> phones;
 
     private String workPlaceName;
     private String categoryName;
@@ -88,6 +90,7 @@ public class EmployeeDTO extends PersonDTO {
                 ", teachingCategoryName=" + teachingCategoryName +
                 ", chargeName=" + chargeName +
                 ", professionName=" + professionName +
+                ", phones=" + phones +
                 '}';
     }
 }
