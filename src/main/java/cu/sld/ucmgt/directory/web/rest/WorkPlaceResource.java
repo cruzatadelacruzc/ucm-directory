@@ -1,12 +1,15 @@
 package cu.sld.ucmgt.directory.web.rest;
 
 import cu.sld.ucmgt.directory.service.WorkPlaceService;
+import cu.sld.ucmgt.directory.service.criteria.WorkPlaceCriteria;
 import cu.sld.ucmgt.directory.service.dto.WorkPlaceDTO;
 import cu.sld.ucmgt.directory.web.rest.errors.BadRequestAlertException;
 import cu.sld.ucmgt.directory.web.rest.util.HeaderUtil;
 import cu.sld.ucmgt.directory.web.rest.util.PaginationUtil;
 import cu.sld.ucmgt.directory.web.rest.util.ResponseUtil;
 import cu.sld.ucmgt.directory.web.rest.vm.ChangeStatusVM;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -139,5 +142,29 @@ public class WorkPlaceResource {
         log.debug("REST request to update status WorkPlace : {}", changeStatusVM);
         Boolean result = service.changeStatus(changeStatusVM.getId(), changeStatusVM.getStatus());
         return ResponseEntity.ok().body(result);
+    }
+
+    /**
+     * {@code GET  /workplaces/filtered/{join}} : get all the filtered workplaces.
+     *
+     * @param pageable the pagination information.
+     * @param criteria the criteria which the requested entities should match.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of workplaces in body.
+     */
+    @ApiOperation(value = "Filtered WorkPlaces list with pagination and logical operator join", response = List.class)
+    @GetMapping("/workplaces/filtered/{join}")
+    public ResponseEntity<List<WorkPlaceDTO>> getAllFilteredWorkPlaces(
+            @ApiParam(value = "Logical operators (AND-OR) for join expressions")
+            @PathVariable String join, WorkPlaceCriteria criteria, Pageable pageable)
+    {
+        if (!(join.equalsIgnoreCase("AND") || join.equalsIgnoreCase("OR"))) {
+            throw new BadRequestAlertException("Wrong logical operator", ENTITY_NAME, "badoperatorjoin", join);
+        }
+        Page<WorkPlaceDTO> page = service.findByCriteria(join, criteria, pageable);
+        HttpHeaders headers = PaginationUtil.generatePaginationHeaders(
+                ServletUriComponentsBuilder.fromCurrentRequest(),
+                page
+        );
+        return ResponseEntity.ok().headers(headers).body(page.getContent());
     }
 }

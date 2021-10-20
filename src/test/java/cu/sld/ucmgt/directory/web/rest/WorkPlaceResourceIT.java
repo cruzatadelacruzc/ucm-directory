@@ -41,6 +41,7 @@ import java.time.ZoneOffset;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -649,5 +650,383 @@ public class WorkPlaceResourceIT {
         assertThat(phoneIndexIterable).hasSize(1);
         PhoneIndex testPhoneIndex = phoneIndexIterable.iterator().next();
         testCreatedWorkPlaceIndex(testPhoneIndex.getWorkPlace());
+    }
+
+    /**
+     * Executes the search with And operator, and checks that the default entity is returned.
+     */
+    private void defaultWorkPlaceShouldBeFoundWithAndOperator(String filter) throws Exception {
+        restMockMvc.perform(get("/api/workplaces/filtered/and?sort=id,desc&" + filter))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$.[*].name").value(hasItem(DEFAULT_NAME)))
+                .andExpect(jsonPath("$.[*].email").value(hasItem(DEFAULT_EMAIL)))
+                .andExpect(jsonPath("$.[*].active").value(hasItem(DEFAULT_ACTIVE)))
+                .andExpect(jsonPath("$.[*].id").value(hasItem(workPlace.getId().toString())))
+                .andExpect(jsonPath("$.[*].description").value(hasItem(DEFAULT_DESCRIPTION)));
+    }
+
+    /**
+     * Executes the search with And operator, and checks that the default entity is not returned.
+     */
+    private void defaultWorkPlaceShouldNotBeFoundWithAndOperator(String filter) throws Exception {
+        restMockMvc.perform(get("/api/workplaces/filtered/and?sort=id,desc&" + filter))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    /**
+     * Executes the search with Or operator, and checks that the default entity is returned.
+     */
+    private void defaultWorkPlaceShouldBeFoundWithOrOperator(String filter) throws Exception {
+        restMockMvc.perform(get("/api/workplaces/filtered/or?sort=id,desc&" + filter))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$.[*].name").value(hasItem(DEFAULT_NAME)))
+                .andExpect(jsonPath("$.[*].email").value(hasItem(DEFAULT_EMAIL)))
+                .andExpect(jsonPath("$.[*].active").value(hasItem(DEFAULT_ACTIVE)))
+                .andExpect(jsonPath("$.[*].id").value(hasItem(workPlace.getId().toString())))
+                .andExpect(jsonPath("$.[*].description").value(hasItem(DEFAULT_DESCRIPTION)));
+    }
+
+    /**
+     * Executes the search with Or operator, and checks that the default entity is not returned.
+     */
+    private void defaultWorkPlaceShouldNotBeFoundWithOrOperator(String filter) throws Exception {
+        restMockMvc.perform(get("/api/workplaces/filtered/or?sort=id,desc&" + filter))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    @Transactional
+    public void getWorkPlaceByIdFiltering() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(workPlace);
+
+        UUID id = workPlace.getId();
+
+        defaultWorkPlaceShouldBeFoundWithAndOperator("id.equals=" + id);
+        defaultWorkPlaceShouldBeFoundWithOrOperator("id.equals=" + id);
+
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("id.notEquals=" + id);
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("id.notEquals=" + id);
+
+
+        defaultWorkPlaceShouldBeFoundWithAndOperator("id.in=" + id + "," + UUID.randomUUID().toString());
+        defaultWorkPlaceShouldBeFoundWithOrOperator("id.in=" + id + "," + UUID.randomUUID().toString());
+
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("id.notIn=" + id + "," + UUID.randomUUID().toString());
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("id.notIn=" + id + "," + UUID.randomUUID().toString());
+
+        defaultWorkPlaceShouldBeFoundWithAndOperator("id.specified=true");
+        defaultWorkPlaceShouldBeFoundWithOrOperator("id.specified=true");
+
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("id.specified=false");
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("id.specified=false");
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByNameIsEqualToSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(workPlace);
+
+        // Get all the workPlaceList where name equals to DEFAULT_NAME
+        defaultWorkPlaceShouldBeFoundWithAndOperator("name.equals=" + DEFAULT_NAME);
+        defaultWorkPlaceShouldBeFoundWithOrOperator("name.equals=" + DEFAULT_NAME);
+
+        // Get all the workPlaceList where name equals to UPDATE_NAME
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("name.equals=" + UPDATE_NAME);
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("name.equals=" + UPDATE_NAME);
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByNameIsNotEqualToSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(workPlace);
+
+        // Get all the workplacesList where name not equals to DEFAULT_NAME
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("name.notEquals=" + DEFAULT_NAME);
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("name.notEquals=" + DEFAULT_NAME);
+
+        // Get all the workplaceList where name not equals to UPDATE_NAME
+        defaultWorkPlaceShouldBeFoundWithAndOperator("name.notEquals=" + UPDATE_NAME);
+        defaultWorkPlaceShouldBeFoundWithOrOperator("name.notEquals=" + UPDATE_NAME);
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByNameIsInShouldWork() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(workPlace);
+
+        // Get all the workplacesList where name in UPDATED_NAME or DEFAULT_NAME
+        defaultWorkPlaceShouldBeFoundWithAndOperator("name.in=" + DEFAULT_NAME + "," + UPDATE_NAME);
+        defaultWorkPlaceShouldBeFoundWithOrOperator("name.in=" + DEFAULT_NAME + "," + UPDATE_NAME);
+
+        // Get all the workplacesList where name not equals to UPDATE_NAME
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("name.in=" + UPDATE_NAME);
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("name.in=" + UPDATE_NAME);
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByNameIsNullOrNotNull() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(workPlace);
+
+        // Get all the workplacesList where name is not null
+        defaultWorkPlaceShouldBeFoundWithAndOperator("name.specified=true");
+        defaultWorkPlaceShouldBeFoundWithOrOperator("name.specified=true");
+
+        // Get all the workplacesList where name is null
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("name.specified=false");
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("name.specified=false");
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByNameContainsSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(workPlace);
+
+        // Get all the workplacesList where name contains DEFAULT_NAME
+        defaultWorkPlaceShouldBeFoundWithAndOperator("name.contains=" + DEFAULT_NAME);
+        defaultWorkPlaceShouldBeFoundWithOrOperator("name.contains=" + DEFAULT_NAME);
+
+        // Get all the workplacesList where name contains UPDATE_NAME
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("name.contains=" + UPDATE_NAME);
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("name.contains=" + UPDATE_NAME);
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByNameNotContainsSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(workPlace);
+
+        // Get all the workplacesList where name does not contain DEFAULT_NAME
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("name.doesNotContain=" + DEFAULT_NAME);
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("name.doesNotContain=" + DEFAULT_NAME);
+
+        // Get all the workplacesList where name does not contain UPDATE_NAME
+        defaultWorkPlaceShouldBeFoundWithAndOperator("name.doesNotContain=" + UPDATE_NAME);
+        defaultWorkPlaceShouldBeFoundWithOrOperator("name.doesNotContain=" + UPDATE_NAME);
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByDescriptionIsEqualToSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(workPlace);
+
+        // Get all the workplacesList where description equals to DEFAULT_DESCRIPTION
+        defaultWorkPlaceShouldBeFoundWithAndOperator("description.equals=" + DEFAULT_DESCRIPTION);
+        defaultWorkPlaceShouldBeFoundWithOrOperator("description.equals=" + DEFAULT_DESCRIPTION);
+
+        // Get all the workplacesList where description equals to UPDATE_DESCRIPTION
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("description.equals=" + UPDATE_DESCRIPTION);
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("description.equals=" + UPDATE_DESCRIPTION);
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByDescriptionIsNotEqualToSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(workPlace);
+
+        // Get all the workplacesList where description not equals to UPDATE_DESCRIPTION
+        defaultWorkPlaceShouldBeFoundWithAndOperator("description.notEquals=" + UPDATE_DESCRIPTION);
+        defaultWorkPlaceShouldBeFoundWithOrOperator("description.notEquals=" + UPDATE_DESCRIPTION);
+
+        // Get all the workplacesList where description not equals to DEFAULT_DESCRIPTION
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("description.notEquals=" + DEFAULT_DESCRIPTION);
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("description.notEquals=" + DEFAULT_DESCRIPTION);
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByDescriptionIsInShouldWork() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(workPlace);
+
+        // Get all the workplacesList where description in UPDATE_DESCRIPTION or DEFAULT_NAME
+        defaultWorkPlaceShouldBeFoundWithAndOperator("description.in=" + DEFAULT_DESCRIPTION + "," + UPDATE_DESCRIPTION);
+        defaultWorkPlaceShouldBeFoundWithOrOperator("description.in=" + DEFAULT_DESCRIPTION + "," + UPDATE_DESCRIPTION);
+
+        // Get all the workplacesList where description equals to DEFAULT_DESCRIPTION
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("description.in=" + UPDATE_DESCRIPTION);
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("description.in=" + UPDATE_DESCRIPTION);
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByDescriptionIsNullOrNotNull() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(workPlace);
+
+        // Get all the workplacesList where description is not null
+        defaultWorkPlaceShouldBeFoundWithAndOperator("description.specified=true");
+        defaultWorkPlaceShouldBeFoundWithOrOperator("description.specified=true");
+
+        // Get all the workplacesList where description is null
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("description.specified=false");
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("description.specified=false");
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByDescriptionContainsSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(workPlace);
+
+        // Get all the workplacesList where description contains DEFAULT_DESCRIPTION
+        defaultWorkPlaceShouldBeFoundWithAndOperator("description.contains=" + DEFAULT_DESCRIPTION);
+        defaultWorkPlaceShouldBeFoundWithOrOperator("description.contains=" + DEFAULT_DESCRIPTION);
+
+        // Get all the workplacesList where description contains UPDATE_DESCRIPTION
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("description.contains=" + UPDATE_DESCRIPTION);
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("description.contains=" + UPDATE_DESCRIPTION);
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByDescriptionNotContainsSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(workPlace);
+
+        // Get all the workplacesList where description does not contain UPDATE_NAME
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("description.doesNotContain=" + DEFAULT_DESCRIPTION);
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("description.doesNotContain=" + DEFAULT_DESCRIPTION);
+
+        // Get all the workplacesList where description does not contain UPDATE_DESCRIPTION
+        defaultWorkPlaceShouldBeFoundWithAndOperator("description.doesNotContain=" + UPDATE_DESCRIPTION);
+        defaultWorkPlaceShouldBeFoundWithOrOperator("description.doesNotContain=" + UPDATE_DESCRIPTION);
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByEmailIsEqualToSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(workPlace);
+
+        // Get all the workPlaceList where email equals to DEFAULT_EMAIL
+        defaultWorkPlaceShouldBeFoundWithAndOperator("email.equals=" + DEFAULT_EMAIL);
+        defaultWorkPlaceShouldBeFoundWithOrOperator("email.equals=" + DEFAULT_EMAIL);
+
+        // Get all the workPlaceList where name equals to UPDATE_EMAIL
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("email.equals=" + UPDATE_EMAIL);
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("email.equals=" + UPDATE_EMAIL);
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByEmailIsNotEqualToSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(workPlace);
+
+        // Get all the workplacesList where email not equals to DEFAULT_EMAIL
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("email.notEquals=" + DEFAULT_EMAIL);
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("email.notEquals=" + DEFAULT_EMAIL);
+
+        // Get all the workplaceList where email not equals to UPDATE_EMAIL
+        defaultWorkPlaceShouldBeFoundWithAndOperator("email.notEquals=" + UPDATE_EMAIL);
+        defaultWorkPlaceShouldBeFoundWithOrOperator("email.notEquals=" + UPDATE_EMAIL);
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByEmailIsInShouldWork() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(workPlace);
+
+        // Get all the workplacesList where email in UPDATED_NAME or DEFAULT_EMAIL
+        defaultWorkPlaceShouldBeFoundWithAndOperator("email.in=" + DEFAULT_EMAIL + "," + UPDATE_EMAIL);
+        defaultWorkPlaceShouldBeFoundWithOrOperator("email.in=" + DEFAULT_EMAIL + "," + UPDATE_EMAIL);
+
+        // Get all the workplacesList where email not equals to UPDATE_EMAIL
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("email.in=" + UPDATE_EMAIL);
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("email.in=" + UPDATE_EMAIL);
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByEmailIsNullOrNotNull() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(workPlace);
+
+        // Get all the workplacesList where email is not null
+        defaultWorkPlaceShouldBeFoundWithAndOperator("email.specified=true");
+        defaultWorkPlaceShouldBeFoundWithOrOperator("email.specified=true");
+
+        // Get all the workplacesList where name is null
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("email.specified=false");
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("email.specified=false");
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByEmailContainsSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(workPlace);
+
+        // Get all the workplacesList where email contains DEFAULT_EMAIL
+        defaultWorkPlaceShouldBeFoundWithAndOperator("email.contains=" + DEFAULT_EMAIL);
+        defaultWorkPlaceShouldBeFoundWithOrOperator("email.contains=" + DEFAULT_EMAIL);
+
+        // Get all the workplacesList where email contains UPDATE_EMAIL
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("email.contains=" + UPDATE_EMAIL);
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("email.contains=" + UPDATE_EMAIL);
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByEmailNotContainsSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(workPlace);
+
+        // Get all the workplacesList where email does not contain DEFAULT_EMAIL
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("email.doesNotContain=" + DEFAULT_EMAIL);
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("email.doesNotContain=" + DEFAULT_EMAIL);
+
+        // Get all the workplacesList where email does not contain UPDATE_EMAIL
+        defaultWorkPlaceShouldBeFoundWithAndOperator("email.doesNotContain=" + UPDATE_EMAIL);
+        defaultWorkPlaceShouldBeFoundWithOrOperator("email.doesNotContain=" + UPDATE_EMAIL);
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByActiveIsEqualToSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(workPlace);
+
+        // Get all the workPlaceList where active equals to DEFAULT_ACTIVE
+        defaultWorkPlaceShouldBeFoundWithAndOperator("active.equals=" + DEFAULT_ACTIVE);
+        defaultWorkPlaceShouldBeFoundWithOrOperator("active.equals=" + DEFAULT_ACTIVE);
+
+        // Get all the workPlaceList where active equals to UPDATE_ACTIVE
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("active.equals=" + UPDATE_ACTIVE);
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("active.equals=" + UPDATE_ACTIVE);
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByActiveIsNotEqualToSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(workPlace);
+
+        // Get all the workplacesList where active not equals to DEFAULT_ACTIVE
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("active.notEquals=" + DEFAULT_ACTIVE);
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("active.notEquals=" + DEFAULT_ACTIVE);
+
+        // Get all the workplaceList where active not equals to UPDATE_ACTIVE
+        defaultWorkPlaceShouldBeFoundWithAndOperator("active.notEquals=" + UPDATE_ACTIVE);
+        defaultWorkPlaceShouldBeFoundWithOrOperator("active.notEquals=" + UPDATE_ACTIVE);
     }
 }

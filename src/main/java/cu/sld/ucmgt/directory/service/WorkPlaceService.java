@@ -3,6 +3,7 @@ package cu.sld.ucmgt.directory.service;
 import cu.sld.ucmgt.directory.domain.Employee;
 import cu.sld.ucmgt.directory.domain.Phone;
 import cu.sld.ucmgt.directory.domain.WorkPlace;
+import cu.sld.ucmgt.directory.domain.WorkPlace_;
 import cu.sld.ucmgt.directory.domain.elasticsearch.EmployeeIndex;
 import cu.sld.ucmgt.directory.domain.elasticsearch.PhoneIndex;
 import cu.sld.ucmgt.directory.domain.elasticsearch.WorkPlaceIndex;
@@ -14,6 +15,7 @@ import cu.sld.ucmgt.directory.service.EmployeeService.RemovedEmployeeIndexEvent;
 import cu.sld.ucmgt.directory.service.EmployeeService.SavedEmployeeIndexEvent;
 import cu.sld.ucmgt.directory.service.PhoneService.RemovedPhoneIndexEvent;
 import cu.sld.ucmgt.directory.service.PhoneService.SavedPhoneIndexEvent;
+import cu.sld.ucmgt.directory.service.criteria.WorkPlaceCriteria;
 import cu.sld.ucmgt.directory.service.dto.WorkPlaceDTO;
 import cu.sld.ucmgt.directory.service.mapper.WorkPlaceIndexMapper;
 import cu.sld.ucmgt.directory.service.mapper.WorkPlaceMapper;
@@ -33,6 +35,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,7 +47,7 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class WorkPlaceService {
+public class WorkPlaceService extends QueryService<WorkPlace>{
 
     private final WorkPlaceMapper mapper;
     private final WorkPlaceRepository repository;
@@ -285,6 +288,64 @@ public class WorkPlaceService {
             return true;
         };
         return false;
+    }
+
+    /**
+     * Return a {@link List} of {@link WorkPlaceDTO} which matches the criteria from the database.
+     *
+     * @param join Logical operator to join expression: AND - OR
+     * @param criteria       The object which holds all the filters, which the entities should match.
+     * @return the matching entities.
+     */
+    public Page<WorkPlaceDTO> findByCriteria(String join, WorkPlaceCriteria criteria, Pageable pageable) {
+        final Specification<WorkPlace> specification = createSpecification(join, criteria);
+        return repository.findAll(specification, pageable).map(mapper::toDto);
+    }
+
+    /**
+     * Function to convert {@link WorkPlaceCriteria} to a {@link Specification}
+     * @param join Logical operator to join expression: AND - OR
+     * @param criteria The object which holds all the filters, which the entities should match.
+     * @return the matching {@link Specification} of the entity.
+     */
+    private Specification<WorkPlace> createSpecification(String join, WorkPlaceCriteria criteria) {
+        Specification<WorkPlace> specification = Specification.where(null);
+        if (criteria != null) {
+            if (join.equalsIgnoreCase("AND")) {
+                if (criteria.getId() != null) {
+                    specification = specification.and(buildSpecification(criteria.getId(), WorkPlace_.id));
+                }
+                if (criteria.getActive() != null) {
+                    specification = specification.and(buildSpecification(criteria.getActive(), WorkPlace_.active));
+                }
+                if (criteria.getName() != null) {
+                    specification = specification.and(buildStringSpecification(criteria.getName(), WorkPlace_.name));
+                }
+                if (criteria.getEmail() != null) {
+                    specification = specification.and(buildStringSpecification(criteria.getEmail(), WorkPlace_.email));
+                }
+                if (criteria.getDescription() != null) {
+                    specification = specification.and(buildStringSpecification(criteria.getDescription(), WorkPlace_.description));
+                }
+            } else {
+                if (criteria.getId() != null) {
+                    specification = specification.or(buildSpecification(criteria.getId(), WorkPlace_.id));
+                }
+                if (criteria.getActive() != null) {
+                    specification = specification.or(buildSpecification(criteria.getActive(), WorkPlace_.active));
+                }
+                if (criteria.getName() != null) {
+                    specification = specification.or(buildStringSpecification(criteria.getName(), WorkPlace_.name));
+                }
+                if (criteria.getEmail() != null) {
+                    specification = specification.or(buildStringSpecification(criteria.getEmail(), WorkPlace_.email));
+                }
+                if (criteria.getDescription() != null) {
+                    specification = specification.or(buildStringSpecification(criteria.getDescription(), WorkPlace_.description));
+                }
+            }
+        }
+        return specification;
     }
 
     /**
