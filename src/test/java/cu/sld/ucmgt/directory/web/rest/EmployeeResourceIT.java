@@ -997,7 +997,7 @@ public class EmployeeResourceIT extends PersonIT {
     /**
      * Executes the search with Or operator and checks that the default entity is returned.
      */
-    private void defaultNomenclatureShouldBeFoundWithOrOperator(String filter) throws Exception {
+    private void defaultEmployeeShouldBeFoundWithOrOperator(String filter) throws Exception {
         restMockMvc.perform(get("/api/employees/filtered/or?sort=id,desc&" + filter))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.[*].id").value(hasItem(employee.getId().toString())))
@@ -1041,20 +1041,20 @@ public class EmployeeResourceIT extends PersonIT {
         UUID id = employee.getId();
 
         defaultEmployeeShouldBeFoundWithAndOperator("id.equals=" + id);
-        defaultNomenclatureShouldBeFoundWithOrOperator("id.equals=" + id);
+        defaultEmployeeShouldBeFoundWithOrOperator("id.equals=" + id);
 
         defaultEmployeeShouldNotBeFoundWithAndOperator("id.notEquals=" + id);
         defaultEmployeeShouldNotBeFoundWithOrOperator("id.notEquals=" + id);
 
 
         defaultEmployeeShouldBeFoundWithAndOperator("id.in=" + id + "," + UUID.randomUUID().toString());
-        defaultNomenclatureShouldBeFoundWithOrOperator("id.in=" + id + "," + UUID.randomUUID().toString());
+        defaultEmployeeShouldBeFoundWithOrOperator("id.in=" + id + "," + UUID.randomUUID().toString());
 
         defaultEmployeeShouldNotBeFoundWithAndOperator("id.notIn=" + id + "," + UUID.randomUUID().toString());
         defaultEmployeeShouldNotBeFoundWithOrOperator("id.notIn=" + id + "," + UUID.randomUUID().toString());
 
         defaultEmployeeShouldBeFoundWithAndOperator("id.specified=true");
-        defaultNomenclatureShouldBeFoundWithOrOperator("id.specified=true");
+        defaultEmployeeShouldBeFoundWithOrOperator("id.specified=true");
 
         defaultEmployeeShouldNotBeFoundWithAndOperator("id.specified=false");
         defaultEmployeeShouldNotBeFoundWithOrOperator("id.specified=false");
@@ -1069,7 +1069,7 @@ public class EmployeeResourceIT extends PersonIT {
 
         // Get all the employeeList where birthdate equals to UPDATE_BIRTHDATE
         defaultEmployeeShouldBeFoundWithAndOperator("birthdate.equals=" + DEFAULT_BIRTHDATE);
-        defaultNomenclatureShouldBeFoundWithOrOperator("birthdate.equals=" + DEFAULT_BIRTHDATE);
+        defaultEmployeeShouldBeFoundWithOrOperator("birthdate.equals=" + DEFAULT_BIRTHDATE);
 
         // Get all the employeeList where birthdate equals to DEFAULT_BIRTHDATE
         defaultEmployeeShouldNotBeFoundWithAndOperator("birthdate.equals=" + UPDATE_BIRTHDATE);
@@ -1089,7 +1089,7 @@ public class EmployeeResourceIT extends PersonIT {
 
         // Get all the employeeList where birthdate not equals to DEFAULT_BIRTHDATE
         defaultEmployeeShouldBeFoundWithAndOperator("birthdate.notEquals=" + UPDATE_BIRTHDATE);
-        defaultNomenclatureShouldBeFoundWithOrOperator("birthdate.notEquals=" + UPDATE_BIRTHDATE);
+        defaultEmployeeShouldBeFoundWithOrOperator("birthdate.notEquals=" + UPDATE_BIRTHDATE);
     }
 
     @Test
@@ -1105,7 +1105,7 @@ public class EmployeeResourceIT extends PersonIT {
 
         // Get all the employeeList where name not equals to DEFAULT_BIRTHDATE
         defaultEmployeeShouldBeFoundWithAndOperator("birthdate.in=" + UPDATE_BIRTHDATE + "," + DEFAULT_BIRTHDATE);
-        defaultNomenclatureShouldBeFoundWithOrOperator("birthdate.in=" + UPDATE_BIRTHDATE + "," + DEFAULT_BIRTHDATE);
+        defaultEmployeeShouldBeFoundWithOrOperator("birthdate.in=" + UPDATE_BIRTHDATE + "," + DEFAULT_BIRTHDATE);
     }
 
     @Test
@@ -1121,7 +1121,7 @@ public class EmployeeResourceIT extends PersonIT {
 
         // Get all the employeeList where birthdate not equals to DEFAULT_BIRTHDATE
         defaultEmployeeShouldBeFoundWithAndOperator("birthdate.greaterThan=" + DEFAULT_BIRTHDATE.minusDays(1L));
-        defaultNomenclatureShouldBeFoundWithOrOperator("birthdate.greaterThan=" + DEFAULT_BIRTHDATE.minusDays(1L));
+        defaultEmployeeShouldBeFoundWithOrOperator("birthdate.greaterThan=" + DEFAULT_BIRTHDATE.minusDays(1L));
     }
 
     @Test
@@ -1137,7 +1137,30 @@ public class EmployeeResourceIT extends PersonIT {
 
         // Get all the employeeList where gender not equals to DEFAULT_GENDER
         defaultEmployeeShouldBeFoundWithAndOperator("gender.equals=" + DEFAULT_GENDER);
-        defaultNomenclatureShouldBeFoundWithOrOperator("gender.equals=" + DEFAULT_GENDER);
+        defaultEmployeeShouldBeFoundWithOrOperator("gender.equals=" + DEFAULT_GENDER);
+    }
+
+    @Test
+    @Transactional
+    void getAllEmployeesByWorkPlaceIdIsNullOrNotNull() throws Exception {
+        // Initialize the database
+        WorkPlace workPlace =  new WorkPlace();
+        workPlace.setEmail("tic@infomed.sld.cu");
+        workPlace.setDescription("Lorem input");
+        workPlace.setName("TIC");
+        workPlace.setActive(true);
+        em.persist(workPlace);
+        employee.setWorkPlace(workPlace);
+        em.persist(employee);
+        em.flush();
+
+        // Get all the employeeList where workPlaceId is not null
+        defaultEmployeeShouldBeFoundWithAndOperator("workPlaceId.specified=true");
+        defaultEmployeeShouldBeFoundWithOrOperator("workPlaceId.specified=true");
+
+        // Get all the employeeList where workPlaceId is null
+        defaultEmployeeShouldNotBeFoundWithAndOperator("workPlaceId.specified=false");
+        defaultEmployeeShouldNotBeFoundWithOrOperator("workPlaceId.specified=false");
     }
 
     @Test
@@ -1167,6 +1190,6 @@ public class EmployeeResourceIT extends PersonIT {
         defaultEmployeeShouldNotBeFoundWithOrOperator(filter.replaceAll("paramName", UPDATE_NAME));
 
         // Get all the employeeList where name not equals to DEFAULT_NAME
-        defaultNomenclatureShouldBeFoundWithOrOperator(filter.replaceAll("paramName", DEFAULT_NAME));
+        defaultEmployeeShouldBeFoundWithOrOperator(filter.replaceAll("paramName", DEFAULT_NAME));
     }
 }

@@ -386,6 +386,10 @@ public class EmployeeService extends QueryService<Employee> {
                 if (criteria.getFirstLastName() != null) {
                     specification = specification.and(buildStringSpecification(criteria.getFirstLastName(), Employee_.firstLastName));
                 }
+                if (criteria.getWorkPlaceId() != null) {
+                    specification = specification.and(buildSpecification(criteria.getWorkPlaceId(),
+                            root -> root.join(Employee_.workPlace, JoinType.LEFT).get(WorkPlace_.id)));
+                }
                 if (criteria.getSecondLastName() != null) {
                     specification = specification.and(buildStringSpecification(criteria.getSecondLastName(), Employee_.secondLastName));
                 }
@@ -455,6 +459,10 @@ public class EmployeeService extends QueryService<Employee> {
                 }
                 if (criteria.getEmail() != null) {
                     specification = specification.or(buildStringSpecification(criteria.getEmail(), Employee_.email));
+                }
+                if (criteria.getWorkPlaceId() != null) {
+                    specification = specification.or(buildSpecification(criteria.getWorkPlaceId(),
+                            root -> root.join(Employee_.workPlace, JoinType.LEFT).get(WorkPlace_.id)));
                 }
                 if (criteria.getGender() != null) {
                     specification = specification.or(buildSpecification(criteria.getGender(), Employee_.gender));

@@ -23,6 +23,7 @@ public class EmployeeCriteria extends PersonCriteria {
 
     private static final long serialVersionUID = 1L;
 
+    private UUIDFilter workPlaceId;
     private StringFilter chargeName;
     private IntegerFilter serviceYears;
     private StringFilter workPlaceName;
@@ -45,6 +46,7 @@ public class EmployeeCriteria extends PersonCriteria {
         this.endDate = criteria.endDate == null ? null : criteria.endDate.copy();
         this.startDate = criteria.startDate == null ? null : criteria.startDate.copy();
         this.chargeName = criteria.chargeName == null ? null : criteria.chargeName.copy();
+        this.workPlaceId = criteria.workPlaceId == null ? null: criteria.workPlaceId.copy();
         this.categoryName = criteria.categoryName == null ? null : criteria.categoryName.copy();
         this.serviceYears = criteria.serviceYears == null ? null : criteria.serviceYears.copy();
         this.bossWorkPlace = criteria.bossWorkPlace == null ? null : criteria.bossWorkPlace.copy();
@@ -71,6 +73,7 @@ public class EmployeeCriteria extends PersonCriteria {
         return endDate.equals(that.endDate) &&
                 Objects.equals(startDate, that.startDate) &&
                 Objects.equals(chargeName, that.chargeName) &&
+                Objects.equals(workPlaceId, that.workPlaceId) &&
                 Objects.equals(categoryName, that.categoryName) &&
                 Objects.equals(serviceYears, that.serviceYears) &&
                 Objects.equals(bossWorkPlace, that.bossWorkPlace) &&
@@ -89,6 +92,7 @@ public class EmployeeCriteria extends PersonCriteria {
         int result = super.hashCode();
         result = 31 * result + (endDate != null ? endDate.hashCode() : 0);
         result = 31 * result + (chargeName != null ? chargeName.hashCode() : 0);
+        result = 31 * result + (workPlaceId != null ? workPlaceId.hashCode() : 0);
         result = 31 * result + (startDate != null ? startDate.hashCode() : 0);
         result = 31 * result + (serviceYears != null ? serviceYears.hashCode() : 0);
         result = 31 * result + (workPlaceName != null ? workPlaceName.hashCode() : 0);
@@ -110,6 +114,7 @@ public class EmployeeCriteria extends PersonCriteria {
                 "endDate=" + endDate +
                 ", chargeName=" + chargeName +
                 ", startDate=" + startDate +
+                ", workPlaceId=" + workPlaceId +
                 ", serviceYears=" + serviceYears +
                 ", workPlaceName=" + workPlaceName +
                 ", categoryName=" + categoryName +
