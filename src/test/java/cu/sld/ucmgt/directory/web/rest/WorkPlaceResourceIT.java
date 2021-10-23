@@ -957,6 +957,21 @@ public class WorkPlaceResourceIT {
 
     @Test
     @Transactional
+    void getAllWorPlacesByEmailIsNotInShouldWork() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(workPlace);
+
+        // Get all the workplacesList where email notIn UPDATED_NAME
+        defaultWorkPlaceShouldBeFoundWithAndOperator("email.notIn=" + UPDATE_EMAIL + "email@mail.com");
+        defaultWorkPlaceShouldBeFoundWithOrOperator("email.notIn=" + UPDATE_EMAIL + "email@mail.com");
+
+        // Get all the workplacesList where email notIn equals to UPDATE_EMAIL
+        defaultWorkPlaceShouldNotBeFoundWithAndOperator("email.notIn=" + DEFAULT_EMAIL);
+        defaultWorkPlaceShouldNotBeFoundWithOrOperator("email.notIn=" + DEFAULT_EMAIL);
+    }
+
+    @Test
+    @Transactional
     void getAllWorPlacesByEmailIsNullOrNotNull() throws Exception {
         // Initialize the database
         repository.saveAndFlush(workPlace);
