@@ -56,7 +56,7 @@ public class WorkPlaceResource {
         return ResponseEntity.created(new URI("/api/workplaces/" + workPlaceSaved.getId()))
                 .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
                         true, ENTITY_NAME,
-                        workPlaceSaved.getId().toString()))
+                        workPlaceSaved.getName()))
                 .body(workPlaceSaved);
     }
 
@@ -78,7 +78,7 @@ public class WorkPlaceResource {
         return ResponseEntity.ok()
                 .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
                         true, ENTITY_NAME,
-                        workPlaceSaved.getId().toString()))
+                        workPlaceSaved.getName()))
                 .body(workPlaceSaved);
     }
 
@@ -138,7 +138,7 @@ public class WorkPlaceResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body boolean result
      */
     @PutMapping("/workplaces/status")
-    public ResponseEntity<Boolean> updateStatusPhone(@Valid @RequestBody ChangeStatusVM changeStatusVM) {
+    public ResponseEntity<Boolean> updateStatusWorkPlace(@Valid @RequestBody ChangeStatusVM changeStatusVM) {
         log.debug("REST request to update status WorkPlace : {}", changeStatusVM);
         Boolean result = service.changeStatus(changeStatusVM.getId(), changeStatusVM.getStatus());
         return ResponseEntity.ok().body(result);
