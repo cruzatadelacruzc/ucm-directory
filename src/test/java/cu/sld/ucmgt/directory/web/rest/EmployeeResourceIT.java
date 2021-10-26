@@ -286,6 +286,61 @@ public class EmployeeResourceIT extends PersonIT {
 
     @Test
     @Transactional
+    public void updateEmployeeAndRemoveItOfWorkPlace() throws Exception {
+        // Clear EmployeeIndex, WorkPlaceIndex and PhoneIndex indices
+        employeeSearchRepository.deleteAll();
+        workPlaceSearchRepository.deleteAll();
+
+        int databaseSizeBeforeCreate = TestUtil.findAll(em, Employee.class).size();
+        EmployeeDTO employeeDTO = mapper.toDto(employee);
+        MvcResult resultEmployee = restMockMvc.perform(post("/api/employees").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(employeeDTO)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        // Validate the Employee in the database
+        List<Employee> employees = TestUtil.findAll(em, Employee.class);
+        assertThat(employees).hasSize(databaseSizeBeforeCreate + 1);
+        String employeeId = resultEmployee.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        assertThat(employeeId).isNotNull();
+
+        // To save workPlace with a employee in elasticsearch
+        WorkPlace workPlace = createWorkPlaceOfEmployee(Collections.emptySet());
+        WorkPlaceDTO workPlaceDTO = workPlaceMapper.toDto(workPlace);
+        workPlaceDTO.setEmployees(Collections.singleton(UUID.fromString(employeeId)));
+        databaseSizeBeforeCreate = TestUtil.findAll(em, WorkPlace.class).size();
+        restMockMvc.perform(post("/api/workplaces").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(workPlaceDTO)))
+                .andExpect(status().isCreated());
+        // Validate the Phone in the database
+        List<WorkPlace> workPlaces = TestUtil.findAll(em, WorkPlace.class);
+        assertThat(workPlaces).hasSize(databaseSizeBeforeCreate + 1);
+
+        Employee updatedEmployee = updateEmployeeObj(UUID.fromString(employeeId));
+        updatedEmployee.setWorkPlace(null);
+        // to update employee belong to employeeDTO
+        employeeDTO = mapper.toDto(updatedEmployee);
+        int databaseSizeBeforeUpdate = TestUtil.findAll(em, Employee.class).size();
+        restMockMvc.perform(put("/api/employees").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(employeeDTO)))
+                .andExpect(status().isOk());
+
+        // Validate the Employee in the database
+        List<Employee> employeeList = TestUtil.findAll(em, Employee.class);
+        assertThat(employeeList).hasSize(databaseSizeBeforeUpdate);
+        Employee testEmployee = employees.get(employees.size() - 1);
+        testUpdatedEmployee(testEmployee);
+
+        Iterable<WorkPlaceIndex> workPlaceIndices = workPlaceSearchRepository.findAll();
+        assertThat(workPlaceIndices).hasSize(databaseSizeBeforeUpdate);
+        WorkPlaceIndex testWorkPlaceIndex = workPlaceIndices.iterator().next();
+        assertThat(testWorkPlaceIndex.getEmployees()).isEmpty();
+    }
+
+    @Test
+    @Transactional
     public void createEmployeeWithExistingId() throws Exception {
         int databaseSizeBeforeCreate = TestUtil.findAll(em, Employee.class).size();
 
