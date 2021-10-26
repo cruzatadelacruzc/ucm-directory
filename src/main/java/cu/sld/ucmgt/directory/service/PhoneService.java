@@ -1,6 +1,9 @@
 package cu.sld.ucmgt.directory.service;
 
+import cu.sld.ucmgt.directory.domain.Employee_;
 import cu.sld.ucmgt.directory.domain.Phone;
+import cu.sld.ucmgt.directory.domain.Phone_;
+import cu.sld.ucmgt.directory.domain.WorkPlace_;
 import cu.sld.ucmgt.directory.domain.elasticsearch.PhoneIndex;
 import cu.sld.ucmgt.directory.repository.EmployeeRepository;
 import cu.sld.ucmgt.directory.repository.PhoneRepository;
@@ -10,6 +13,7 @@ import cu.sld.ucmgt.directory.service.EmployeeService.RemovedEmployeeIndexEvent;
 import cu.sld.ucmgt.directory.service.EmployeeService.SavedEmployeeIndexEvent;
 import cu.sld.ucmgt.directory.service.WorkPlaceService.RemovedWorkPlaceIndexEvent;
 import cu.sld.ucmgt.directory.service.WorkPlaceService.SavedWorkPlaceIndexEvent;
+import cu.sld.ucmgt.directory.service.criteria.PhoneCriteria;
 import cu.sld.ucmgt.directory.service.dto.PhoneDTO;
 import cu.sld.ucmgt.directory.service.mapper.PhoneIndexMapper;
 import cu.sld.ucmgt.directory.service.mapper.PhoneMapper;
@@ -30,9 +34,11 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.criteria.JoinType;
 import java.io.IOException;
 import java.util.*;
 
@@ -41,7 +47,7 @@ import java.util.*;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class PhoneService {
+public class PhoneService extends QueryService<Phone> {
 
     private final PhoneMapper mapper;
     private final PhoneRepository repository;
@@ -115,7 +121,7 @@ public class PhoneService {
             try {
                 String updateCode = "for (entry in params.entrySet()){ if (entry.getKey() != \"ctx\") " +
                         "{ctx._source.employee[entry.getKey()] = entry.getValue()}}";
-                UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest("phones")
+                UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(INDEX_NAME)
                         .setRefresh(true)
                         .setAbortOnVersionConflict(true)
                         .setScript(new Script(ScriptType.INLINE, "painless", updateCode, employeeIndexEvent.getParams()))
@@ -182,20 +188,22 @@ public class PhoneService {
         });
     }
 
-    @EventListener(condition = "!#event.getPhoneIds().isEmpty()")
+    @EventListener(condition = "#event.getPhoneIds() != null")
     public void removeEmployeeIndexIntoPhoneIndex(RemovedEmployeeIndexEvent event) {
         log.debug("Listening RemovedEmployeeIndexEvent event to remove Employee in PhoneIndex with EmployeeIndex ID: {}",
                 event.getRemovedEmployeeId());
         try {
-            BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
-            event.getPhoneIds().forEach(phoneId -> boolQueryBuilder
-                    .should(QueryBuilders.matchQuery("id", phoneId.toString())));
+            if (!event.getPhoneIds().isEmpty()) {
+                BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+                event.getPhoneIds().forEach(phoneId -> boolQueryBuilder
+                        .should(QueryBuilders.matchQuery("id", phoneId.toString())));
 
-            DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest(INDEX_NAME)
-                    .setRefresh(true)
-                    .setAbortOnVersionConflict(true)
-                    .setQuery(boolQueryBuilder);
-            highLevelClient.deleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
+                DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest(INDEX_NAME)
+                        .setRefresh(true)
+                        .setAbortOnVersionConflict(true)
+                        .setQuery(boolQueryBuilder);
+                highLevelClient.deleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
+            }
         } catch (IOException exception) {
             log.error(exception.getMessage());
         }
@@ -286,6 +294,74 @@ public class PhoneService {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Return a {@link List} of {@link PhoneDTO} which matches the criteria from the database.
+     *
+     * @param join Logical operator to join expression: AND - OR
+     * @param criteria       The object which holds all the filters, which the entities should match.
+     * @return the matching entities.
+     */
+    public Page<PhoneDTO> findByCriteria(String join, PhoneCriteria criteria, Pageable pageable) {
+        final Specification<Phone> specification = createSpecification(join, criteria);
+        return repository.findAll(specification, pageable).map(mapper::toDto);
+    }
+
+    /**
+     * Function to convert {@link PhoneCriteria} to a {@link Specification}
+     * @param join Logical operator to join expression: AND - OR
+     * @param criteria The object which holds all the filters, which the entities should match.
+     * @return the matching {@link Specification} of the entity.
+     */
+    private Specification<Phone> createSpecification(String join, PhoneCriteria criteria) {
+        Specification<Phone> specification = Specification.where(null);
+        if (criteria != null) {
+            if (join.equalsIgnoreCase("AND")) {
+                if (criteria.getId() != null) {
+                    specification = specification.and(buildSpecification(criteria.getId(), Phone_.id));
+                }
+                if (criteria.getActive() != null) {
+                    specification = specification.and(buildSpecification(criteria.getActive(), Phone_.active));
+                }
+                if (criteria.getNumber() != null) {
+                    specification = specification.and(buildRangeSpecification(criteria.getNumber(), Phone_.number));
+                }
+                if (criteria.getDescription() != null) {
+                    specification = specification.and(buildStringSpecification(criteria.getDescription(), Phone_.description));
+                }
+                if (criteria.getEmployeeName() != null) {
+                    specification = specification.and(buildSpecification(criteria.getEmployeeName(),
+                            root -> root.join(Phone_.employee, JoinType.LEFT).get(Employee_.name)));
+                }
+                if (criteria.getWorkPlaceName() != null) {
+                    specification = specification.and(buildSpecification(criteria.getWorkPlaceName(),
+                            root -> root.join(Phone_.workPlace, JoinType.LEFT).get(WorkPlace_.name)));
+                }
+            } else {
+                if (criteria.getId() != null) {
+                    specification = specification.or(buildSpecification(criteria.getId(), Phone_.id));
+                }
+                if (criteria.getActive() != null) {
+                    specification = specification.or(buildSpecification(criteria.getActive(), Phone_.active));
+                }
+                if (criteria.getNumber() != null) {
+                    specification = specification.or(buildRangeSpecification(criteria.getNumber(), Phone_.number));
+                }
+                if (criteria.getDescription() != null) {
+                    specification = specification.or(buildStringSpecification(criteria.getDescription(), Phone_.description));
+                }
+                if (criteria.getEmployeeName() != null) {
+                    specification = specification.or(buildSpecification(criteria.getEmployeeName(),
+                            root -> root.join(Phone_.employee, JoinType.LEFT).get(Employee_.name)));
+                }
+                if (criteria.getWorkPlaceName() != null) {
+                    specification = specification.or(buildSpecification(criteria.getWorkPlaceName(),
+                            root -> root.join(Phone_.workPlace, JoinType.LEFT).get(WorkPlace_.name)));
+                }
+            }
+        }
+        return specification;
     }
 
     /**
