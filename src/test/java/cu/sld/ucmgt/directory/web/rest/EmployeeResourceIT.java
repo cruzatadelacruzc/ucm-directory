@@ -1,5 +1,7 @@
 package cu.sld.ucmgt.directory.web.rest;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import cu.sld.ucmgt.directory.DirectoryApp;
 import cu.sld.ucmgt.directory.TestUtil;
@@ -102,8 +104,12 @@ public class EmployeeResourceIT extends PersonIT {
     @Autowired
     private MockMvc restMockMvc;
 
+    private ObjectMapper objectMapper;
+
     @BeforeEach
     public void initTest() {
+        objectMapper = new ObjectMapper();
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         employee = new Employee();
         employee.setCi(DEFAULT_CI);
         employee.setAge(DEFAULT_AGE);
@@ -205,7 +211,7 @@ public class EmployeeResourceIT extends PersonIT {
                 .andExpect(status().isCreated())
                 .andReturn();
 
-        String workPlaceId = resultWorkPlace.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        String workPlaceId = objectMapper.readTree(resultWorkPlace.getResponse().getContentAsByteArray()).get("id").asText();
         assertThat(workPlaceId).isNotNull();
 
         int databaseSizeBeforeCreate = TestUtil.findAll(em, Employee.class).size();
@@ -248,7 +254,7 @@ public class EmployeeResourceIT extends PersonIT {
         // Validate the Employee in the database
         List<Employee> employees = TestUtil.findAll(em, Employee.class);
         assertThat(employees).hasSize(databaseSizeBeforeCreate + 1);
-        String employeeId = resultEmployee.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        String employeeId = objectMapper.readTree(resultEmployee.getResponse().getContentAsByteArray()).get("id").asText();
         assertThat(employeeId).isNotNull();
 
         // To save phone with a employee in elasticsearch
@@ -301,8 +307,10 @@ public class EmployeeResourceIT extends PersonIT {
         // Validate the Employee in the database
         List<Employee> employees = TestUtil.findAll(em, Employee.class);
         assertThat(employees).hasSize(databaseSizeBeforeCreate + 1);
-        String employeeId = resultEmployee.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        String employeeId = objectMapper.readTree(resultEmployee.getResponse().getContentAsByteArray()).get("id").asText();
         assertThat(employeeId).isNotNull();
+
+
 
         // To save workPlace with a employee in elasticsearch
         WorkPlace workPlace = createWorkPlaceOfEmployee(Collections.emptySet());
@@ -600,7 +608,7 @@ public class EmployeeResourceIT extends PersonIT {
                 .andExpect(status().isCreated())
                 .andReturn();
 
-        String employeeId = resultEmployee.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        String employeeId = objectMapper.readTree(resultEmployee.getResponse().getContentAsByteArray()).get("id").asText();
         assertThat(employeeId).isNotNull();
         int databaseSizeBeforeUpdate = TestUtil.findAll(em, Employee.class).size();
 
@@ -859,7 +867,7 @@ public class EmployeeResourceIT extends PersonIT {
                 .content(TestUtil.convertObjectToJsonBytes(phoneDTO)))
                 .andExpect(status().isCreated())
                 .andReturn();
-        String phoneId = resultPhone.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        String phoneId = objectMapper.readTree(resultPhone.getResponse().getContentAsByteArray()).get("id").asText();
         assertThat(phoneId).isNotNull();
 
         Phone phone1 = em.find(Phone.class, UUID.fromString(phoneId));
