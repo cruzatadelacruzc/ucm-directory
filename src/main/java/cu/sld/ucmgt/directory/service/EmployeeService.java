@@ -218,8 +218,9 @@ public class EmployeeService extends QueryService<Employee> {
             workPlaceIndexEvent.getEmployeeIds().forEach(employeeId -> boolQueryBuilder
                     .should(QueryBuilders.matchQuery("id", employeeId.toString())));
 
-            String updateCode = "for (entry in params.entrySet()){if (entry.getKey() != \"ctx\") " +
-                    "{ctx._source.workPlace[entry.getKey()] = entry.getValue()}}";
+            String updateCode = "if (ctx._source.workPlace == null) {params.remove(\"ctx\");ctx._source.workPlace=params;}" +
+                    "else { for (entry in params.entrySet()){if (entry.getKey() != \"ctx\") " +
+                    "{ctx._source.workPlace[entry.getKey()] = entry.getValue()}}}";
             UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(INDEX_NAME)
                     .setRefresh(true)
                     .setAbortOnVersionConflict(true)
