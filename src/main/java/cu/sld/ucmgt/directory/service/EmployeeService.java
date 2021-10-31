@@ -93,7 +93,6 @@ public class EmployeeService extends QueryService<Employee> {
      * @return the persisted entity.
      */
     public EmployeeDTO create(EmployeeDTO employeeDTO) {
-        log.debug("Request to create Employee : {}", employeeDTO);
         Employee employee = save(employeeDTO);
         EmployeeIndex employeeIndex = employeeIndexMapper.toIndex(employee);
         searchRepository.save(employeeIndex);
@@ -107,17 +106,35 @@ public class EmployeeService extends QueryService<Employee> {
     }
 
     /**
-     * Update a employee and phone's employee.
+     * Update a employee and employee inside phone and workplace.
      *
      * @param employeeDTO the entity to save.
      * @return the persisted entity.
      */
     public EmployeeDTO update(EmployeeDTO employeeDTO) {
-        log.debug("Request to update Employee : {}", employeeDTO);
+        UUID employeeIdToRemove = null;
+        UUID workPlaceIdRemoved = null;
+        if (employeeDTO.getWorkPlaceId() == null) { //find workplace to save in elasticsearch
+            // if employee should be removed own workplace
+            Optional<Employee> employeeFetched = repository.findById(employeeDTO.getId());
+            if (employeeFetched.isPresent() && employeeFetched.get().getWorkPlace() != null) {
+                    employeeIdToRemove = employeeFetched.get().getId();
+                     workPlaceIdRemoved = employeeFetched.get().getWorkPlace().getId();
+            }
+        }
+
         Employee employee = save(employeeDTO);
         searchRepository.save(employeeIndexMapper.toIndex(employee));
+
         // updating the EmployeeIndex belonging to PhoneIndex and WorkPlaceIndex
         Map<String, Object> employeeIndexMap = createEmployeeToEmployeeIndexMap(employee);
+        if (employeeIdToRemove != null) {
+          final RemovedEmployeeIndexEvent removedEmployeeIndexEvent = RemovedEmployeeIndexEvent.builder()
+                  .workPlaceId(workPlaceIdRemoved)
+                  .removedEmployeeId(employeeIdToRemove)
+                  .build();
+          eventPublisher.publishEvent(removedEmployeeIndexEvent);
+        }
         final SavedEmployeeIndexEvent savedEmployeeIndexEvent = SavedEmployeeIndexEvent.builder()
                 .employeeId(employee.getId().toString())
                 .params(employeeIndexMap)
@@ -562,5 +579,12 @@ public class EmployeeService extends QueryService<Employee> {
         private EmployeeIndex removedEmployeeIndex;
         private UUID workPlaceId;
         private List<UUID> phoneIds;
+    }
+
+    @Data
+    private static class EmployeeResponseSaved {
+        private UUID employeeIdToRemove;
+        private Employee savedEmployee;
+        private UUID workPlaceId;
     }
 }

@@ -130,8 +130,9 @@ public class WorkPlaceService extends QueryService<WorkPlace>{
                 if (employeeIndexEvent.getEmployeeId() != null) {
                     updateCode = "def targets = ctx._source.employees.findAll(employee " +
                             "-> employee.id == \"" + employeeIndexEvent.getEmployeeId() + "\" ); " +
-                            "for (employee in targets) { for (entry in params.entrySet()) { if (entry.getKey() != \"ctx\") {" +
-                            "employee[entry.getKey()] = entry.getValue() }}}";
+                            "if (targets.length == 0) {params.remove(\"ctx\");ctx._source.employees.add(params)}" +
+                            "else { for (employee in targets) { for (entry in params.entrySet()) { if (entry.getKey() != \"ctx\") {" +
+                            "employee[entry.getKey()] = entry.getValue() }}}}";
                 }
                 UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(INDEX_NAME)
                         .setRefresh(true)
