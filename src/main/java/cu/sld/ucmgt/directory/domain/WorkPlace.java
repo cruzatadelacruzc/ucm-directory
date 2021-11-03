@@ -50,6 +50,11 @@ public class WorkPlace extends AbstractAuditingEntity implements Serializable {
         employee.setWorkPlace(null);
     }
 
+    public void removePhone(Phone phone) {
+        this.phones.remove(phone);
+        phone.setWorkPlace(null);
+    }
+
     public void addEmployee(Employee employee) {
         this.employees.add(employee);
         employee.setWorkPlace(this);

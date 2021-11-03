@@ -66,8 +66,20 @@ public class WorkPlaceService extends QueryService<WorkPlace>{
      * @return the persisted entity.
      */
     public WorkPlaceDTO save(WorkPlaceDTO workPlaceDTO) {
-        log.debug("Request to save WorkPlace : {}", workPlaceDTO);
-        WorkPlace workPlace = mapper.toEntity(workPlaceDTO);
+            WorkPlace workPlace = mapper.toEntity(workPlaceDTO);
+
+        if (workPlaceDTO.getId() != null && (!workPlaceDTO.getPhones().isEmpty() || !workPlaceDTO.getEmployees().isEmpty())) {
+            Optional<WorkPlace> workPlaceFetched = repository.findWorkPlaceWithAssociationsById(workPlaceDTO.getId());
+            if (workPlaceFetched.isPresent()) {
+                workPlace = workPlaceFetched.get();
+                if (workPlaceDTO.getEmployees() != null && !workPlaceDTO.getEmployees().isEmpty()) {
+                    new HashSet<>(workPlace.getEmployees()).forEach(workPlace::removeEmployee);
+                }
+                if (workPlaceDTO.getPhones() != null && !workPlaceDTO.getPhones().isEmpty()) {
+                    new HashSet<>(workPlace.getPhones()).forEach(workPlace::removePhone);
+                }
+            }
+        }
         // find all employees and phones to saves
         if (workPlaceDTO.getEmployees() != null) {
             Set<Employee> employees = workPlaceDTO.getEmployees().stream()
