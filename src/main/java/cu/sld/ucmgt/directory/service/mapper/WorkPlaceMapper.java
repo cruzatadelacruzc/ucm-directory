@@ -14,13 +14,17 @@ import java.util.UUID;
 /**
  * Mapper for the entity {@link WorkPlace} and its DTO {@link WorkPlaceDTO}.
  */
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = {EmployeeMapper.class, PhoneMapper.class})
 public interface WorkPlaceMapper extends EntityMapper<WorkPlaceDTO, WorkPlace> {
 
     @Mapping(target = "phones", ignore = true)
     @Mapping(target = "employees", ignore = true)
     WorkPlace toEntity(WorkPlaceDTO dto);
 
+    @Mapping(target = "phones", ignore = true)
+    @Mapping(target = "employees", ignore = true)
+    @Mapping(source = "phones", target = "phoneIds")
+    @Mapping(source = "employees", target = "employeeIds")
     WorkPlaceDTO toDto(WorkPlace entity);
 
     @IterableMapping(elementTargetType = UUID.class)

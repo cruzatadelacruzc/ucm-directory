@@ -25,9 +25,13 @@ public class WorkPlaceDTO implements Serializable {
 
     private String description;
 
-    private Set<UUID> employees;
+    private Set<UUID> employeeIds;
 
-    private Set<UUID> phones;
+    private Set<UUID> phoneIds;
+
+    private Set<EmployeeDTO> employees;
+
+    private Set<PhoneDTO> phones;
 
     @Override
     public boolean equals(Object o) {
@@ -50,6 +54,8 @@ public class WorkPlaceDTO implements Serializable {
                 ", email='" + email + '\'' +
                 ", active=" + active +
                 ", description='" + description + '\'' +
+                ", employeeIds=" + employeeIds +
+                ", phoneIds=" + phoneIds +
                 ", employees=" + employees +
                 ", phones=" + phones +
                 '}';

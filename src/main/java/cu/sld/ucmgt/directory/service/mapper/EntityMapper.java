@@ -1,6 +1,7 @@
 package cu.sld.ucmgt.directory.service.mapper;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Contract for a generic dto to entity mapper.
@@ -16,5 +17,10 @@ public interface EntityMapper<D,E> {
 
     List<E> toEntities(List<D> dtos);
 
+    Set<E> toEntities(Set<D> dtos);
+
     List<D> toDtos(List<E> entities);
+
+    Set<D> toDtos(Set<E> entities);
+
 }
