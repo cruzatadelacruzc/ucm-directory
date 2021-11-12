@@ -1,5 +1,7 @@
 package cu.sld.ucmgt.directory.web.rest;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import cu.sld.ucmgt.directory.DirectoryApp;
 import cu.sld.ucmgt.directory.TestUtil;
@@ -88,8 +90,6 @@ public class WorkPlaceResourceIT {
     @Autowired
     private EmployeeSearchRepository employeeSearchRepository;
 
-    private static final String ENDPOINT_RESPONSE_PARAMETERS_KEY = "X-directoryApp-params";
-
     @Autowired
     private WorkPlaceRepository repository;
 
@@ -99,6 +99,8 @@ public class WorkPlaceResourceIT {
     @Autowired
     private MockMvc restMockMvc;
 
+    private ObjectMapper objectMapper;
+
     @BeforeEach
     public void initTest() {
         workPlace = new WorkPlace();
@@ -106,7 +108,8 @@ public class WorkPlaceResourceIT {
         workPlace.setActive(DEFAULT_ACTIVE);
         workPlace.setEmail(DEFAULT_EMAIL);
         workPlace.setDescription(DEFAULT_DESCRIPTION);
-
+        objectMapper = new ObjectMapper();
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
     @Test
@@ -119,7 +122,7 @@ public class WorkPlaceResourceIT {
         em.persist(employee);
 
         WorkPlaceDTO workPlaceDTO = mapper.toDto(workPlace);
-        workPlaceDTO.setEmployees(Collections.singleton(employee.getId()));
+        workPlaceDTO.setEmployeeIds(Collections.singleton(employee.getId()));
 
         restMockMvc.perform(post("/api/workplaces").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -213,7 +216,7 @@ public class WorkPlaceResourceIT {
                 .content(TestUtil.convertObjectToJsonBytes(workPlaceDTO)))
                 .andExpect(status().isCreated())
                 .andReturn();
-        String workplaceId = resultWorkplace.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        String workplaceId = objectMapper.readTree(resultWorkplace.getResponse().getContentAsString()).get("id").asText();
         assertThat(workplaceId).isNotNull();
 
         WorkPlace updatedWorkPlace =  repository.findById(UUID.fromString(workplaceId)).get();
@@ -278,7 +281,7 @@ public class WorkPlaceResourceIT {
                 .andExpect(status().isCreated())
                 .andReturn();
 
-        String phoneId = phoneResult.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        String phoneId = objectMapper.readTree(phoneResult.getResponse().getContentAsString()).get("id").asText();
         assertThat(phoneId).isNotNull();
         Phone createdPhone = em.find(Phone.class, UUID.fromString(phoneId));
         workPlace.addPhone(createdPhone);
@@ -324,7 +327,7 @@ public class WorkPlaceResourceIT {
                 .andExpect(status().isCreated())
                 .andReturn();
 
-        String employeeId = employeeResult.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        String employeeId = objectMapper.readTree(employeeResult.getResponse().getContentAsString()).get("id").asText();
         assertThat(employeeId).isNotNull();
 
         Employee savedEmployee = em.find(Employee.class, UUID.fromString(employeeId));
@@ -418,7 +421,7 @@ public class WorkPlaceResourceIT {
                 .content(TestUtil.convertObjectToJsonBytes(workPlaceDTO)))
                 .andExpect(status().isCreated())
                 .andReturn();
-        String workplaceId = workPlaceResult.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        String workplaceId = objectMapper.readTree(workPlaceResult.getResponse().getContentAsString()).get("id").asText();
         assertThat(workplaceId).isNotNull();
 
         Employee workPlaceEmployee = getEmployeeObj();
@@ -429,7 +432,7 @@ public class WorkPlaceResourceIT {
                 .content(TestUtil.convertObjectToJsonBytes(employeeDTO)))
                 .andExpect(status().isCreated())
                 .andReturn();
-        String employeeId = employeeResult.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        String employeeId = objectMapper.readTree(employeeResult.getResponse().getContentAsString()).get("id").asText();
         assertThat(employeeId).isNotNull();
 
         // code to achieve full associations between phone and workplace
@@ -461,7 +464,18 @@ public class WorkPlaceResourceIT {
     @Transactional
     public void getWorkPlace() throws Exception {
         // Initialize the database
-        repository.saveAndFlush(workPlace);
+        em.persist(workPlace);
+
+        Employee employee = getEmployeeObj();
+        employee.setWorkPlace(workPlace);
+        em.persist(employee);
+
+        Phone phone = createPhoneOfWorkPlace(workPlace);
+        em.persist(phone);
+
+        workPlace.addEmployee(employee);
+        workPlace.addPhone(phone);
+        em.flush();
 
         restMockMvc.perform(get("/api/workplaces/{id}", workPlace.getId()))
                 .andExpect(status().isOk())
@@ -469,7 +483,11 @@ public class WorkPlaceResourceIT {
                 .andExpect(jsonPath("$.id").value(workPlace.getId().toString()))
                 .andExpect(jsonPath("$.name").value(DEFAULT_NAME))
                 .andExpect(jsonPath("$.active").value(DEFAULT_ACTIVE))
-                .andExpect(jsonPath("$.description").value(DEFAULT_DESCRIPTION));
+                .andExpect(jsonPath("$.description").value(DEFAULT_DESCRIPTION))
+                .andExpect(jsonPath("$.phones[*].number").value(hasItem(phone.getNumber())))
+                .andExpect(jsonPath("$.employees[*].name").value(hasItem(employee.getName())))
+                .andExpect(jsonPath("$.phoneIds[*]").value(hasItem(phone.getId().toString())))
+                .andExpect(jsonPath("$.employeeIds[*]").value(hasItem(employee.getId().toString())));
     }
 
     @Test
@@ -514,17 +532,17 @@ public class WorkPlaceResourceIT {
                 .andExpect(status().isCreated())
                 .andReturn();
 
-        String employeeId = employeeResult.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        String employeeId = objectMapper.readTree(employeeResult.getResponse().getContentAsString()).get("id").asText();
         assertThat(employeeId).isNotNull();
 
         WorkPlaceDTO workPlaceDTO = mapper.toDto(workPlace);
-        workPlaceDTO.setEmployees(Collections.singleton(UUID.fromString(employeeId)));
+        workPlaceDTO.setEmployeeIds(Collections.singleton(UUID.fromString(employeeId)));
         MvcResult workPlaceResult = restMockMvc.perform(post("/api/workplaces").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(TestUtil.convertObjectToJsonBytes(workPlaceDTO)))
                 .andExpect(status().isCreated())
                 .andReturn();
-        String workplaceId = workPlaceResult.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        String workplaceId = objectMapper.readTree(workPlaceResult.getResponse().getContentAsString()).get("id").asText();
         assertThat(workplaceId).isNotNull();
 
 
@@ -582,17 +600,17 @@ public class WorkPlaceResourceIT {
                 .andExpect(status().isCreated())
                 .andReturn();
 
-        String employeeId = employeeResult.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        String employeeId = objectMapper.readTree(employeeResult.getResponse().getContentAsString()).get("id").asText();
         assertThat(employeeId).isNotNull();
 
         WorkPlaceDTO workPlaceDTO = mapper.toDto(workPlace);
-        workPlaceDTO.setEmployees(Collections.singleton(UUID.fromString(employeeId)));
+        workPlaceDTO.setEmployeeIds(Collections.singleton(UUID.fromString(employeeId)));
         MvcResult workPlaceResult = restMockMvc.perform(post("/api/workplaces").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(TestUtil.convertObjectToJsonBytes(workPlaceDTO)))
                 .andExpect(status().isCreated())
                 .andReturn();
-        String workplaceId = workPlaceResult.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        String workplaceId = objectMapper.readTree(workPlaceResult.getResponse().getContentAsString()).get("id").asText();
         assertThat(workplaceId).isNotNull();
 
 
@@ -604,7 +622,7 @@ public class WorkPlaceResourceIT {
                 .content(TestUtil.convertObjectToJsonBytes(phoneDTO)))
                 .andExpect(status().isCreated())
                 .andReturn();
-        String phoneId = phoneResult.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        String phoneId = objectMapper.readTree(phoneResult.getResponse().getContentAsString()).get("id").asText();
         assertThat(phoneId).isNotNull();
 
         // code to achieve full associations between phone and workplace
