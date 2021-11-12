@@ -4,8 +4,6 @@ import cu.sld.ucmgt.directory.domain.Employee;
 import cu.sld.ucmgt.directory.domain.Phone;
 import cu.sld.ucmgt.directory.domain.WorkPlace;
 import cu.sld.ucmgt.directory.domain.WorkPlace_;
-import cu.sld.ucmgt.directory.domain.elasticsearch.EmployeeIndex;
-import cu.sld.ucmgt.directory.domain.elasticsearch.PhoneIndex;
 import cu.sld.ucmgt.directory.domain.elasticsearch.WorkPlaceIndex;
 import cu.sld.ucmgt.directory.repository.EmployeeRepository;
 import cu.sld.ucmgt.directory.repository.PhoneRepository;
@@ -63,45 +61,69 @@ public class WorkPlaceService extends QueryService<WorkPlace>{
     private final ApplicationEventPublisher eventPublisher;
     private static final String INDEX_NAME = "workplaces";
 
+
     /**
-     * Save a workplace.
-     *
-     * @param workPlaceDTO the entity to save.
+     * Create a WorkPlace entity and index WorkPlace
+     * @param workPlaceDTO the request data of the workplace to save
      * @return the persisted entity.
      */
-    public WorkPlaceDTO save(WorkPlaceDTO workPlaceDTO) {
-            WorkPlace workPlace = mapper.toEntity(workPlaceDTO);
+    public WorkPlaceDTO create(WorkPlaceDTO workPlaceDTO) {
+        WorkPlace workPlace = mapper.toEntity(workPlaceDTO);
 
-        if (workPlaceDTO.getId() != null && (!workPlaceDTO.getPhones().isEmpty() || !workPlaceDTO.getEmployees().isEmpty())) {
+        // find all employees and phones to saves
+        loadAssociations(workPlaceDTO, workPlace);
+
+        repository.save(workPlace);
+        saveWorkPlaceIndex(workPlace, true);
+        return mapper.toDto(workPlace);
+    }
+
+    /**
+     * Update un WorkPlace and WorkPlaceIndex
+     * @param workPlaceDTO the data of the workplace to save
+     * @return the persisted entity.
+     */
+    public WorkPlaceDTO update(WorkPlaceDTO workPlaceDTO) {
+        WorkPlace workPlace = mapper.toEntity(workPlaceDTO);
+
+        // remove all associations for updating the new associations
+        if (!workPlaceDTO.getPhoneIds().isEmpty() || !workPlaceDTO.getEmployeeIds().isEmpty()) {
             Optional<WorkPlace> workPlaceFetched = repository.findWorkPlaceWithAssociationsById(workPlaceDTO.getId());
             if (workPlaceFetched.isPresent()) {
                 workPlace = workPlaceFetched.get();
-                if (workPlaceDTO.getEmployees() != null && !workPlaceDTO.getEmployees().isEmpty()) {
+                if (workPlaceDTO.getEmployeeIds() != null && !workPlaceDTO.getEmployeeIds().isEmpty()) {
                     new HashSet<>(workPlace.getEmployees()).forEach(workPlace::removeEmployee);
                 }
-                if (workPlaceDTO.getPhones() != null && !workPlaceDTO.getPhones().isEmpty()) {
+                if (workPlaceDTO.getPhoneIds() != null && !workPlaceDTO.getPhoneIds().isEmpty()) {
                     new HashSet<>(workPlace.getPhones()).forEach(workPlace::removePhone);
                 }
             }
         }
+
         // find all employees and phones to saves
-        if (workPlaceDTO.getEmployees() != null) {
-            Set<Employee> employees = workPlaceDTO.getEmployees().stream()
-                    .map(employeeRepository::findById)
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .collect(Collectors.toSet());
-            employees.forEach(workPlace::addEmployee);
-        }
-        if (workPlaceDTO.getPhones() != null) {
-            Set<Phone> phones = workPlaceDTO.getPhones().stream()
-                    .map(phoneRepository::findById)
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .collect(Collectors.toSet());
-            phones.forEach(workPlace::addPhone);
-        }
+        loadAssociations(workPlaceDTO, workPlace);
+
+        workPlace.setName(workPlaceDTO.getName());
+        workPlace.setEmail(workPlaceDTO.getEmail());
+        boolean oldStatus = workPlace.getActive();
+        workPlace.setActive(workPlaceDTO.getActive());
+        workPlace.setDescription(workPlaceDTO.getDescription());
         repository.save(workPlace);
+
+        if ((workPlaceDTO.getActive() && !oldStatus) || (!workPlaceDTO.getActive() && oldStatus)) {
+            switchStatus(workPlace, workPlaceDTO.getActive());
+        } else {
+            saveWorkPlaceIndex(workPlace, false);
+        }
+        return mapper.toDto(workPlace);
+    }
+
+    /**
+     * Update a WorkPlace entity and index WorkPlace
+     * @param workPlace persisted entity to save as WorkPlaceIndex
+     * @param isNew flag indicating whether to update or create WorkplaceIndex
+     */
+    private void saveWorkPlaceIndex(WorkPlace workPlace, boolean isNew) {
         WorkPlaceIndex workPlaceIndex = workPlaceIndexMapper.toIndex(workPlace);
         searchRepository.save(workPlaceIndex);
         // saving the workplace belonging to phones and employees
@@ -109,13 +131,36 @@ public class WorkPlaceService extends QueryService<WorkPlace>{
         List<UUID> employeeIds = workPlace.getEmployees().stream().map(Employee::getId).collect(Collectors.toList());
         List<UUID> phoneIds = workPlace.getPhones().stream().map(Phone::getId).collect(Collectors.toList());
         final SavedWorkPlaceIndexEvent savedWorkPlaceIndexEvent = SavedWorkPlaceIndexEvent.builder()
-                .workplaceId( workPlaceDTO.getId() != null ? workPlaceIndex.getId(): null)
-                .phoneIds(phoneIds)
-                .employeeIds(employeeIds)
+                .workplaceId(isNew ? null: workPlaceIndex.getId())
                 .workplaceIndexMap(workPlaceMap)
+                .employeeIds(employeeIds)
+                .phoneIds(phoneIds)
                 .build();
         eventPublisher.publishEvent(savedWorkPlaceIndexEvent);
-        return mapper.toDto(workPlace);
+    }
+
+    /**
+     * Add all associations (Phones and Employees) to WorkPlace
+     * @param workPlaceDTO the request data with EmployeeIds and PhoneIds
+     * @param workPlace persistent entity to add all associations
+     */
+    private void loadAssociations(WorkPlaceDTO workPlaceDTO, WorkPlace workPlace) {
+        if (workPlaceDTO.getEmployeeIds() != null) {
+            Set<Employee> employees = workPlaceDTO.getEmployeeIds().stream()
+                    .map(employeeRepository::findById)
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .collect(Collectors.toSet());
+            employees.forEach(workPlace::addEmployee);
+        }
+        if (workPlaceDTO.getPhoneIds() != null) {
+            Set<Phone> phones = workPlaceDTO.getPhoneIds().stream()
+                    .map(phoneRepository::findById)
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .collect(Collectors.toSet());
+            phones.forEach(workPlace::addPhone);
+        }
     }
 
     /**
@@ -271,46 +316,46 @@ public class WorkPlaceService extends QueryService<WorkPlace>{
     }
 
     /**
-     * Change status for active or disable workplace
+     * Toggle status for active or disable workplace
      *
      * @param id          workplace identifier
      * @param status true or false
      * @return true if changed status or false otherwise
      */
     public Boolean changeStatus(UUID id, Boolean status) {
-        log.debug("Request to change WorkPlace status to {} by ID {}", status, id);
         Optional<WorkPlace> workPlaceToUpdate  = repository.findWorkPlaceWithAssociationsById(id);
         if (workPlaceToUpdate.isPresent()){
             workPlaceToUpdate.get().setActive(status);
             repository.save(workPlaceToUpdate.get());
-            if (status) {
-                // WorkPlaceIndex must to be created because when WorkPlace was disabled, WorkPlaceIndex was removed
-                WorkPlaceIndex workPlaceIndex = workPlaceIndexMapper.toIndex(workPlaceToUpdate.get());
-                searchRepository.save(workPlaceIndex);
-                Map<String, Object> workPlaceIndexMap = convertWorkPlaceIndexToWorkPlaceIndexMap(workPlaceIndex);
-                List<UUID> employeeIds = workPlaceIndex.getEmployees().stream().map(EmployeeIndex::getId).collect(Collectors.toList());
-                List<UUID> phoneIds = workPlaceIndex.getPhones().stream().map(PhoneIndex::getId).collect(Collectors.toList());
-                final SavedWorkPlaceIndexEvent savedWorkPlaceIndexEvent = SavedWorkPlaceIndexEvent.builder()
-                        .employeeIds(employeeIds)
-                        .phoneIds(phoneIds)
-                        .workplaceIndexMap(workPlaceIndexMap)
-                        .build();
-                eventPublisher.publishEvent(savedWorkPlaceIndexEvent);
-            } else {
-                // WorkPlaceIndex must to be removed because WorkPlace was disabled
-                WorkPlaceIndex workPlaceIndex = searchRepository.findById(workPlaceToUpdate.get().getId())
-                        .orElseThrow(() -> new NoSuchElementException("WorkPlaceIndex with ID: "
-                                + workPlaceToUpdate.get().getId() + " not was found"));
-                searchRepository.delete(workPlaceIndex);
-                final RemovedWorkPlaceIndexEvent removedWorkPlaceIndexEvent = RemovedWorkPlaceIndexEvent.builder()
-                        .removedWorkPlaceIndexId(workPlaceIndex.getId())
-                        .removedWorkPlaceIndex(workPlaceIndex)
-                        .build();
-                eventPublisher.publishEvent(removedWorkPlaceIndexEvent);
-            }
+            switchStatus(workPlaceToUpdate.get(), status);
             return true;
-        };
+        }
         return false;
+    }
+
+    /**
+     * Toggle the status of WorkPlaceIndex, if the status is false then WorkPlaceIndex must be removed;
+     * otherwise WorkPlaceIndex must be created
+     *
+     * @param workPlaceToUpdate persisted entity
+     * @param status request WorkPlace's status
+     */
+    private void switchStatus(WorkPlace workPlaceToUpdate, boolean status) {
+        if (status) {
+            // WorkPlaceIndex must to be created because when WorkPlace was disabled, WorkPlaceIndex was removed
+            saveWorkPlaceIndex(workPlaceToUpdate, true);
+        } else {
+            // WorkPlaceIndex must to be removed because WorkPlace was disabled
+            WorkPlaceIndex workPlaceIndex = searchRepository.findById(workPlaceToUpdate.getId())
+                    .orElseThrow(() -> new NoSuchElementException("WorkPlaceIndex with ID: "
+                            + workPlaceToUpdate.getId() + " not was found"));
+            searchRepository.delete(workPlaceIndex);
+            final RemovedWorkPlaceIndexEvent removedWorkPlaceIndexEvent = RemovedWorkPlaceIndexEvent.builder()
+                    .removedWorkPlaceIndexId(workPlaceIndex.getId())
+                    .removedWorkPlaceIndex(workPlaceIndex)
+                    .build();
+            eventPublisher.publishEvent(removedWorkPlaceIndexEvent);
+        }
     }
 
     /**
