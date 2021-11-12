@@ -73,8 +73,6 @@ public class EmployeeResourceIT extends PersonIT {
     private static final LocalDateTime UPDATE_START_DATE = LocalDateTime.now(ZoneId.systemDefault()).withNano(0);
     private static final LocalDateTime DEFAULT_START_DATE = LocalDateTime.ofInstant(Instant.ofEpochMilli(1L), ZoneOffset.UTC);
 
-    private static final String ENDPOINT_RESPONSE_PARAMETERS_KEY = "X-directoryApp-params";
-
     @Autowired
     private EmployeeMapper mapper;
 
@@ -315,7 +313,7 @@ public class EmployeeResourceIT extends PersonIT {
         // To save workPlace with a employee in elasticsearch
         WorkPlace workPlace = createWorkPlaceOfEmployee(Collections.emptySet());
         WorkPlaceDTO workPlaceDTO = workPlaceMapper.toDto(workPlace);
-        workPlaceDTO.setEmployees(Collections.singleton(UUID.fromString(employeeId)));
+        workPlaceDTO.setEmployeeIds(Collections.singleton(UUID.fromString(employeeId)));
         databaseSizeBeforeCreate = TestUtil.findAll(em, WorkPlace.class).size();
         restMockMvc.perform(post("/api/workplaces").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
