@@ -62,7 +62,7 @@ public class PhoneResource {
         return ResponseEntity.created(new URI("/api/phones/" + phoneDTO.getId()))
                 .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
                         true, ENTITY_NAME,
-                        phoneSaved.getId().toString()))
+                        phoneSaved.getNumber()))
                 .body(phoneSaved);
     }
 
@@ -138,7 +138,7 @@ public class PhoneResource {
         return ResponseEntity.ok()
                 .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
                         true, ENTITY_NAME,
-                        phoneSaved.getId().toString()))
+                        phoneSaved.getNumber()))
                 .body(phoneSaved);
 
     }
