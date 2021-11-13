@@ -1,12 +1,15 @@
 package cu.sld.ucmgt.directory.web.rest;
 
 import cu.sld.ucmgt.directory.service.PhoneService;
+import cu.sld.ucmgt.directory.service.criteria.PhoneCriteria;
 import cu.sld.ucmgt.directory.service.dto.PhoneDTO;
 import cu.sld.ucmgt.directory.web.rest.errors.BadRequestAlertException;
 import cu.sld.ucmgt.directory.web.rest.util.HeaderUtil;
 import cu.sld.ucmgt.directory.web.rest.util.PaginationUtil;
 import cu.sld.ucmgt.directory.web.rest.util.ResponseUtil;
 import cu.sld.ucmgt.directory.web.rest.vm.ChangeStatusVM;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -151,5 +154,29 @@ public class PhoneResource {
         log.debug("REST request to update status Phone : {}", changeStatusVM);
         Boolean result = service.changeStatus(changeStatusVM.getId(), changeStatusVM.getStatus());
         return ResponseEntity.ok().body(result);
+    }
+
+    /**
+     * {@code GET  /phones/filtered/{join}} : get all the filtered phones.
+     *
+     * @param pageable the pagination information.
+     * @param criteria the criteria which the requested entities should match.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of phones in body.
+     */
+    @ApiOperation(value = "Filtered Phones list with pagination and logical operator join", response = List.class)
+    @GetMapping("/phones/filtered/{join}")
+    public ResponseEntity<List<PhoneDTO>> getAllFilteredPhones(
+            @ApiParam(value = "Logical operators (AND-OR) for join expressions")
+            @PathVariable String join, PhoneCriteria criteria, Pageable pageable)
+    {
+        if (!(join.equalsIgnoreCase("AND") || join.equalsIgnoreCase("OR"))) {
+            throw new BadRequestAlertException("Wrong logical operator", ENTITY_NAME, "badoperatorjoin", join);
+        }
+        Page<PhoneDTO> page = service.findByCriteria(join, criteria, pageable);
+        HttpHeaders headers = PaginationUtil.generatePaginationHeaders(
+                ServletUriComponentsBuilder.fromCurrentRequest(),
+                page
+        );
+        return ResponseEntity.ok().headers(headers).body(page.getContent());
     }
 }
