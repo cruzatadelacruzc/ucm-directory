@@ -50,8 +50,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @WithMockUser
 public class PhoneResourceIT {
-    private static final Integer UPDATE_NUMBER = 78358658;
-    private static final Integer DEFAULT_NUMBER = 78372133;
+    private static final String UPDATE_NUMBER = "78358658";
+    private static final String DEFAULT_NUMBER = "78372133";
 
     private static final Boolean UPDATE_ACTIVE = false;
     private static final Boolean DEFAULT_ACTIVE = true;
@@ -346,7 +346,7 @@ public class PhoneResourceIT {
         int databaseSizeBeforeCreate = repository.findAll().size();
 
         // Create the Employee, which fails.
-        phone.setNumber(0);
+        phone.setNumber("0");
         PhoneDTO phoneDTO = mapper.toDto(phone);
 
         restMockMvc.perform(post("/api/phones").with(csrf())
@@ -460,7 +460,7 @@ public class PhoneResourceIT {
 
         Phone phone2 = new Phone();
         phone2.setActive(true);
-        phone2.setNumber(21319094);
+        phone2.setNumber("21319094");
         phone2.setDescription("Carlos Manuel's Phone");
 
         WorkPlace phoneWorkPlace = getWorkPlaceWithPhones(Collections.emptySet());
@@ -680,6 +680,348 @@ public class PhoneResourceIT {
         WorkPlaceIndex testWorkPlacePhone = workPlaceIndexIterable.iterator().next();
         assertThat(testWorkPlacePhone.getPhones()).hasSize(1);
         testPhoneIndexIsCreated(testWorkPlacePhone.getPhones().iterator().next());
+    }
+
+    /**
+     * Executes the search with And operator, and checks that the default entity is returned.
+     */
+    private void defaultPhoneShouldBeFoundWithAndOperator(String filter) throws Exception {
+        restMockMvc.perform(get("/api/phones/filtered/and?sort=id,desc&" + filter))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$.[*].number").value(hasItem(DEFAULT_NUMBER)))
+                .andExpect(jsonPath("$.[*].active").value(hasItem(DEFAULT_ACTIVE)))
+                .andExpect(jsonPath("$.[*].id").value(hasItem(phone.getId().toString())))
+                .andExpect(jsonPath("$.[*].description").value(hasItem(DEFAULT_DESCRIPTION)));
+    }
+
+    /**
+     * Executes the search with And operator, and checks that the default entity is not returned.
+     */
+    private void defaultPhoneShouldNotBeFoundWithAndOperator(String filter) throws Exception {
+        restMockMvc.perform(get("/api/phones/filtered/and?sort=id,desc&" + filter))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    /**
+     * Executes the search with Or operator, and checks that the default entity is returned.
+     */
+    private void defaultPhoneShouldBeFoundWithOrOperator(String filter) throws Exception {
+        restMockMvc.perform(get("/api/phones/filtered/or?sort=id,desc&" + filter))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$.[*].number").value(hasItem(DEFAULT_NUMBER)))
+                .andExpect(jsonPath("$.[*].active").value(hasItem(DEFAULT_ACTIVE)))
+                .andExpect(jsonPath("$.[*].id").value(hasItem(phone.getId().toString())))
+                .andExpect(jsonPath("$.[*].description").value(hasItem(DEFAULT_DESCRIPTION)));
+    }
+
+    /**
+     * Executes the search with Or operator, and checks that the default entity is not returned.
+     */
+    private void defaultPhoneShouldNotBeFoundWithOrOperator(String filter) throws Exception {
+        restMockMvc.perform(get("/api/phones/filtered/or?sort=id,desc&" + filter))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    @Transactional
+    public void getWorkPlaceByIdFiltering() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(phone);
+
+        UUID id = phone.getId();
+
+        defaultPhoneShouldBeFoundWithAndOperator("id.equals=" + id);
+        defaultPhoneShouldBeFoundWithOrOperator("id.equals=" + id);
+
+        defaultPhoneShouldNotBeFoundWithAndOperator("id.notEquals=" + id);
+        defaultPhoneShouldNotBeFoundWithOrOperator("id.notEquals=" + id);
+
+
+        defaultPhoneShouldBeFoundWithAndOperator("id.in=" + id + "," + UUID.randomUUID().toString());
+        defaultPhoneShouldBeFoundWithOrOperator("id.in=" + id + "," + UUID.randomUUID().toString());
+
+        defaultPhoneShouldNotBeFoundWithAndOperator("id.notIn=" + id + "," + UUID.randomUUID().toString());
+        defaultPhoneShouldNotBeFoundWithOrOperator("id.notIn=" + id + "," + UUID.randomUUID().toString());
+
+        defaultPhoneShouldBeFoundWithAndOperator("id.specified=true");
+        defaultPhoneShouldBeFoundWithOrOperator("id.specified=true");
+
+        defaultPhoneShouldNotBeFoundWithAndOperator("id.specified=false");
+        defaultPhoneShouldNotBeFoundWithOrOperator("id.specified=false");
+    }
+
+    @Test
+    @Transactional
+    void getAllPhoneByDescriptionIsEqualToSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(phone);
+
+        // Get all the phonesList where description equals to DEFAULT_DESCRIPTION
+        defaultPhoneShouldBeFoundWithAndOperator("description.equals=" + DEFAULT_DESCRIPTION);
+        defaultPhoneShouldBeFoundWithOrOperator("description.equals=" + DEFAULT_DESCRIPTION);
+
+        // Get all the phonesList where description equals to UPDATE_DESCRIPTION
+        defaultPhoneShouldNotBeFoundWithAndOperator("description.equals=" + UPDATE_DESCRIPTION);
+        defaultPhoneShouldNotBeFoundWithOrOperator("description.equals=" + UPDATE_DESCRIPTION);
+    }
+
+    @Test
+    @Transactional
+    void getAllPhoneByDescriptionIsNotEqualToSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(phone);
+
+        // Get all the phonesList where description not equals to UPDATE_DESCRIPTION
+        defaultPhoneShouldBeFoundWithAndOperator("description.notEquals=" + UPDATE_DESCRIPTION);
+        defaultPhoneShouldBeFoundWithOrOperator("description.notEquals=" + UPDATE_DESCRIPTION);
+
+        // Get all the phonesList where description not equals to DEFAULT_DESCRIPTION
+        defaultPhoneShouldNotBeFoundWithAndOperator("description.notEquals=" + DEFAULT_DESCRIPTION);
+        defaultPhoneShouldNotBeFoundWithOrOperator("description.notEquals=" + DEFAULT_DESCRIPTION);
+    }
+
+    @Test
+    @Transactional
+    void getAllPhoneByDescriptionIsInShouldWork() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(phone);
+
+        // Get all the phonesList where description in UPDATE_DESCRIPTION or DEFAULT_NAME
+       defaultPhoneShouldBeFoundWithAndOperator("description.in=" + DEFAULT_DESCRIPTION + "," + UPDATE_DESCRIPTION);
+       defaultPhoneShouldBeFoundWithOrOperator("description.in=" + DEFAULT_DESCRIPTION + "," + UPDATE_DESCRIPTION);
+
+        // Get all the phonesList where description equals to DEFAULT_DESCRIPTION
+       defaultPhoneShouldNotBeFoundWithAndOperator("description.in=" + UPDATE_DESCRIPTION);
+       defaultPhoneShouldNotBeFoundWithOrOperator("description.in=" + UPDATE_DESCRIPTION);
+    }
+
+    @Test
+    @Transactional
+    void getAllPhoneByDescriptionIsNullOrNotNull() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(phone);
+
+        // Get all the phonesList where description is not null
+       defaultPhoneShouldBeFoundWithAndOperator("description.specified=true");
+       defaultPhoneShouldBeFoundWithOrOperator("description.specified=true");
+
+        // Get all the phonesList where description is null
+       defaultPhoneShouldNotBeFoundWithAndOperator("description.specified=false");
+       defaultPhoneShouldNotBeFoundWithOrOperator("description.specified=false");
+    }
+
+    @Test
+    @Transactional
+    void getAllPhoneByDescriptionContainsSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(phone);
+
+        // Get all the phonesList where description contains DEFAULT_DESCRIPTION
+       defaultPhoneShouldBeFoundWithAndOperator("description.contains=" + DEFAULT_DESCRIPTION);
+       defaultPhoneShouldBeFoundWithOrOperator("description.contains=" + DEFAULT_DESCRIPTION);
+
+        // Get all the phonesList where description contains UPDATE_DESCRIPTION
+       defaultPhoneShouldNotBeFoundWithAndOperator("description.contains=" + UPDATE_DESCRIPTION);
+       defaultPhoneShouldNotBeFoundWithOrOperator("description.contains=" + UPDATE_DESCRIPTION);
+    }
+
+    @Test
+    @Transactional
+    void getAllPhoneByDescriptionNotContainsSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(phone);
+
+        // Get all the phonesList where description does not contain UPDATE_NAME
+       defaultPhoneShouldNotBeFoundWithAndOperator("description.doesNotContain=" + DEFAULT_DESCRIPTION);
+       defaultPhoneShouldNotBeFoundWithOrOperator("description.doesNotContain=" + DEFAULT_DESCRIPTION);
+
+        // Get all the phonesList where description does not contain UPDATE_DESCRIPTION
+       defaultPhoneShouldBeFoundWithAndOperator("description.doesNotContain=" + UPDATE_DESCRIPTION);
+       defaultPhoneShouldBeFoundWithOrOperator("description.doesNotContain=" + UPDATE_DESCRIPTION);
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByActiveIsEqualToSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(phone);
+
+        // Get all the phonesList where active equals to DEFAULT_ACTIVE
+        defaultPhoneShouldBeFoundWithAndOperator("active.equals=" + DEFAULT_ACTIVE);
+        defaultPhoneShouldBeFoundWithOrOperator("active.equals=" + DEFAULT_ACTIVE);
+
+        // Get all the phonesList where active equals to UPDATE_ACTIVE
+        defaultPhoneShouldNotBeFoundWithAndOperator("active.equals=" + UPDATE_ACTIVE);
+        defaultPhoneShouldNotBeFoundWithOrOperator("active.equals=" + UPDATE_ACTIVE);
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByActiveIsNotEqualToSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(phone);
+
+        // Get all the workplacesList where active not equals to DEFAULT_ACTIVE
+        defaultPhoneShouldNotBeFoundWithAndOperator("active.notEquals=" + DEFAULT_ACTIVE);
+        defaultPhoneShouldNotBeFoundWithOrOperator("active.notEquals=" + DEFAULT_ACTIVE);
+
+        // Get all the workplaceList where active not equals to UPDATE_ACTIVE
+        defaultPhoneShouldBeFoundWithAndOperator("active.notEquals=" + UPDATE_ACTIVE);
+        defaultPhoneShouldBeFoundWithOrOperator("active.notEquals=" + UPDATE_ACTIVE);
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByNumberIsEqualToSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(phone);
+
+        // Get all the phonesList where number equals to DEFAULT_ACTIVE
+        defaultPhoneShouldBeFoundWithAndOperator("number.equals=" + DEFAULT_NUMBER);
+        defaultPhoneShouldBeFoundWithOrOperator("number.equals=" + DEFAULT_NUMBER);
+
+        // Get all the phonesList where active equals to UPDATE_ACTIVE
+        defaultPhoneShouldNotBeFoundWithAndOperator("number.equals=" + UPDATE_NUMBER);
+        defaultPhoneShouldNotBeFoundWithOrOperator("number.equals=" + UPDATE_NUMBER);
+    }
+
+    @Test
+    @Transactional
+    void getAllWorPlacesByNumberIsNotEqualToSomething() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(phone);
+
+        // Get all the phonesList where number not equals to DEFAULT_ACTIVE
+        defaultPhoneShouldNotBeFoundWithAndOperator("number.notEquals=" + DEFAULT_NUMBER);
+        defaultPhoneShouldNotBeFoundWithOrOperator("number.notEquals=" + DEFAULT_NUMBER);
+
+        // Get all the phonesList where number not equals to UPDATE_ACTIVE
+        defaultPhoneShouldBeFoundWithAndOperator("number.notEquals=" + UPDATE_NUMBER);
+        defaultPhoneShouldBeFoundWithOrOperator("number.notEquals=" + UPDATE_NUMBER);
+    }
+
+    @Test
+    @Transactional
+    void getAllPhoneByNumberIsNullOrNotNull() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(phone);
+
+        // Get all the phonesList where number is not null
+        defaultPhoneShouldBeFoundWithAndOperator("number.specified=true");
+        defaultPhoneShouldBeFoundWithOrOperator("number.specified=true");
+
+        // Get all the phonesList where number is null
+        defaultPhoneShouldNotBeFoundWithAndOperator("number.specified=false");
+        defaultPhoneShouldNotBeFoundWithOrOperator("number.specified=false");
+    }
+
+    @Test
+    @Transactional
+    void getAllPhoneByNumberIsInShouldWork() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(phone);
+
+        // Get all the phonesList where number in DEFAULT_NUMBER or UPDATE_NUMBER
+        defaultPhoneShouldBeFoundWithAndOperator("number.in=" + DEFAULT_NUMBER + "," + UPDATE_NUMBER);
+        defaultPhoneShouldBeFoundWithOrOperator("number.in=" + DEFAULT_NUMBER + "," + UPDATE_NUMBER);
+
+        // Get all the phonesList where number equals to UPDATE_NUMBER
+        defaultPhoneShouldNotBeFoundWithAndOperator("number.in=" + UPDATE_NUMBER);
+        defaultPhoneShouldNotBeFoundWithOrOperator("number.in=" + UPDATE_NUMBER);
+    }
+
+    @Test
+    @Transactional
+    void getAllPhoneByNumberIsNotInShouldWork() throws Exception {
+        // Initialize the database
+        repository.saveAndFlush(phone);
+
+        defaultPhoneShouldBeFoundWithAndOperator("number.notIn=" + UPDATE_NUMBER + "," + "52132138");
+        defaultPhoneShouldBeFoundWithOrOperator("number.notIn=" + UPDATE_NUMBER + "," + "52132138");
+    }
+
+    @Test
+    @Transactional
+    void getAllPhoneByWorkPlaceNameIsEqualToSomething() throws Exception {
+        // Initialize the database
+        WorkPlace workPlace = getWorkPlaceWithPhones(Collections.emptySet());
+        String name = workPlace.getName();
+        em.persist(workPlace);
+        phone.setWorkPlace(workPlace);
+        repository.saveAndFlush(phone);
+
+        // Get all the phonesList where workPlaceName equals to name
+        defaultPhoneShouldBeFoundWithAndOperator("workPlaceName.equals=" + name);
+        defaultPhoneShouldBeFoundWithOrOperator("workPlaceName.equals=" + name);
+
+        // Get all the phonesList where workPlaceName equals to wrong name
+        defaultPhoneShouldNotBeFoundWithAndOperator("workPlaceName.equals=" + name.concat(" Cruzata"));
+        defaultPhoneShouldNotBeFoundWithOrOperator("workPlaceName.equals=" + name.concat(" Cruzata"));
+    }
+
+    @Test
+    @Transactional
+    void getAllPhoneByWorkPlaceNameIsNotEqualToSomething() throws Exception {
+        // Initialize the database
+        WorkPlace workPlace = getWorkPlaceWithPhones(Collections.emptySet());
+        String name = workPlace.getName();
+        em.persist(workPlace);
+        phone.setWorkPlace(workPlace);
+        repository.saveAndFlush(phone);
+
+        // Get all the phonesList where workPlaceName not equals to name
+        defaultPhoneShouldBeFoundWithAndOperator("workPlaceName.notEquals=" + name.concat(" Cruzata"));
+        defaultPhoneShouldBeFoundWithOrOperator("workPlaceName.notEquals=" + name.concat(" Cruzata"));
+
+        // Get all the phonesList where workPlaceName not equals to name
+        defaultPhoneShouldNotBeFoundWithAndOperator("workPlaceName.notEquals=" + name);
+        defaultPhoneShouldNotBeFoundWithOrOperator("workPlaceName.notEquals=" + name);
+    }
+
+    @Test
+    @Transactional
+    void getAllPhoneByEmployeeNameIsEqualToSomething() throws Exception {
+        // Initialize the database
+        Employee employee = getEmployee();
+        String name = employee.getName();
+        em.persist(employee);
+        phone.setEmployee(employee);
+        repository.saveAndFlush(phone);
+
+        // Get all the phonesList where employeeName equals to name
+        defaultPhoneShouldBeFoundWithAndOperator("employeeName.equals=" + name);
+        defaultPhoneShouldBeFoundWithOrOperator("employeeName.equals=" + name);
+
+        // Get all the phonesList where employeeName equals to wrong name
+        defaultPhoneShouldNotBeFoundWithAndOperator("employeeName.equals=" + name.concat(" Cruzata"));
+        defaultPhoneShouldNotBeFoundWithOrOperator("employeeName.equals=" + name.concat(" Cruzata"));
+    }
+
+    @Test
+    @Transactional
+    void getAllPhoneByEmployeeNameIsNotEqualToSomething() throws Exception {
+        // Initialize the database
+        Employee employee = getEmployee();
+        String name = employee.getName();
+        em.persist(employee);
+        phone.setEmployee(employee);
+        repository.saveAndFlush(phone);
+
+        // Get all the phonesList where employeeName not equals to name
+        defaultPhoneShouldBeFoundWithAndOperator("employeeName.notEquals=" + name.concat(" Cruzata"));
+        defaultPhoneShouldBeFoundWithOrOperator("employeeName.notEquals=" + name.concat(" Cruzata"));
+
+        // Get all the phonesList where employeeName not equals to name
+        defaultPhoneShouldNotBeFoundWithAndOperator("employeeName.notEquals=" + name);
+        defaultPhoneShouldNotBeFoundWithOrOperator("employeeName.notEquals=" + name);
     }
 
 }

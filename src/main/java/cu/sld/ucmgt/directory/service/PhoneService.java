@@ -238,7 +238,7 @@ public class PhoneService extends QueryService<Phone> {
      *
      * @param number the id of the entity.
      */
-    public void deletePhone(Integer number) {
+    public void deletePhone(String number) {
         log.debug("Request to delete Phone : {}", number);
         repository.findPhoneByNumber(number).ifPresent(phone -> {
             repository.delete(phone);
@@ -325,7 +325,7 @@ public class PhoneService extends QueryService<Phone> {
                     specification = specification.and(buildSpecification(criteria.getActive(), Phone_.active));
                 }
                 if (criteria.getNumber() != null) {
-                    specification = specification.and(buildRangeSpecification(criteria.getNumber(), Phone_.number));
+                    specification = specification.and(buildStringSpecification(criteria.getNumber(), Phone_.number));
                 }
                 if (criteria.getDescription() != null) {
                     specification = specification.and(buildStringSpecification(criteria.getDescription(), Phone_.description));
@@ -346,7 +346,7 @@ public class PhoneService extends QueryService<Phone> {
                     specification = specification.or(buildSpecification(criteria.getActive(), Phone_.active));
                 }
                 if (criteria.getNumber() != null) {
-                    specification = specification.or(buildRangeSpecification(criteria.getNumber(), Phone_.number));
+                    specification = specification.or(buildStringSpecification(criteria.getNumber(), Phone_.number));
                 }
                 if (criteria.getDescription() != null) {
                     specification = specification.or(buildStringSpecification(criteria.getDescription(), Phone_.description));
