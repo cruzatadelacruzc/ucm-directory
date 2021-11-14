@@ -255,6 +255,26 @@ public class PhoneService extends QueryService<Phone> {
     }
 
     /**
+     * Delete the phone by ID.
+     *
+     * @param id of the entity.
+     */
+    public void deletePhoneById(UUID id) {
+        repository.findById(id).ifPresent(phone -> {
+            repository.delete(phone);
+            PhoneIndex phoneIndex = searchRepository.findById(id)
+                    .orElseThrow(() -> new NoSuchElementException("PhoneIndex with Id: " + id + " not was found"));
+            searchRepository.delete(phoneIndex);
+            final RemovedPhoneIndexEvent removedPhoneIndexEvent = RemovedPhoneIndexEvent.builder()
+                    .removedPhoneIndex(phoneIndex)
+                    .removedPhoneIndexId(phoneIndex.getId())
+                    .workPlaceId(phoneIndex.getWorkPlace().getId())
+                    .build();
+            eventPublisher.publishEvent(removedPhoneIndexEvent);
+        });
+    }
+
+    /**
      * Change status for active or disable phone
      *
      * @param id     phone identifier
