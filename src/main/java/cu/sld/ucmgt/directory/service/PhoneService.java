@@ -245,12 +245,14 @@ public class PhoneService extends QueryService<Phone> {
             PhoneIndex phoneIndex = searchRepository.findPhoneIndexByNumber(number)
                     .orElseThrow(() -> new NoSuchElementException("PhoneIndex with number: " + number + " not was found"));
             searchRepository.delete(phoneIndex);
-            final RemovedPhoneIndexEvent removedPhoneIndexEvent = RemovedPhoneIndexEvent.builder()
-                    .removedPhoneIndex(phoneIndex)
-                    .removedPhoneIndexId(phoneIndex.getId())
-                    .workPlaceId(phoneIndex.getWorkPlace().getId())
-                    .build();
-            eventPublisher.publishEvent(removedPhoneIndexEvent);
+            if (phoneIndex.getWorkPlace() != null) {
+                final RemovedPhoneIndexEvent removedPhoneIndexEvent = RemovedPhoneIndexEvent.builder()
+                        .removedPhoneIndex(phoneIndex)
+                        .removedPhoneIndexId(phoneIndex.getId())
+                        .workPlaceId(phoneIndex.getWorkPlace().getId())
+                        .build();
+                eventPublisher.publishEvent(removedPhoneIndexEvent);
+            }
         });
     }
 
@@ -265,12 +267,14 @@ public class PhoneService extends QueryService<Phone> {
             PhoneIndex phoneIndex = searchRepository.findById(id)
                     .orElseThrow(() -> new NoSuchElementException("PhoneIndex with Id: " + id + " not was found"));
             searchRepository.delete(phoneIndex);
-            final RemovedPhoneIndexEvent removedPhoneIndexEvent = RemovedPhoneIndexEvent.builder()
-                    .removedPhoneIndex(phoneIndex)
-                    .removedPhoneIndexId(phoneIndex.getId())
-                    .workPlaceId(phoneIndex.getWorkPlace().getId())
-                    .build();
-            eventPublisher.publishEvent(removedPhoneIndexEvent);
+            if (phoneIndex.getWorkPlace() != null) {
+                final RemovedPhoneIndexEvent removedPhoneIndexEvent = RemovedPhoneIndexEvent.builder()
+                        .removedPhoneIndex(phoneIndex)
+                        .removedPhoneIndexId(phoneIndex.getId())
+                        .workPlaceId(phoneIndex.getWorkPlace().getId())
+                        .build();
+                eventPublisher.publishEvent(removedPhoneIndexEvent);
+            }
         });
     }
 

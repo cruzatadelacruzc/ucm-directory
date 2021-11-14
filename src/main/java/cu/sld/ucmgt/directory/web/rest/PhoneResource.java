@@ -106,13 +106,9 @@ public class PhoneResource {
      */
     @DeleteMapping("/phones/number/{number}")
     public ResponseEntity<Void> deletePhone(@PathVariable String number) {
-        log.debug("REST request to delete Phone : {}", number);
         service.deletePhone(number);
         return ResponseEntity.noContent()
-                .headers(HeaderUtil.createEntityDeletionAlert(
-                        applicationName,
-                        true, ENTITY_NAME,
-                        number.toString()))
+                .headers(HeaderUtil.createEntityDeletionAlert(applicationName,true, ENTITY_NAME, number))
                 .build();
     }
 
