@@ -503,6 +503,60 @@ public class PhoneResourceIT {
     }
 
     @Test
+    public void deletePhoneAndPhoneIndexByIdInsideWorkPlace() throws Exception {
+        // clear indices
+        workPlaceSearchRepository.deleteAll();
+        searchRepository.deleteAll();
+
+        Phone phone2 = new Phone();
+        phone2.setActive(true);
+        phone2.setNumber("21319094");
+        phone2.setDescription("Carlos Manuel's Phone");
+
+        WorkPlace phoneWorkPlace = getWorkPlaceWithPhones(Collections.emptySet());
+        WorkPlaceDTO workPlaceDTO = workPlaceMapper.toDto(phoneWorkPlace);
+        MvcResult resultWorkplace = restMockMvc.perform(post("/api/workplaces").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(workPlaceDTO)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String workplaceId = TestUtil.getMapper().readTree(resultWorkplace.getResponse().getContentAsString()).get("id").asText();
+        assertThat(workplaceId).isNotNull();
+
+        PhoneDTO phoneDTO = mapper.toDto(phone);
+        phoneDTO.setWorkPlaceId(UUID.fromString(workplaceId));
+        restMockMvc.perform(post("/api/phones").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(phoneDTO)))
+                .andExpect(status().isCreated());
+
+        PhoneDTO phone2DTO = mapper.toDto(phone2);
+        phone2DTO.setWorkPlaceId(UUID.fromString(workplaceId));
+        MvcResult resultPhone = restMockMvc.perform(post("/api/phones").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(phone2DTO)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String phoneId = TestUtil.getMapper().readTree(resultPhone.getResponse().getContentAsString()).get("id").asText();
+        assertThat(workplaceId).isNotNull();
+
+        // Delete the phone
+        restMockMvc.perform(delete("/api/phones/{id}", phoneId).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNoContent());
+
+        // Validate the database contains one less item
+        List<Phone> phones = repository.findAll();
+        assertThat(phones).hasSize(1);
+
+        Iterable<WorkPlaceIndex> workPlaceIndexIterable = workPlaceSearchRepository.findAll();
+        WorkPlaceIndex testWorkPaceIndex = workPlaceIndexIterable.iterator().next();
+        assertThat(testWorkPaceIndex.getPhones()).hasSize(1);
+        assertThat(testWorkPaceIndex.getPhones().iterator().next().getNumber()).isEqualTo(phone.getNumber());
+    }
+
+    @Test
     @Transactional
     public void updatePhoneAndPhoneIndex() throws Exception {
         // Initialize the database

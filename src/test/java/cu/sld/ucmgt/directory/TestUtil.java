@@ -44,6 +44,10 @@ public final class TestUtil {
         return mapper;
     }
 
+    public static ObjectMapper getMapper() {
+        return mapper;
+    }
+
     /**
      * Convert an object to JSON byte array.
      *

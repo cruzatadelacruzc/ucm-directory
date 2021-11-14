@@ -104,7 +104,7 @@ public class PhoneResource {
      * @param number the id of the Phone to delete.
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}.
      */
-    @DeleteMapping("/phones/{number}")
+    @DeleteMapping("/phones/number/{number}")
     public ResponseEntity<Void> deletePhone(@PathVariable String number) {
         log.debug("REST request to delete Phone : {}", number);
         service.deletePhone(number);
@@ -113,6 +113,23 @@ public class PhoneResource {
                         applicationName,
                         true, ENTITY_NAME,
                         number.toString()))
+                .build();
+    }
+
+    /**
+     * {@code DELETE  /phones/:id} : delete the "ID" phone.
+     *
+     * @param id the id of the Phone to delete.
+     * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}.
+     */
+    @DeleteMapping("/phones/{id}")
+    public ResponseEntity<Void> deletePhoneById(@PathVariable UUID id) {
+        service.deletePhoneById(id);
+        return ResponseEntity.noContent()
+                .headers(HeaderUtil.createEntityDeletionAlert(
+                        applicationName,
+                        true, ENTITY_NAME,
+                        id.toString()))
                 .build();
     }
 
