@@ -18,5 +18,5 @@ public interface PhoneSearchRepository extends ElasticsearchRepository<PhoneInde
 
     void deletePhoneIndexByNumber(Integer number);
 
-    Optional<PhoneIndex> findPhoneIndexByNumber(Integer number);
+    Optional<PhoneIndex> findPhoneIndexByNumber(String number);
 }

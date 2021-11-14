@@ -55,7 +55,7 @@ public class PhoneResource {
 
         if ((phoneDTO.getWorkPlaceId() == null && phoneDTO.getEmployeeId() == null) ||
             (phoneDTO.getWorkPlaceId() != null && phoneDTO.getEmployeeId() != null)) {
-            throw new BadRequestAlertException("Phone below to WorkPlace or Employee", ENTITY_NAME, "relationshipnull", phoneDTO.getNumber().toString());
+            throw new BadRequestAlertException("Phone below to WorkPlace or Employee", ENTITY_NAME, "relationshipnull", phoneDTO.getNumber());
         }
 
         PhoneDTO phoneSaved = service.save(phoneDTO);
@@ -105,7 +105,7 @@ public class PhoneResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}.
      */
     @DeleteMapping("/phones/{number}")
-    public ResponseEntity<Void> deletePhone(@PathVariable Integer number) {
+    public ResponseEntity<Void> deletePhone(@PathVariable String number) {
         log.debug("REST request to delete Phone : {}", number);
         service.deletePhone(number);
         return ResponseEntity.noContent()

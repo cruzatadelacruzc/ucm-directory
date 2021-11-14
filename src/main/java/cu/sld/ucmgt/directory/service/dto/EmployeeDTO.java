@@ -33,7 +33,7 @@ public class EmployeeDTO extends PersonDTO {
     private UUID teachingCategoryId;
     private UUID chargeId;
     private UUID professionId;
-    private Set<Integer> phones;
+    private Set<String> phones;
 
     private String workPlaceName;
     private String categoryName;

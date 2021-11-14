@@ -19,12 +19,14 @@ public class PhoneDTO implements Serializable {
 
     private UUID id;
     @Min(value = 1, message = "error:Min")
-    private Integer number;
+    private String number;
     private Boolean active = false;
     @Size(max = 255, message = "error:Size")
     private String description;
     private UUID employeeId;
     private UUID workPlaceId;
+    private String workPlaceName;
+    private String employeeName;
 
     @Override
     public boolean equals(Object o) {

@@ -45,10 +45,10 @@ public interface EmployeeMapper extends EntityMapper<EmployeeDTO, Employee> {
     @Mapping(source = "teachingCategory.name", target = "teachingCategoryName")
     EmployeeDTO toDto(Employee entity);
 
-    @IterableMapping(elementTargetType = Integer.class)
-    Set<Integer> mapToPhoneToInteger(Set<Phone> phones);
+    @IterableMapping(elementTargetType = String.class)
+    Set<String> mapToPhoneToString(Set<Phone> phones);
 
-    default Integer mapPhoneToInteger(Phone phone) {
+    default String mapPhoneToInteger(Phone phone) {
         if (phone == null) {
             return null;
         }

@@ -16,7 +16,7 @@ public class PhoneIndex {
     @Id
     private UUID id;
 
-    private Integer number;
+    private String number;
 
     @Field(type = FieldType.Text)
     private String description;
