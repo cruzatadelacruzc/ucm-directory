@@ -187,8 +187,8 @@ public class EmployeeService extends QueryService<Employee> {
      * @param uid the id of the entity.
      */
     public void deleteEmployee(UUID uid) {
-        log.debug("Request to delete Employee : {}", uid);
-        repository.findById(uid).ifPresent(employee -> {
+        repository.findEmployeeWithAssociationsById(uid).ifPresent(employee -> {
+            new HashSet<>(employee.getPhones()).forEach(employee::removePhone);
             repository.delete(employee);
             EmployeeIndex employeeIndex = searchRepository.findById(employee.getId())
                     .orElseThrow(() -> new NoSuchElementException("EmployeeIndex with ID: " + employee.getId() + " not was found"));

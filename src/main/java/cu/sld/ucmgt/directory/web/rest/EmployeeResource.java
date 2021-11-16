@@ -98,7 +98,6 @@ public class EmployeeResource {
      */
     @DeleteMapping("/employees/{id}")
     public ResponseEntity<Void> deleteEmployee(@PathVariable(name = "id") UUID uid) {
-        log.debug("REST request to delete Employee : {}", uid);
         service.deleteEmployee(uid);
         return ResponseEntity.noContent()
                 .headers(HeaderUtil.createEntityDeletionAlert(

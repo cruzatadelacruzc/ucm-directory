@@ -81,9 +81,14 @@ public class Employee extends Person implements Serializable {
     @JsonIgnoreProperties(value = "employeesProfession", allowSetters = true)
     private Nomenclature profession;
 
-    @OneToMany(mappedBy = "employee", cascade = CascadeType.PERSIST, orphanRemoval = true)
+    @OneToMany(mappedBy = "employee", orphanRemoval = true, cascade = CascadeType.PERSIST)
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     private Set<Phone> phones = new HashSet<>();
+
+    public void removePhone(Phone phone) {
+        this.phones.remove(phone);
+        phone.setEmployee(null);
+    }
 
     @Override
     public boolean equals(Object o) {
