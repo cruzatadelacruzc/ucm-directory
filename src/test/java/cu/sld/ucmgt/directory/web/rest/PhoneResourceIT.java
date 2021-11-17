@@ -453,7 +453,7 @@ public class PhoneResourceIT {
     }
 
     @Test
-    public void deletePhoneAndPhoneIndexInsideWorkPlace() throws Exception {
+    public void deletePhoneAndPhoneIndexByNumberInsideWorkPlace() throws Exception {
         // clear indices
         workPlaceSearchRepository.deleteAll();
         searchRepository.deleteAll();
@@ -470,7 +470,7 @@ public class PhoneResourceIT {
                 .content(TestUtil.convertObjectToJsonBytes(workPlaceDTO)))
                 .andExpect(status().isCreated())
                 .andReturn();
-        String workplaceId = resultWorkplace.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        String workplaceId = TestUtil.getMapper().readTree(resultWorkplace.getResponse().getContentAsString()).get("id").asText();
         assertThat(workplaceId).isNotNull();
 
         PhoneDTO phoneDTO = mapper.toDto(phone);
@@ -488,7 +488,7 @@ public class PhoneResourceIT {
                 .andExpect(status().isCreated());
 
         // Delete the phone
-        restMockMvc.perform(delete("/api/phones/{number}", phone.getNumber()).with(csrf())
+        restMockMvc.perform(delete("/api/phones/number/{number}", phone.getNumber()).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent());
 
