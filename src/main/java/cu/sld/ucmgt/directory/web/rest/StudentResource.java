@@ -1,11 +1,14 @@
 package cu.sld.ucmgt.directory.web.rest;
 
 import cu.sld.ucmgt.directory.service.StudentService;
+import cu.sld.ucmgt.directory.service.criteria.StudentCriteria;
 import cu.sld.ucmgt.directory.service.dto.StudentDTO;
 import cu.sld.ucmgt.directory.web.rest.errors.BadRequestAlertException;
 import cu.sld.ucmgt.directory.web.rest.util.HeaderUtil;
 import cu.sld.ucmgt.directory.web.rest.util.PaginationUtil;
 import cu.sld.ucmgt.directory.web.rest.util.ResponseUtil;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -121,6 +124,30 @@ public class StudentResource {
     public ResponseEntity<List<StudentDTO>> getAllStudents(Pageable pageable) {
         log.debug("REST request to get a page of Students");
         Page<StudentDTO> page = service.getAllStudents(pageable);
+        HttpHeaders headers = PaginationUtil.generatePaginationHeaders(
+                ServletUriComponentsBuilder.fromCurrentRequest(),
+                page
+        );
+        return ResponseEntity.ok().headers(headers).body(page.getContent());
+    }
+
+    /**
+     * {@code GET  /students/filtered/{join}} : get all the filtered students.
+     *
+     * @param pageable the pagination information.
+     * @param criteria the criteria which the requested entities should match.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of students in body.
+     */
+    @ApiOperation(value = "Filtered Students list with pagination and logical operator join", response = List.class)
+    @GetMapping("/students/filtered/{join}")
+    public ResponseEntity<List<StudentDTO>> getAllFilteredStudents(
+            @ApiParam(value = "Logical operators (AND-OR) for join expressions")
+            @PathVariable String join, StudentCriteria criteria, Pageable pageable)
+    {
+        if (!(join.equalsIgnoreCase("AND") || join.equalsIgnoreCase("OR"))) {
+            throw new BadRequestAlertException("Wrong logical operator", ENTITY_NAME, "badoperatorjoin", join);
+        }
+        Page<StudentDTO> page = service.findByCriteria(join, criteria, pageable);
         HttpHeaders headers = PaginationUtil.generatePaginationHeaders(
                 ServletUriComponentsBuilder.fromCurrentRequest(),
                 page

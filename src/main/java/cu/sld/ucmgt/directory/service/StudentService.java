@@ -1,12 +1,15 @@
 package cu.sld.ucmgt.directory.service;
 
 import cu.sld.ucmgt.directory.domain.NomenclatureType;
+import cu.sld.ucmgt.directory.domain.Nomenclature_;
 import cu.sld.ucmgt.directory.domain.Student;
+import cu.sld.ucmgt.directory.domain.Student_;
 import cu.sld.ucmgt.directory.domain.elasticsearch.StudentIndex;
 import cu.sld.ucmgt.directory.repository.NomenclatureRepository;
 import cu.sld.ucmgt.directory.repository.StudentRepository;
 import cu.sld.ucmgt.directory.repository.search.StudentSearchRepository;
 import cu.sld.ucmgt.directory.service.NomenclatureService.SavedNomenclatureEvent;
+import cu.sld.ucmgt.directory.service.criteria.StudentCriteria;
 import cu.sld.ucmgt.directory.service.dto.StudentDTO;
 import cu.sld.ucmgt.directory.service.mapper.StudentIndexMapper;
 import cu.sld.ucmgt.directory.service.mapper.StudentMapper;
@@ -23,11 +26,14 @@ import org.elasticsearch.script.ScriptType;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.criteria.JoinType;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -36,7 +42,7 @@ import java.util.UUID;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class StudentService {
+public class StudentService extends QueryService<Student>{
     private final StudentMapper mapper;
     private final StudentRepository repository;
     private final RestHighLevelClient highLevelClient;
@@ -135,5 +141,150 @@ public class StudentService {
         } catch (ElasticsearchException | IOException e) {
             e.printStackTrace();
         }
+    }
+    
+    /**
+     * Return a {@link List} of {@link StudentDTO} which matches the criteria from the database.
+     *
+     * @param operator_union Logical operator to join expression: AND - OR
+     * @param criteria       The object which holds all the filters, which the entities should match.
+     * @return the matching entities.
+     */
+    public Page<StudentDTO> findByCriteria(String operator_union, StudentCriteria criteria, Pageable page) {
+        final Specification<Student> specification = createSpecification(operator_union, criteria);
+        return repository.findAll(specification, page).map(mapper::toDto);
+    }
+
+    /**
+     * Function to convert {@link StudentCriteria} to a {@link Specification}
+     *
+     * @param operator_union Logical operator to join expression: AND - OR
+     * @param criteria       The object which holds all the filters, which the entities should match.
+     * @return the matching {@link Specification} of the entity.
+     */
+    private Specification<Student> createSpecification(String operator_union, StudentCriteria criteria) {
+        Specification<Student> specification = Specification.where(null);
+        if (criteria != null) {
+            if (operator_union.equalsIgnoreCase("AND")) {
+                if (criteria.getId() != null) {
+                    specification = specification.and(buildSpecification(criteria.getId(), Student_.id));
+                }
+                if (criteria.getCi() != null) {
+                    specification = specification.and(buildStringSpecification(criteria.getCi(), Student_.ci));
+                }
+                if (criteria.getAge() != null) {
+                    specification = specification.and(buildRangeSpecification(criteria.getAge(), Student_.age));
+                }
+                if (criteria.getName() != null) {
+                    specification = specification.and(buildStringSpecification(criteria.getName(), Student_.name));
+                }
+                if (criteria.getRace() != null) {
+                    specification = specification.and(buildStringSpecification(criteria.getRace(), Student_.race));
+                }
+                if (criteria.getEmail() != null) {
+                    specification = specification.and(buildStringSpecification(criteria.getEmail(), Student_.email));
+                }
+                if (criteria.getGender() != null) {
+                    specification = specification.and(buildSpecification(criteria.getGender(), Student_.gender));
+                }
+                if (criteria.getAddress() != null) {
+                    specification = specification.and(buildStringSpecification(criteria.getAddress(), Student_.address));
+                }
+                if (criteria.getDistrictName() != null) {
+                    specification = specification.and(buildSpecification(criteria.getDistrictName(),
+                            root -> root.join(Student_.district, JoinType.LEFT).get(Nomenclature_.name)));
+                }
+                if (criteria.getBirthdate() != null) {
+                    specification = specification.and(buildRangeSpecification(criteria.getBirthdate(), Student_.birthdate));
+                }
+                if (criteria.getSpecialtyName() != null) {
+                    specification = specification.and(buildSpecification(criteria.getSpecialtyName(),
+                            root -> root.join(Student_.specialty, JoinType.LEFT).get(Nomenclature_.name)));
+                }
+                if (criteria.getFirstLastName() != null) {
+                    specification = specification.and(buildStringSpecification(criteria.getFirstLastName(), Student_.firstLastName));
+                }
+                if (criteria.getSecondLastName() != null) {
+                    specification = specification.and(buildStringSpecification(criteria.getSecondLastName(), Student_.secondLastName));
+                }
+                if (criteria.getClassRoom() !=null) {
+                    specification = specification.and(buildStringSpecification(criteria.getClassRoom(), Student_.classRoom));
+                }
+                if (criteria.getKindName() != null) {
+                    specification = specification.and(buildSpecification(criteria.getKindName(),
+                            root -> root.join(Student_.kind, JoinType.LEFT).get(Nomenclature_.name)));
+                }
+                if (criteria.getResidence() != null) {
+                    specification = specification.and(buildStringSpecification(criteria.getResidence(), Student_.residence));
+                }
+                if (criteria.getStudyCenterName() != null) {
+                    specification = specification.and(buildSpecification(criteria.getStudyCenterName(),
+                            root -> root.join(Student_.studyCenter, JoinType.LEFT).get(Nomenclature_.name)));
+                }
+                if (criteria.getUniversityYear() != null) {
+                    specification = specification.and(buildRangeSpecification(criteria.getUniversityYear(), Student_.universityYear));
+                }
+            } else {
+                if (criteria.getId() != null) {
+                    specification = specification.or(buildSpecification(criteria.getId(), Student_.id));
+                }
+                if (criteria.getCi() != null) {
+                    specification = specification.or(buildStringSpecification(criteria.getCi(), Student_.ci));
+                }
+                if (criteria.getAge() != null) {
+                    specification = specification.or(buildRangeSpecification(criteria.getAge(), Student_.age));
+                }
+                if (criteria.getName() != null) {
+                    specification = specification.or(buildStringSpecification(criteria.getName(), Student_.name));
+                }
+                if (criteria.getRace() != null) {
+                    specification = specification.or(buildStringSpecification(criteria.getRace(), Student_.race));
+                }
+                if (criteria.getEmail() != null) {
+                    specification = specification.or(buildStringSpecification(criteria.getEmail(), Student_.email));
+                }
+                if (criteria.getGender() != null) {
+                    specification = specification.or(buildSpecification(criteria.getGender(), Student_.gender));
+                }
+                if (criteria.getAddress() != null) {
+                    specification = specification.or(buildStringSpecification(criteria.getAddress(), Student_.address));
+                }
+                if (criteria.getDistrictName() != null) {
+                    specification = specification.or(buildSpecification(criteria.getDistrictName(),
+                            root -> root.join(Student_.district, JoinType.LEFT).get(Nomenclature_.name)));
+                }
+                if (criteria.getBirthdate() != null) {
+                    specification = specification.or(buildRangeSpecification(criteria.getBirthdate(), Student_.birthdate));
+                }
+                if (criteria.getSpecialtyName() != null) {
+                    specification = specification.or(buildSpecification(criteria.getSpecialtyName(),
+                            root -> root.join(Student_.specialty, JoinType.LEFT).get(Nomenclature_.name)));
+                }
+                if (criteria.getFirstLastName() != null) {
+                    specification = specification.or(buildStringSpecification(criteria.getFirstLastName(), Student_.firstLastName));
+                }
+                if (criteria.getSecondLastName() != null) {
+                    specification = specification.or(buildStringSpecification(criteria.getSecondLastName(), Student_.secondLastName));
+                }
+                if (criteria.getClassRoom() !=null) {
+                    specification = specification.or(buildStringSpecification(criteria.getClassRoom(), Student_.classRoom));
+                }
+                if (criteria.getKindName() != null) {
+                    specification = specification.or(buildSpecification(criteria.getKindName(),
+                            root -> root.join(Student_.kind, JoinType.LEFT).get(Nomenclature_.name)));
+                }
+                if (criteria.getResidence() != null) {
+                    specification = specification.or(buildStringSpecification(criteria.getResidence(), Student_.residence));
+                }
+                if (criteria.getStudyCenterName() != null) {
+                    specification = specification.or(buildSpecification(criteria.getStudyCenterName(),
+                            root -> root.join(Student_.studyCenter, JoinType.LEFT).get(Nomenclature_.name)));
+                }
+                if (criteria.getUniversityYear() != null) {
+                    specification = specification.or(buildRangeSpecification(criteria.getUniversityYear(), Student_.universityYear));
+                }
+            }
+        }
+        return specification;
     }
 }

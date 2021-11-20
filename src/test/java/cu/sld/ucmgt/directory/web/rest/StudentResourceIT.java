@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -451,5 +452,257 @@ public class StudentResourceIT extends PersonIT {
                 .andExpect(jsonPath("$.[*].gender").value(hasItem(DEFAULT_GENDER.toString())))
                 .andExpect(jsonPath("$.[*].firstLastName").value(hasItem(DEFAULT_FIRST_LAST_NAME)))
                 .andExpect(jsonPath("$.[*].secondLastName").value(hasItem(DEFAULT_SECOND_LAST_NAME)));
+    }
+
+    /**
+     * Executes the search with And operator and checks that the default entity is returned.
+     */
+    private void defaultStudentShouldBeFoundWithAndOperator(String filter) throws Exception {
+        restMockMvc.perform(get("/api/students/filtered/and?sort=id,desc&" + filter))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$.[*].id").value(hasItem(student.getId().toString())))
+                .andExpect(jsonPath("$.[*].ci").value(hasItem(DEFAULT_CI)))
+                .andExpect(jsonPath("$.[*].age").value(hasItem(DEFAULT_AGE)))
+                .andExpect(jsonPath("$.[*].name").value(hasItem(DEFAULT_NAME)))
+                .andExpect(jsonPath("$.[*].race").value(hasItem(DEFAULT_RACE)))
+                .andExpect(jsonPath("$.[*].email").value(hasItem(DEFAULT_EMAIL)))
+                .andExpect(jsonPath("$.[*].address").value(hasItem(DEFAULT_ADDRESS)))
+                .andExpect(jsonPath("$.[*].classRoom").value(hasItem(DEFAULT_CLASSROOM)))
+                .andExpect(jsonPath("$.[*].residence").value(hasItem(DEFAULT_RESIDENCE)))
+                .andExpect(jsonPath("$.[*].gender").value(hasItem(DEFAULT_GENDER.toString())))
+                .andExpect(jsonPath("$.[*].firstLastName").value(hasItem(DEFAULT_FIRST_LAST_NAME)))
+                .andExpect(jsonPath("$.[*].birthdate").value(hasItem(DEFAULT_BIRTHDATE.toString())))
+                .andExpect(jsonPath("$.[*].universityYear").value(hasItem(DEFAULT_UNIVERSITY_YEAR)))
+                .andExpect(jsonPath("$.[*].secondLastName").value(hasItem(DEFAULT_SECOND_LAST_NAME)));
+    }
+
+    /**
+     * Executes the search with And operator and checks that the default entity is not returned.
+     */
+    private void defaultStudentShouldNotBeFoundWithAndOperator(String filter) throws Exception {
+        restMockMvc.perform(get("/api/students/filtered/and?sort=id,desc&" + filter))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    private void defaultStudentShouldBeFoundWithOrOperator(String filter) throws Exception {
+        restMockMvc.perform(get("/api/students/filtered/or?sort=id,desc&" + filter))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$.[*].id").value(hasItem(student.getId().toString())))
+                .andExpect(jsonPath("$.[*].ci").value(hasItem(DEFAULT_CI)))
+                .andExpect(jsonPath("$.[*].age").value(hasItem(DEFAULT_AGE)))
+                .andExpect(jsonPath("$.[*].name").value(hasItem(DEFAULT_NAME)))
+                .andExpect(jsonPath("$.[*].race").value(hasItem(DEFAULT_RACE)))
+                .andExpect(jsonPath("$.[*].email").value(hasItem(DEFAULT_EMAIL)))
+                .andExpect(jsonPath("$.[*].address").value(hasItem(DEFAULT_ADDRESS)))
+                .andExpect(jsonPath("$.[*].classRoom").value(hasItem(DEFAULT_CLASSROOM)))
+                .andExpect(jsonPath("$.[*].residence").value(hasItem(DEFAULT_RESIDENCE)))
+                .andExpect(jsonPath("$.[*].gender").value(hasItem(DEFAULT_GENDER.toString())))
+                .andExpect(jsonPath("$.[*].firstLastName").value(hasItem(DEFAULT_FIRST_LAST_NAME)))
+                .andExpect(jsonPath("$.[*].birthdate").value(hasItem(DEFAULT_BIRTHDATE.toString())))
+                .andExpect(jsonPath("$.[*].universityYear").value(hasItem(DEFAULT_UNIVERSITY_YEAR)))
+                .andExpect(jsonPath("$.[*].secondLastName").value(hasItem(DEFAULT_SECOND_LAST_NAME)));
+    }
+
+    private void defaultStudentShouldNotBeFoundWithOrOperator(String filter) throws Exception {
+        restMockMvc.perform(get("/api/students/filtered/or?sort=id,desc&" + filter))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    @Transactional
+    public void getStudentsByIdFiltering() throws Exception {
+        // Initialize the database
+        em.persist(student);
+        em.flush();
+
+        UUID id = student.getId();
+
+        defaultStudentShouldBeFoundWithAndOperator("id.equals=" + id);
+        defaultStudentShouldBeFoundWithOrOperator("id.equals=" + id);
+
+        defaultStudentShouldNotBeFoundWithAndOperator("id.notEquals=" + id);
+        defaultStudentShouldNotBeFoundWithOrOperator("id.notEquals=" + id);
+
+
+        defaultStudentShouldBeFoundWithAndOperator("id.in=" + id + "," + UUID.randomUUID().toString());
+        defaultStudentShouldBeFoundWithOrOperator("id.in=" + id + "," + UUID.randomUUID().toString());
+
+        defaultStudentShouldNotBeFoundWithAndOperator("id.notIn=" + id + "," + UUID.randomUUID().toString());
+        defaultStudentShouldNotBeFoundWithOrOperator("id.notIn=" + id + "," + UUID.randomUUID().toString());
+
+        defaultStudentShouldBeFoundWithAndOperator("id.specified=true");
+        defaultStudentShouldBeFoundWithOrOperator("id.specified=true");
+
+        defaultStudentShouldNotBeFoundWithAndOperator("id.specified=false");
+        defaultStudentShouldNotBeFoundWithOrOperator("id.specified=false");
+    }
+
+    @Test
+    @Transactional
+    void getAllStudentsByBirthdateIsEqualToSomething() throws Exception {
+        // Initialize the database
+        em.persist(student);
+        em.flush();
+
+        // Get all the studentList where birthdate equals to UPDATE_BIRTHDATE
+        defaultStudentShouldBeFoundWithAndOperator("birthdate.equals=" + DEFAULT_BIRTHDATE);
+        defaultStudentShouldBeFoundWithOrOperator("birthdate.equals=" + DEFAULT_BIRTHDATE);
+
+        // Get all the studentList where birthdate equals to DEFAULT_BIRTHDATE
+        defaultStudentShouldNotBeFoundWithAndOperator("birthdate.equals=" + UPDATE_BIRTHDATE);
+        defaultStudentShouldNotBeFoundWithOrOperator("birthdate.equals=" + UPDATE_BIRTHDATE);
+    }
+
+    @Test
+    @Transactional
+    void getAllStudentsByBirthdateIsNotEqualToSomething() throws Exception {
+        // Initialize the database
+        em.persist(student);
+        em.flush();
+
+        // Get all the studentList where birthdate not equals to UPDATE_BIRTHDATE
+        defaultStudentShouldNotBeFoundWithAndOperator("birthdate.notEquals=" + DEFAULT_BIRTHDATE);
+        defaultStudentShouldNotBeFoundWithOrOperator("birthdate.notEquals=" + DEFAULT_BIRTHDATE);
+
+        // Get all the studentList where birthdate not equals to DEFAULT_BIRTHDATE
+        defaultStudentShouldBeFoundWithAndOperator("birthdate.notEquals=" + UPDATE_BIRTHDATE);
+        defaultStudentShouldBeFoundWithOrOperator("birthdate.notEquals=" + UPDATE_BIRTHDATE);
+    }
+
+    @Test
+    @Transactional
+    void getAllStudentsByBirthdateIsIsInShouldWork() throws Exception {
+        // Initialize the database
+        em.persist(student);
+        em.flush();
+
+        // Get all the studentList where name not equals to UPDATE_BIRTHDATE
+        defaultStudentShouldNotBeFoundWithAndOperator("birthdate.in=" + UPDATE_BIRTHDATE + "," + LocalDate.now());
+        defaultStudentShouldNotBeFoundWithOrOperator("birthdate.in=" + UPDATE_BIRTHDATE + "," + LocalDate.now());
+
+        // Get all the studentList where name not equals to DEFAULT_BIRTHDATE
+        defaultStudentShouldBeFoundWithAndOperator("birthdate.in=" + UPDATE_BIRTHDATE + "," + DEFAULT_BIRTHDATE);
+        defaultStudentShouldBeFoundWithOrOperator("birthdate.in=" + UPDATE_BIRTHDATE + "," + DEFAULT_BIRTHDATE);
+    }
+
+    @Test
+    @Transactional
+    void getAllStudentsByBirthdateIsGreaterThanShouldWork() throws Exception {
+        // Initialize the database
+        em.persist(student);
+        em.flush();
+
+        // Get all the studentList where birthdate not equals to UPDATE_BIRTHDATE
+        defaultStudentShouldNotBeFoundWithAndOperator("birthdate.greaterThan=" + UPDATE_BIRTHDATE);
+        defaultStudentShouldNotBeFoundWithOrOperator("birthdate.greaterThan=" + UPDATE_BIRTHDATE);
+
+        // Get all the studentList where birthdate not equals to DEFAULT_BIRTHDATE
+        defaultStudentShouldBeFoundWithAndOperator("birthdate.greaterThan=" + DEFAULT_BIRTHDATE.minusDays(1L));
+        defaultStudentShouldBeFoundWithOrOperator("birthdate.greaterThan=" + DEFAULT_BIRTHDATE.minusDays(1L));
+    }
+
+    @Test
+    @Transactional
+    void getAllStudentsByGenderIsEqualShouldWork() throws Exception {
+        // Initialize the database
+        em.persist(student);
+        em.flush();
+
+        // Get all the studentList where gender not equals to UPDATE_GENDER
+        defaultStudentShouldNotBeFoundWithAndOperator("gender.equals=" + UPDATE_GENDER);
+        defaultStudentShouldNotBeFoundWithOrOperator("gender.equals=" + UPDATE_GENDER);
+
+        // Get all the studentList where gender equals to DEFAULT_GENDER
+        defaultStudentShouldBeFoundWithAndOperator("gender.equals=" + DEFAULT_GENDER);
+        defaultStudentShouldBeFoundWithOrOperator("gender.equals=" + DEFAULT_GENDER);
+    }
+
+    @Test
+    @Transactional
+    void getAllStudentsByStudyCenterNameShouldWork() throws Exception {
+        // Initialize the database
+        String CENTER = "IPVCE";
+        Nomenclature studyCenter = new Nomenclature();
+        studyCenter.setName(CENTER);
+        studyCenter.setDiscriminator(NomenclatureType.CENTRO_ESTUDIO);
+        studyCenter.setDescription("High's School");
+        em.persist(studyCenter);
+        student.setStudyCenter(studyCenter);
+        em.persist(student);
+        em.flush();
+
+        // Get all the studentList where name not equals to CENTER
+        defaultStudentShouldNotBeFoundWithAndOperator("studyCenterName.equals=" + CENTER.concat("not equals"));
+        defaultStudentShouldNotBeFoundWithOrOperator("studyCenterName.equals=" + CENTER.concat("not equals"));
+
+        // Get all the studentList where name  equals to CENTER
+        defaultStudentShouldBeFoundWithAndOperator("studyCenterName.equals=" + CENTER);
+        defaultStudentShouldBeFoundWithOrOperator("studyCenterName.equals=" + CENTER);
+    }
+
+    @Test
+    @Transactional
+    void getAllStudentsByAgeIsEqualShouldWork() throws Exception {
+        // Initialize the database
+        em.persist(student);
+        em.flush();
+
+        // Get all the studentList where age not equals to UPDATE_AGE
+        defaultStudentShouldNotBeFoundWithAndOperator("age.equals=" + UPDATE_AGE);
+        defaultStudentShouldNotBeFoundWithOrOperator("age.equals=" + UPDATE_AGE);
+
+        // Get all the studentList where age equals to DEFAULT_AGE
+        defaultStudentShouldBeFoundWithAndOperator("age.equals=" + DEFAULT_AGE);
+        defaultStudentShouldBeFoundWithOrOperator("age.equals=" + DEFAULT_AGE);
+    }
+
+    @Test
+    @Transactional
+    void getAllStudentsByKindNameShouldWork() throws Exception {
+        // Initialize the database
+        String CENTER = "TIPO";
+        Nomenclature kind = new Nomenclature();
+        kind.setName(CENTER);
+        kind.setDiscriminator(NomenclatureType.TIPO);
+        kind.setDescription("Student kind");
+        em.persist(kind);
+
+        student.setKind(kind);
+        em.persist(student);
+        em.flush();
+
+        // Get all the studentList where name not equals to CENTER
+        defaultStudentShouldNotBeFoundWithAndOperator("kindName.equals=" + CENTER.concat("not equals"));
+        defaultStudentShouldNotBeFoundWithOrOperator("kindName.equals=" + CENTER.concat("not equals"));
+
+        // Get all the studentList where name  equals to CENTER
+        defaultStudentShouldBeFoundWithAndOperator("kindName.equals=" + CENTER);
+        defaultStudentShouldBeFoundWithOrOperator("kindName.equals=" + CENTER);
+    }
+
+    @Test
+    @Transactional
+    void searchAllStudentsByAllSearchParametersExceptAgeAndBirthdateAndGenderShouldWork() throws Exception {
+        // Initialize the database
+        em.persist(student);
+        em.flush();
+
+        String filter = "ci.contains=paramName&name.contains=paramName&race.contains=paramName&email.contains=paramName" +
+                 "&address.contains=paramName&districtName.contains=paramName&kindName.contains=paramName"+
+                "&firstLastName.contains=paramName&secondLastName.contains=paramName&studyCenter.contains=paramName"+
+                "&specialtyName.contains=paramName&page=0&size=20&sort=name,asc";
+        // Get all the studentList where ci, registerNumber, name, studyCenterName, kindName and rest  not equals to UPDATE_NAME
+        defaultStudentShouldNotBeFoundWithOrOperator(filter.replaceAll("paramName", UPDATE_NAME));
+
+        // Get all the studentList where ci, registerNumber, name, studyCenterName, kindName and rest equals to DEFAULT_NAME
+        defaultStudentShouldBeFoundWithOrOperator(filter.replaceAll("paramName", DEFAULT_NAME));
     }
 }
