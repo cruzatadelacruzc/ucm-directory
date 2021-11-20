@@ -1,5 +1,6 @@
 package cu.sld.ucmgt.directory.service.dto;
 
+import com.google.common.base.Objects;
 import lombok.Data;
 
 import javax.validation.constraints.Min;
@@ -19,18 +20,23 @@ public class StudentDTO extends PersonDTO {
     private String residence;
     private UUID kindId;
     private UUID studyCenterId;
+    private String kindName;
+    private String studyCenterName;
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof StudentDTO)) return false;
-
-        return id != null && id.equals(((StudentDTO) o).id);
+        if (!super.equals(o)) return false;
+        StudentDTO that = (StudentDTO) o;
+        return Objects.equal(classRoom, that.classRoom) &&
+                Objects.equal(universityYear, that.universityYear) &&
+                Objects.equal(residence, that.residence);
     }
 
     @Override
     public int hashCode() {
-        return 31;
+        return Objects.hashCode(super.hashCode(), classRoom, universityYear, residence);
     }
 
     @Override
@@ -39,17 +45,25 @@ public class StudentDTO extends PersonDTO {
                 "classRoom='" + classRoom + '\'' +
                 ", universityYear=" + universityYear +
                 ", residence='" + residence + '\'' +
+                ", kindId=" + kindId +
+                ", studyCenterId=" + studyCenterId +
+                ", kindName='" + kindName + '\'' +
+                ", studyCenterName='" + studyCenterName + '\'' +
                 ", id=" + id +
                 ", ci='" + ci + '\'' +
                 ", name='" + name + '\'' +
+                ", address='" + address + '\'' +
                 ", firstLastName='" + firstLastName + '\'' +
                 ", secondLastName='" + secondLastName + '\'' +
                 ", email='" + email + '\'' +
                 ", gender=" + gender +
                 ", age=" + age +
-                ", birthdate=" + birthdate +
                 ", race='" + race + '\'' +
                 ", districtId=" + districtId +
-                '}';
+                ", specialtyId=" + specialtyId +
+                ", birthdate=" + birthdate +
+                ", districtName='" + districtName + '\'' +
+                ", specialtyName='" + specialtyName + '\'' +
+                "} " + super.toString();
     }
 }

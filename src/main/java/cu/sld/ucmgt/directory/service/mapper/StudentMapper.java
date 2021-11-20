@@ -23,6 +23,10 @@ public interface StudentMapper extends EntityMapper<StudentDTO, Student>{
     @Mapping(source = "district.id", target = "districtId")
     @Mapping(source = "specialty.id", target = "specialtyId")
     @Mapping(source = "studyCenter.id", target = "studyCenterId")
+    @Mapping(source = "kind.name", target = "kindName")
+    @Mapping(source = "district.name", target = "districtName")
+    @Mapping(source = "specialty.name", target = "specialtyName")
+    @Mapping(source = "studyCenter.name", target = "studyCenterName")
     StudentDTO toDto(Student entity);
 
     default Student fromId(UUID id) {
