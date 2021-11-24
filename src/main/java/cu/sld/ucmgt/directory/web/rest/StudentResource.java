@@ -15,14 +15,17 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -55,7 +58,7 @@ public class StudentResource {
         return ResponseEntity.created(new URI("/api/students/" + studentSaved.getId()))
                 .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
                         true, ENTITY_NAME,
-                        studentSaved.getId().toString()))
+                        studentSaved.getName()))
                 .body(studentSaved);
     }
 
@@ -78,7 +81,7 @@ public class StudentResource {
         return ResponseEntity.ok()
                 .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
                         true, ENTITY_NAME,
-                        studentSaved.getId().toString()))
+                        studentSaved.getName()))
                 .body(studentSaved);
     }
 
@@ -153,5 +156,41 @@ public class StudentResource {
                 page
         );
         return ResponseEntity.ok().headers(headers).body(page.getContent());
+    }
+
+    /**
+     * {@code PATCH  /students/:id} : Partial updates given fields of an existing student, field will ignore if it is null
+     *
+     * @param id the id of the studentDTO to save.
+     * @param studentDTO the cardDTO to update.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated studentDTO,
+     * or with status {@code 400 (Bad Request)} if the studentDTO is not valid,
+     * or with status {@code 404 (Not Found)} if the studentDTO is not found,
+     * or with status {@code 500 (Internal Server Error)} if the cardDTO couldn't be updated.
+     */
+    @PatchMapping(value = "/students/{id}", consumes = "application/merge-patch+json")
+    public ResponseEntity<StudentDTO> updatePersonalData(
+            @PathVariable(value = "id", required = false) final UUID id,
+            @NotNull @RequestBody StudentDTO studentDTO
+    ) {
+        if (studentDTO.getId() == null) {
+            throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idnull", "idnull");
+        }
+
+        if (!Objects.equals(id, studentDTO.getId())) {
+            throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid", "idnull");
+        }
+
+        Boolean exists = service.exists(id);
+        if (!exists) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        } else {
+            StudentDTO updatedStudent = service.partialUpdate(studentDTO);
+            return ResponseEntity.ok()
+                    .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
+                            true, ENTITY_NAME,
+                            updatedStudent.getName()))
+                    .body(updatedStudent);
+        }
     }
 }

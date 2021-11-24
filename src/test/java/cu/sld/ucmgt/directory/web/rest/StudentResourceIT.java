@@ -1,5 +1,7 @@
 package cu.sld.ucmgt.directory.web.rest;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import cu.sld.ucmgt.directory.DirectoryApp;
 import cu.sld.ucmgt.directory.TestUtil;
 import cu.sld.ucmgt.directory.config.TestSecurityConfiguration;
@@ -7,6 +9,8 @@ import cu.sld.ucmgt.directory.domain.Employee;
 import cu.sld.ucmgt.directory.domain.Nomenclature;
 import cu.sld.ucmgt.directory.domain.NomenclatureType;
 import cu.sld.ucmgt.directory.domain.Student;
+import cu.sld.ucmgt.directory.domain.elasticsearch.StudentIndex;
+import cu.sld.ucmgt.directory.repository.search.StudentSearchRepository;
 import cu.sld.ucmgt.directory.service.dto.StudentDTO;
 import cu.sld.ucmgt.directory.service.mapper.StudentMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +23,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
@@ -59,10 +64,17 @@ public class StudentResourceIT extends PersonIT {
     private EntityManager em;
 
     @Autowired
+    private StudentSearchRepository searchRepository;
+
+    @Autowired
     private MockMvc restMockMvc;
+
+    private ObjectMapper objectMapper;
 
     @BeforeEach
     public void initTest() {
+        objectMapper = new ObjectMapper();
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         student = new Student();
         student.setCi(DEFAULT_CI);
         student.setAge(DEFAULT_AGE);
@@ -704,5 +716,61 @@ public class StudentResourceIT extends PersonIT {
 
         // Get all the studentList where ci, registerNumber, name, studyCenterName, kindName and rest equals to DEFAULT_NAME
         defaultStudentShouldBeFoundWithOrOperator(filter.replaceAll("paramName", DEFAULT_NAME));
+    }
+
+    @Test
+    @Transactional
+    void updatePersonalData() throws Exception {
+        // Initialize the database
+        searchRepository.deleteAll();
+
+        StudentDTO studentToSaveDTO = mapper.toDto(student);
+
+        MvcResult resultStudent = restMockMvc.perform(post("/api/students").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtil.convertObjectToJsonBytes(studentToSaveDTO)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String studentId = objectMapper.readTree(resultStudent.getResponse().getContentAsByteArray()).get("id").asText();
+        assertThat(studentId).isNotNull();
+
+        int databaseSizeBeforeUpdate = TestUtil.findAll(em, Student.class).size();
+
+        // Update the Student
+        Student updatedStudent = em.find(Student.class, UUID.fromString(studentId));
+        // Disconnect from session so that the updates on updatedStudent are not directly saved in db
+        em.detach(updatedStudent);
+
+        updatedStudent.setName(UPDATE_NAME);
+        updatedStudent.setResidence(UPDATE_RESIDENCE);
+        updatedStudent.setClassRoom(UPDATE_CLASSROOM);
+        updatedStudent.setFirstLastName(UPDATE_FIRST_LAST_NAME);
+
+        StudentDTO studentDTO = mapper.toDto(updatedStudent);
+
+        restMockMvc.perform(patch("/api/students/{id}", studentDTO.getId()).with(csrf())
+                .contentType("application/merge-patch+json")
+                .content(TestUtil.convertObjectToJsonBytes(studentDTO)))
+                .andExpect(status().isOk());
+
+        // Validate the Student in the database
+        List<Student> students = TestUtil.findAll(em, Student.class);
+        assertThat(students).hasSize(databaseSizeBeforeUpdate);
+        Student testStudent = students.get(students.size() -1);
+        assertThat(testStudent.getName()).isEqualTo(UPDATE_NAME);
+        assertThat(testStudent.getResidence()).isEqualTo(UPDATE_RESIDENCE);
+        assertThat(testStudent.getClassRoom()).isEqualTo(UPDATE_CLASSROOM);
+        assertThat(testStudent.getFirstLastName()).isEqualTo(UPDATE_FIRST_LAST_NAME);
+
+        // Validate the StudentIndex
+        Iterable<StudentIndex> studentIndices = searchRepository.findAll();
+        assertThat(studentIndices).hasSize(databaseSizeBeforeUpdate);
+        StudentIndex studentIndex =  studentIndices.iterator().next();
+        assertThat(studentIndex.getName()).isEqualTo(UPDATE_NAME);
+        assertThat(studentIndex.getEmail()).isEqualTo(DEFAULT_EMAIL);
+        assertThat(studentIndex.getResidence()).isEqualTo(UPDATE_RESIDENCE);
+        assertThat(studentIndex.getClassRoom()).isEqualTo(UPDATE_CLASSROOM);
+        assertThat(studentIndex.getFirstLastName()).isEqualTo(UPDATE_FIRST_LAST_NAME);
     }
 }

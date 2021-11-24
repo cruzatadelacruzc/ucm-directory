@@ -52,6 +52,15 @@ public class StudentService extends QueryService<Student>{
     private final NomenclatureRepository nomenclatureRepository;
 
     /**
+     * Check if student exists
+     * @param studentId of student
+     * @return boolean
+     */
+    public Boolean exists(UUID studentId) {
+        return repository.existsById(studentId);
+    }
+
+    /**
      * Save a student.
      *
      * @param studentDTO the entity to save.
@@ -87,6 +96,25 @@ public class StudentService extends QueryService<Student>{
         log.debug("Request to delete Student : {}", uid);
         repository.deleteById(uid);
         searchRepository.deleteById(uid);
+    }
+
+    /**
+     * Partially update a student, only personal data
+     *
+     * @param studentDto the entity to update partially.
+     * @return the persisted entity.
+     */
+    public StudentDTO partialUpdate(StudentDTO studentDto){
+        Optional<Student> existingStudent =  repository.findById(studentDto.getId());
+        if (existingStudent.isPresent()) {
+            mapper.partialUpdate(studentDto, existingStudent.get());
+            repository.save(existingStudent.get());
+            StudentIndex studentIndex = studentIndexMapper.toIndex(existingStudent.get());
+            searchRepository.save(studentIndex);
+            return mapper.toDto(existingStudent.get());
+        } else {
+            return null;
+        }
     }
 
     /**
