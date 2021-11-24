@@ -3,9 +3,7 @@ package cu.sld.ucmgt.directory.service.mapper;
 import cu.sld.ucmgt.directory.domain.Employee;
 import cu.sld.ucmgt.directory.domain.Phone;
 import cu.sld.ucmgt.directory.service.dto.EmployeeDTO;
-import org.mapstruct.IterableMapping;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
+import org.mapstruct.*;
 
 import java.util.Set;
 import java.util.UUID;
@@ -44,6 +42,12 @@ public interface EmployeeMapper extends EntityMapper<EmployeeDTO, Employee> {
     @Mapping(source = "scientificDegree.name", target = "scientificDegreeName")
     @Mapping(source = "teachingCategory.name", target = "teachingCategoryName")
     EmployeeDTO toDto(Employee entity);
+
+
+    @Mapping(source = "id", target = "id")
+    @Mapping(target = "phones", ignore = true)
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    void partialUpdate(EmployeeDTO dto, @MappingTarget Employee employee);
 
     @IterableMapping(elementTargetType = String.class)
     Set<String> mapToPhoneToString(Set<Phone> phones);

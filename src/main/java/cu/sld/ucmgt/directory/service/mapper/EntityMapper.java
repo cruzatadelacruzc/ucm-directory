@@ -1,5 +1,10 @@
 package cu.sld.ucmgt.directory.service.mapper;
 
+import org.mapstruct.BeanMapping;
+import org.mapstruct.MappingTarget;
+import org.mapstruct.Named;
+import org.mapstruct.NullValuePropertyMappingStrategy;
+
 import java.util.List;
 import java.util.Set;
 
@@ -22,5 +27,9 @@ public interface EntityMapper<D,E> {
     List<D> toDtos(List<E> entities);
 
     Set<D> toDtos(Set<E> entities);
+
+    @Named("partialUpdate")
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    void partialUpdate(D dto, @MappingTarget E entity);
 
 }
