@@ -60,7 +60,7 @@ public class PhoneResource {
 
         PhoneDTO phoneSaved = service.save(phoneDTO);
         return ResponseEntity.created(new URI("/api/phones/" + phoneDTO.getId()))
-                .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
+                .headers(HeaderUtil.createEntityExecutedAlert(applicationName,
                         true, ENTITY_NAME,
                         phoneSaved.getNumber()))
                 .body(phoneSaved);

@@ -58,7 +58,7 @@ public class NomenclatureResource {
 
         NomenclatureDTO nomenclatureSaved = service.create(nomenclatureDTO);
         return ResponseEntity.created(new URI("/api/nomenclatures/" + nomenclatureSaved.getId()))
-                .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
+                .headers(HeaderUtil.createEntityExecutedAlert(applicationName,
                         true, ENTITY_NAME,
                         nomenclatureSaved.getName()))
                 .body(nomenclatureSaved);

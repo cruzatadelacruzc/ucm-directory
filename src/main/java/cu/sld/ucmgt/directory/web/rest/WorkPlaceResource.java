@@ -54,7 +54,7 @@ public class WorkPlaceResource {
         }
         WorkPlaceDTO workPlaceSaved = service.create(workPlaceDTO);
         return ResponseEntity.created(new URI("/api/workplaces/" + workPlaceSaved.getId()))
-                .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
+                .headers(HeaderUtil.createEntityExecutedAlert(applicationName,
                         true, ENTITY_NAME,
                         workPlaceSaved.getName()))
                 .body(workPlaceSaved);

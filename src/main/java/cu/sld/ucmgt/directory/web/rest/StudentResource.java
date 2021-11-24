@@ -56,7 +56,7 @@ public class StudentResource {
         }
         StudentDTO studentSaved = service.save(studentDTO);
         return ResponseEntity.created(new URI("/api/students/" + studentSaved.getId()))
-                .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
+                .headers(HeaderUtil.createEntityExecutedAlert(applicationName,
                         true, ENTITY_NAME,
                         studentSaved.getName()))
                 .body(studentSaved);

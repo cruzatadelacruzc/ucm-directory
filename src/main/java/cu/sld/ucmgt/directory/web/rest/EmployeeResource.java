@@ -57,7 +57,7 @@ public class EmployeeResource {
         }
         EmployeeDTO employeeSaved = service.create(employeeDTO);
         return ResponseEntity.created(new URI("/api/employees/" + employeeSaved.getId()))
-                .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
+                .headers(HeaderUtil.createEntityExecutedAlert(applicationName,
                         true, ENTITY_NAME,
                         employeeSaved.getName()))
                 .body(employeeSaved);
