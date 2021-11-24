@@ -82,6 +82,7 @@ public class Employee extends Person implements Serializable {
     private Nomenclature profession;
 
     @OneToMany(mappedBy = "employee", orphanRemoval = true, cascade = CascadeType.PERSIST)
+    @JsonIgnoreProperties(value = { "employee", "workPlace" }, allowSetters = true)
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     private Set<Phone> phones = new HashSet<>();
 
