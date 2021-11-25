@@ -1,5 +1,7 @@
 package cu.sld.ucmgt.directory.web.rest;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import cu.sld.ucmgt.directory.DirectoryApp;
 import cu.sld.ucmgt.directory.TestUtil;
 import cu.sld.ucmgt.directory.config.TestSecurityConfiguration;
@@ -85,16 +87,17 @@ public class PhoneResourceIT {
     @Autowired
     private WorkPlaceSearchRepository workPlaceSearchRepository;
 
-    private static final String ENDPOINT_RESPONSE_PARAMETERS_KEY = "X-directoryApp-params";
-
     @Autowired
     private MockMvc restMockMvc;
+
+    private ObjectMapper objectMapper;
 
     @BeforeEach
     public void initTest() {
         // clear all indices
         searchRepository.deleteAll();
-
+        objectMapper = new ObjectMapper();
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         phone = new Phone();
         phone.setNumber(DEFAULT_NUMBER);
         phone.setActive(DEFAULT_ACTIVE);
@@ -146,7 +149,7 @@ public class PhoneResourceIT {
                 .andExpect(status().isCreated())
                 .andReturn();
 
-        String workPlaceId = resultWorkPlace.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        String workPlaceId = objectMapper.readTree(resultWorkPlace.getResponse().getContentAsByteArray()).get("id").asText();
         assertThat(workPlaceId).isNotNull();
 
         int databaseSizeBeforeCreate = TestUtil.findAll(em, Phone.class).size();
@@ -188,7 +191,7 @@ public class PhoneResourceIT {
                 .andExpect(status().isCreated())
                 .andReturn();
 
-        String workPlaceId = resultWorkPlace.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        String workPlaceId = objectMapper.readTree(resultWorkPlace.getResponse().getContentAsByteArray()).get("id").asText();
         assertThat(workPlaceId).isNotNull();
 
         int databaseSizeBeforeCreate = TestUtil.findAll(em, Phone.class).size();
@@ -200,7 +203,7 @@ public class PhoneResourceIT {
                 .andExpect(status().isCreated())
                 .andReturn();
 
-        String phoneId = resultPhone.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        String phoneId = objectMapper.readTree(resultPhone.getResponse().getContentAsByteArray()).get("id").asText();
         assertThat(phoneId).isNotNull();
 
         // Update the Phone
@@ -634,7 +637,7 @@ public class PhoneResourceIT {
                 .content(TestUtil.convertObjectToJsonBytes(workPlaceDTO)))
                 .andExpect(status().isCreated())
                 .andReturn();
-        String workPlaceId = resultWorkPlace.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        String workPlaceId = objectMapper.readTree(resultWorkPlace.getResponse().getContentAsByteArray()).get("id").asText();
         assertThat(workPlaceId).isNotNull();
 
         PhoneDTO phoneDTO = mapper.toDto(phone);
@@ -646,7 +649,7 @@ public class PhoneResourceIT {
                 .andExpect(status().isCreated())
                 .andReturn();
 
-        String phoneId = resultPhone.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        String phoneId = objectMapper.readTree(resultPhone.getResponse().getContentAsByteArray()).get("id").asText();
         assertThat(phoneId).isNotNull();
 
         Map<String, Object> switchStatusPhone = new HashMap<>();
@@ -688,7 +691,7 @@ public class PhoneResourceIT {
                 .content(TestUtil.convertObjectToJsonBytes(workPlaceDTO)))
                 .andExpect(status().isCreated())
                 .andReturn();
-        String workPlaceId = resultWorkPlace.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        String workPlaceId = objectMapper.readTree(resultWorkPlace.getResponse().getContentAsByteArray()).get("id").asText();
         assertThat(workPlaceId).isNotNull();
 
         PhoneDTO phoneDTO = mapper.toDto(phone);
@@ -699,7 +702,7 @@ public class PhoneResourceIT {
                 .andExpect(status().isCreated())
                 .andReturn();
 
-        String phoneId = resultPhone.getResponse().getHeader(ENDPOINT_RESPONSE_PARAMETERS_KEY);
+        String phoneId = objectMapper.readTree(resultPhone.getResponse().getContentAsByteArray()).get("id").asText();
         assertThat(phoneId).isNotNull();
 
         Map<String, Object> switchStatusPhone = new HashMap<>();
