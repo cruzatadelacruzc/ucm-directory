@@ -91,6 +91,11 @@ public class Employee extends Person implements Serializable {
         phone.setEmployee(null);
     }
 
+    public void addPhone(Phone phone) {
+        this.phones.add(phone);
+        phone.setEmployee(this);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
