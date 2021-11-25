@@ -721,7 +721,7 @@ public class EmployeeResourceIT extends PersonIT {
 
     private Phone createPhoneOfEmployee(Employee employee) {
         Phone phone = new Phone();
-        phone.setNumber(21382103);
+        phone.setNumber("21382103");
         phone.setActive(true);
         phone.setDescription("Cesar's cell");
         phone.setEmployee(employee);
@@ -945,7 +945,7 @@ public class EmployeeResourceIT extends PersonIT {
     public void getEmployee() throws Exception {
         // Initialize the database
         em.persist(employee);
-        int number = 55161416;
+        String number = "55161416";
         Phone phone = new Phone();
         phone.setActive(true);
         phone.setNumber(number);
@@ -1187,7 +1187,7 @@ public class EmployeeResourceIT extends PersonIT {
 
     @Test
     @Transactional
-    void getAllEmployeesByGenderIsGreaterThanShouldWork() throws Exception {
+    void getAllEmployeesByGenderIsEqualShouldWork() throws Exception {
         // Initialize the database
         em.persist(employee);
         em.flush();
@@ -1196,7 +1196,7 @@ public class EmployeeResourceIT extends PersonIT {
         defaultEmployeeShouldNotBeFoundWithAndOperator("gender.equals=" + UPDATE_GENDER);
         defaultEmployeeShouldNotBeFoundWithOrOperator("gender.equals=" + UPDATE_GENDER);
 
-        // Get all the employeeList where gender not equals to DEFAULT_GENDER
+        // Get all the employeeList where gender equals to DEFAULT_GENDER
         defaultEmployeeShouldBeFoundWithAndOperator("gender.equals=" + DEFAULT_GENDER);
         defaultEmployeeShouldBeFoundWithOrOperator("gender.equals=" + DEFAULT_GENDER);
     }
