@@ -823,7 +823,7 @@ public class EmployeeResourceIT extends PersonIT {
         // Initialize the database
         em.persist(employee);
         Phone employeePhone = createPhoneOfEmployee(employee);
-        employee.setPhones(Collections.singleton(employeePhone));
+        employee.addPhone(employeePhone);
         em.flush();
         // Initialize Index
         EmployeeIndex employeeIndex = indexMapper.toIndex(employee);
