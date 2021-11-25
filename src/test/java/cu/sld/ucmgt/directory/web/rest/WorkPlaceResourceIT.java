@@ -302,7 +302,7 @@ public class WorkPlaceResourceIT {
 
     private Phone createPhoneOfWorkPlace(WorkPlace workPlace) {
         Phone phone = new Phone();
-        phone.setNumber(21382103);
+        phone.setNumber("21382103");
         phone.setActive(true);
         phone.setDescription("Maximo's cell");
         phone.setWorkPlace(workPlace);
