@@ -1,11 +1,9 @@
 package cu.sld.ucmgt.directory.service.mapper;
 
 import cu.sld.ucmgt.directory.domain.Employee;
-import cu.sld.ucmgt.directory.domain.Phone;
 import cu.sld.ucmgt.directory.service.dto.EmployeeDTO;
 import org.mapstruct.*;
 
-import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -25,6 +23,7 @@ public interface EmployeeMapper extends EntityMapper<EmployeeDTO, Employee> {
     @Mapping(source = "teachingCategoryId", target = "teachingCategory")
     Employee toEntity(EmployeeDTO dto);
 
+    @Mapping(target = "phones", ignore = true)
     @Mapping(source = "charge.id", target = "chargeId")
     @Mapping(source = "district.id", target = "districtId")
     @Mapping(source = "category.id", target = "categoryId")
@@ -49,15 +48,15 @@ public interface EmployeeMapper extends EntityMapper<EmployeeDTO, Employee> {
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void partialUpdate(EmployeeDTO dto, @MappingTarget Employee employee);
 
-    @IterableMapping(elementTargetType = String.class)
-    Set<String> mapToPhoneToString(Set<Phone> phones);
-
-    default String mapPhoneToInteger(Phone phone) {
-        if (phone == null) {
-            return null;
-        }
-        return phone.getNumber();
-    }
+//    @IterableMapping(elementTargetType = String.class)
+//    Set<String> mapToPhoneToString(Set<Phone> phones);
+//
+//    default String mapPhoneToInteger(Phone phone) {
+//        if (phone == null) {
+//            return null;
+//        }
+//        return phone.getNumber();
+//    }
 
     default Employee fromId(UUID id) {
         if (id == null) {

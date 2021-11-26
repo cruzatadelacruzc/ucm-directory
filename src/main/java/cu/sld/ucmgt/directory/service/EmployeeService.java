@@ -13,6 +13,7 @@ import cu.sld.ucmgt.directory.service.criteria.EmployeeCriteria;
 import cu.sld.ucmgt.directory.service.dto.EmployeeDTO;
 import cu.sld.ucmgt.directory.service.mapper.EmployeeIndexMapper;
 import cu.sld.ucmgt.directory.service.mapper.EmployeeMapper;
+import cu.sld.ucmgt.directory.service.mapper.PhoneMapper;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -46,6 +47,7 @@ import java.util.stream.Collectors;
 public class EmployeeService extends QueryService<Employee> {
 
     private final EmployeeMapper mapper;
+    private final PhoneMapper phoneMapper;
     private final EmployeeRepository repository;
     private final RestHighLevelClient highLevelClient;
     private static final String INDEX_NAME = "employees";
@@ -266,8 +268,11 @@ public class EmployeeService extends QueryService<Employee> {
      */
     @Transactional(readOnly = true)
     public Optional<EmployeeDTO> getEmployee(UUID uid) {
-        log.debug("Request to get Employee : {}", uid);
-        return repository.findEmployeeWithAssociationsById(uid).map(mapper::toDto);
+        return repository.findEmployeeWithAssociationsById(uid).map(employee -> {
+            EmployeeDTO employeeDTO = mapper.toDto(employee);
+            employeeDTO.setPhones(phoneMapper.toDtos(employee.getPhones()));
+            return employeeDTO;
+        });
     }
 
     /**

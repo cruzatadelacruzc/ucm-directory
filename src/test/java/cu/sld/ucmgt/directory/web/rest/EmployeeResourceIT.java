@@ -974,7 +974,7 @@ public class EmployeeResourceIT extends PersonIT {
                 .andExpect(jsonPath("$.endDate").value(DEFAULT_END_DATE.toString()))
                 .andExpect(jsonPath("$.birthdate").value(DEFAULT_BIRTHDATE.toString()))
                 .andExpect(jsonPath("$.isGraduatedBySector").value(DEFAULT_IS_GRADUATE_BY_SECTOR))
-                .andExpect(jsonPath("$.phones[0]").value(number))
+                .andExpect(jsonPath("$.phones[0].number").value(number))
                 .andExpect(jsonPath("$.startDate").value(DEFAULT_START_DATE.toString()));
     }
 
