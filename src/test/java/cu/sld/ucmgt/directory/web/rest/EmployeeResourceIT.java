@@ -869,7 +869,7 @@ public class EmployeeResourceIT extends PersonIT {
         assertThat(phoneId).isNotNull();
 
         Phone phone1 = em.find(Phone.class, UUID.fromString(phoneId));
-        employee.setPhones(Collections.singleton(phone1));
+        employee.addPhone(phone1);
 
         // Delete the employee
         restMockMvc.perform(delete("/api/employees/{id}", employee.getId()).with(csrf())

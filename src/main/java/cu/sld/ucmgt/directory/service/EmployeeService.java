@@ -188,12 +188,13 @@ public class EmployeeService extends QueryService<Employee> {
      */
     public void deleteEmployee(UUID uid) {
         repository.findEmployeeWithAssociationsById(uid).ifPresent(employee -> {
+            List<UUID> phoneIds = employee.getPhones().stream().map(Phone::getId).collect(Collectors.toList());
             new HashSet<>(employee.getPhones()).forEach(employee::removePhone);
             repository.delete(employee);
             EmployeeIndex employeeIndex = searchRepository.findById(employee.getId())
                     .orElseThrow(() -> new NoSuchElementException("EmployeeIndex with ID: " + employee.getId() + " not was found"));
             searchRepository.delete(employeeIndex);
-            List<UUID> phoneIds = employee.getPhones().stream().map(Phone::getId).collect(Collectors.toList());
+
             final RemovedEmployeeIndexEvent removedEmployeeIndexEvent = RemovedEmployeeIndexEvent.builder()
                     .phoneIds(phoneIds)
                     .removedEmployeeIndex(employeeIndex)
