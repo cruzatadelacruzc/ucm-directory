@@ -8,5 +8,5 @@ import java.util.UUID;
 
 public interface CustomNomenclatureRepository {
 
-    Optional<Nomenclature> findNomenclatureWithUniqueNameAndUniqueDiscriminator(String name, NomenclatureType discriminator, UUID id, boolean isParentDistrict);
+    Optional<Nomenclature> findNomenclatureWithUniqueNameAndUniqueDiscriminator(UUID id, String name, NomenclatureType discriminator);
 }

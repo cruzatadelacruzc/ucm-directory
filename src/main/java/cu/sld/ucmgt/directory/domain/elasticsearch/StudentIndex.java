@@ -18,18 +18,12 @@ public class StudentIndex extends PersonIndex {
 
     private String residence;
 
-    private String kind;
-
-    private String studyCenter;
-
     @Override
     public String toString() {
         return "StudentIndex{" +
                 "classRoom='" + classRoom + '\'' +
                 ", universityYear=" + universityYear +
                 ", residence='" + residence + '\'' +
-                ", kind='" + kind + '\'' +
-                ", studyCenter='" + studyCenter + '\'' +
                 ", id=" + id +
                 ", ci='" + ci + '\'' +
                 ", name='" + name + '\'' +

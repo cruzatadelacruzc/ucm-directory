@@ -21,10 +21,8 @@ public class CustomNomenclatureRepositoryImpl implements CustomNomenclatureRepos
     private EntityManager em;
 
     @Override
-    public Optional<Nomenclature> findNomenclatureWithUniqueNameAndUniqueDiscriminator(String name,
-                                                                                       NomenclatureType discriminator,
-                                                                                       UUID id,
-                                                                                       boolean isParentDistrict) {
+    public Optional<Nomenclature> findNomenclatureWithUniqueNameAndUniqueDiscriminator(UUID id, String name,
+                                                                                       NomenclatureType discriminator) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<Nomenclature> query = cb.createQuery(Nomenclature.class);
         Root<Nomenclature> root = query.from(Nomenclature.class);
@@ -33,11 +31,6 @@ public class CustomNomenclatureRepositoryImpl implements CustomNomenclatureRepos
         predicates.add(cb.equal(root.get("discriminator"), discriminator));
         if (id != null) {
             predicates.add(cb.notEqual(root.get("id"), id));
-        }
-        if (isParentDistrict) {
-            predicates.add(cb.isNotNull(root.get("parentDistrict")));
-        } else {
-            predicates.add(cb.isNull(root.get("parentDistrict")));
         }
         query.select(root).where(predicates.toArray(new Predicate[0]));
         return em.createQuery(query).getResultStream().findFirst();

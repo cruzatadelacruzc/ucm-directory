@@ -1,6 +1,6 @@
 package cu.sld.ucmgt.directory.domain;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.google.common.base.Objects;
 import lombok.Data;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -10,7 +10,6 @@ import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
 import java.io.Serializable;
 import java.util.HashSet;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -33,14 +32,6 @@ public class Nomenclature implements Serializable {
 
     @Enumerated(value = EnumType.STRING)
     private NomenclatureType discriminator;
-
-    @ManyToOne
-    @JsonIgnoreProperties(value = "childrenDistrict", allowSetters = true)
-    private Nomenclature parentDistrict;
-
-    @OneToMany(mappedBy = "parentDistrict", orphanRemoval = true, cascade = CascadeType.PERSIST)
-    @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
-    private Set<Nomenclature> childrenDistrict = new HashSet<>();
 
     @OneToMany(mappedBy = "district")
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
@@ -133,15 +124,6 @@ public class Nomenclature implements Serializable {
         return this;
     }
 
-    public boolean isChildDistrict() {
-        return parentDistrict != null && discriminator.equals(NomenclatureType.DISTRITO);
-    }
-
-    public void addNomenclatureDistrict(Nomenclature nomenclatureDistrict) {
-        this.childrenDistrict.add(nomenclatureDistrict);
-        nomenclatureDistrict.setParentDistrict(this);
-    }
-
     public void addPeopleDistrict(Person person) {
         this.peopleDistrict.add(person);
         person.setDistrict(this);
@@ -151,12 +133,15 @@ public class Nomenclature implements Serializable {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof Nomenclature)) return false;
-        return id != null && id.equals(((Nomenclature) o).id);
+        Nomenclature that = (Nomenclature) o;
+        return Objects.equal(id, that.id) &&
+                Objects.equal(name, that.name) &&
+                discriminator == that.discriminator;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return Objects.hashCode(id, name, discriminator);
     }
 
     @Override

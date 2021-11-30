@@ -287,6 +287,11 @@ public class EmployeeService extends QueryService<Employee> {
         return repository.findAll(pageable).map(mapper::toDto);
     }
 
+    /**
+     * Add employeeIds to filter of employee(employee with district association or specialty added above) that need
+     * to be updated
+     * @param savedNomenclatureEvent with saved employee data
+     */
     @EventListener(condition = "#savedNomenclatureEvent.getUpdatedNomenclature() != null")
     public void updateNomenclatureIntoEmployeeIndex(SavedNomenclatureEvent savedNomenclatureEvent) {
         log.debug("Listening SavedNomenclatureEvent event to update Nomenclature with ID {} in EmployeeIndex.",

@@ -141,6 +141,11 @@ public class StudentService extends QueryService<Student>{
         return repository.findAll(pageable).map(mapper::toDto);
     }
 
+    /**
+     * Add studentIds to filter of student(student with district association or specialty added above) that need
+     * to be updated
+     * @param savedNomenclatureEvent with saved student data
+     */
     @EventListener( condition = "#savedNomenclatureEvent.getUpdatedNomenclature() != null")
     public void updateNomenclatureIntoStudentIndex(SavedNomenclatureEvent savedNomenclatureEvent) {
         log.debug("Listening SavedNomenclatureEvent event to update Nomenclature with ID {} in StudentIndex.",

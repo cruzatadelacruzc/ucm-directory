@@ -1,6 +1,5 @@
 package cu.sld.ucmgt.directory.web.rest;
 
-import cu.sld.ucmgt.directory.domain.Nomenclature;
 import cu.sld.ucmgt.directory.domain.NomenclatureType;
 import cu.sld.ucmgt.directory.service.NomenclatureService;
 import cu.sld.ucmgt.directory.service.criteria.NomenclatureCriteria;
@@ -74,7 +73,6 @@ public class NomenclatureResource {
      */
     @PutMapping("/nomenclatures")
     public ResponseEntity<NomenclatureDTO> updateNomenclature(@Valid @RequestBody NomenclatureDTO nomenclatureDTO) {
-        log.debug("REST request to update Nomenclature : {}", nomenclatureDTO);
         if (nomenclatureDTO.getId() == null) {
             throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull", "idnull");
         }
@@ -142,24 +140,6 @@ public class NomenclatureResource {
     }
 
     /**
-     * {@code GET  /nomenclatures/childrenbyparentid:id} : get a page of children district by parent id
-     *
-     * @param id       the id of the nomenclature parent to fetch children.
-     * @param pageable the pagination information.
-     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of nomenclatures in body.
-     */
-    @GetMapping("/nomenclatures/childrenbyparentid/{id}")
-    public ResponseEntity<List<NomenclatureDTO>> getChildrenByParentId(Pageable pageable, @PathVariable UUID id) {
-        log.debug("REST request to get a page of children district by ParentId : {}", id);
-        Page<NomenclatureDTO> page = service.getChildrenByParentId(pageable, id);
-        HttpHeaders headers = PaginationUtil.generatePaginationHeaders(
-                ServletUriComponentsBuilder.fromCurrentRequest(),
-                page
-        );
-        return ResponseEntity.ok().headers(headers).body(page.getContent());
-    }
-
-    /**
      * {@code GET  /nomenclatures/:discriminator} : get a page of nomenclature by status and discriminator
      *
      * @param discriminator nomenclature discriminator
@@ -203,19 +183,13 @@ public class NomenclatureResource {
     }
 
     private void checkNomenclatureWithNameAndDiscriminatorExist(NomenclatureDTO nomenclatureDTO) {
-        if (nomenclatureDTO.getParentDistrictId() != null &&
-                service.getNomenclatureByIdAndCheckParentDiscriminatorWithUniqueNameAndUniqueDiscriminator(
-                        nomenclatureDTO.getName(), nomenclatureDTO.getDiscriminator(), nomenclatureDTO.getId(), true)
-                        .isPresent()) {
-            throw new BadRequestAlertException("Child nomenclature " + nomenclatureDTO.getName() + " of type: "
-                    + nomenclatureDTO.getDiscriminator() + " already used", ENTITY_NAME, "nomenclatureexists", nomenclatureDTO.getName());
-        }
-        Optional<Nomenclature> parentDistrict = service.getNomenclatureByIdAndCheckParentDiscriminatorWithUniqueNameAndUniqueDiscriminator(
-                nomenclatureDTO.getName(), nomenclatureDTO.getDiscriminator(), nomenclatureDTO.getId(), false);
-        if (nomenclatureDTO.getParentDistrictId() == null && parentDistrict.isPresent()) {
-            throw new BadRequestAlertException("Nomenclature " + nomenclatureDTO.getName() + " of type: "
-                    + nomenclatureDTO.getDiscriminator() + " already used", ENTITY_NAME, "nomenclatureexists", parentDistrict.get().getName());
-        }
+        service.getNomenclatureByIdAndNameAndDiscriminator(nomenclatureDTO.getId(), nomenclatureDTO.getName(), nomenclatureDTO.getDiscriminator())
+                .ifPresent( nomenclature -> {
+                    throw new BadRequestAlertException("Nomenclature " + nomenclatureDTO.getName() + " of type: "
+                + nomenclatureDTO.getDiscriminator() + " already used", ENTITY_NAME, "nomenclatureexists", nomenclature.getName());
+                });
+
+
     }
 
 }

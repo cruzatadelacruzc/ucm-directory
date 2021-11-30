@@ -15,16 +15,13 @@ import java.util.UUID;
 @Repository
 public interface NomenclatureRepository extends JpaRepository<Nomenclature, UUID>, CustomNomenclatureRepository, JpaSpecificationExecutor<Nomenclature> {
 
-    Optional<Nomenclature> findNomenclatureByNameIgnoreCaseAndDiscriminatorAndParentDistrictNotNull(String name, NomenclatureType discriminator);
 
-    Optional<Nomenclature> findNomenclatureByNameIgnoreCaseAndDiscriminatorAndParentDistrictNull(String name, NomenclatureType discriminator);
 
     @EntityGraph(attributePaths = {
             "employeesCharge",
             "peopleDistrict",
             "peopleSpecialty",
             "employeesCategory",
-            "childrenDistrict",
             "employeesScientificDegree",
             "employeesTeachingCategory",
             "employeesProfession",
@@ -32,8 +29,6 @@ public interface NomenclatureRepository extends JpaRepository<Nomenclature, UUID
             "studentsStudyCenter"
     })
     Optional<Nomenclature> findNomenclatureWithAssociationsById(UUID uuid);
-
-    Page<Nomenclature> findAllByParentDistrict_Id(Pageable pageable, UUID id);
 
     Page<Nomenclature> findAllByDiscriminator(Pageable pageable, NomenclatureType discriminator);
 }

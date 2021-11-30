@@ -27,7 +27,6 @@ public class NomenclatureCriteria implements Serializable {
     private UUIDFilter id;
     private StringFilter name;
     private StringFilter description;
-    private StringFilter parentDistrictName;
     private StringFilter discriminator;
 
     public NomenclatureCriteria() {}
@@ -36,7 +35,6 @@ public class NomenclatureCriteria implements Serializable {
         this.id = criteria.id == null ? null: criteria.id.copy();
         this.name = criteria.name == null ? null : criteria.name.copy();
         this.description = criteria.description == null ? null : criteria.description.copy();
-        this.parentDistrictName = criteria.parentDistrictName == null ? null: criteria.parentDistrictName.copy();
         this.discriminator = criteria.discriminator == null ? null : criteria.discriminator.copy();
     }
 
@@ -52,13 +50,12 @@ public class NomenclatureCriteria implements Serializable {
         return id.equals(that.id) &&
                 Objects.equals(name, that.name) &&
                 Objects.equals(description, that.description) &&
-                Objects.equals(discriminator, that.discriminator) &&
-                Objects.equals(parentDistrictName, that.parentDistrictName);
+                Objects.equals(discriminator, that.discriminator);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, name, description, discriminator, parentDistrictName);
+        return Objects.hash(id, name, description, discriminator);
     }
 
     @Override
@@ -68,7 +65,6 @@ public class NomenclatureCriteria implements Serializable {
                 ", name=" + name +
                 ", description=" + description +
                 ", discriminator=" + discriminator +
-                ", parentDistrict=" + parentDistrictName +
                 '}';
     }
 }
