@@ -1,5 +1,6 @@
 package cu.sld.ucmgt.directory.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.google.common.base.Objects;
 import lombok.Data;
 import org.hibernate.annotations.Cache;
@@ -16,7 +17,7 @@ import java.util.UUID;
 @Data
 @Entity
 @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
-public class Nomenclature implements Serializable {
+public class Nomenclature extends AbstractAuditingEntity implements Serializable {
     private static final long serialVersionUID = 1L;
 
     @Id
@@ -35,37 +36,91 @@ public class Nomenclature implements Serializable {
 
     @OneToMany(mappedBy = "district")
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
+    @JsonIgnoreProperties(value = { "district", "specialty" }, allowSetters = true)
     private Set<Person> peopleDistrict = new HashSet<>();
 
     @OneToMany(mappedBy = "specialty")
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
+    @JsonIgnoreProperties(value = { "district", "specialty" }, allowSetters = true)
     private Set<Person> peopleSpecialty = new HashSet<>();
 
     @OneToMany(mappedBy = "category")
+    @JsonIgnoreProperties(value = {
+            "charge",
+            "district",
+            "specialty",
+            "profession",
+            "scientificDegree",
+            "teachingCategory"
+    }, allowSetters = true)
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     private Set<Employee> employeesCategory = new HashSet<>();
 
     @OneToMany(mappedBy = "scientificDegree")
+    @JsonIgnoreProperties(value = {
+            "charge",
+            "district",
+            "specialty",
+            "profession",
+            "scientificDegree",
+            "teachingCategory"
+    }, allowSetters = true)
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     private Set<Employee> employeesScientificDegree = new HashSet<>();
 
     @OneToMany(mappedBy = "teachingCategory")
+    @JsonIgnoreProperties(value = {
+            "charge",
+            "district",
+            "specialty",
+            "profession",
+            "scientificDegree",
+            "teachingCategory"
+    }, allowSetters = true)
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     private Set<Employee> employeesTeachingCategory = new HashSet<>();
 
     @OneToMany(mappedBy = "charge")
+    @JsonIgnoreProperties(value = {
+            "charge",
+            "district",
+            "specialty",
+            "profession",
+            "scientificDegree",
+            "teachingCategory"
+    }, allowSetters = true)
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     private Set<Employee> employeesCharge = new HashSet<>();
 
     @OneToMany(mappedBy = "profession")
+    @JsonIgnoreProperties(value = {
+            "charge",
+            "district",
+            "specialty",
+            "profession",
+            "scientificDegree",
+            "teachingCategory"
+    }, allowSetters = true)
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     private Set<Employee> employeesProfession = new HashSet<>();
 
     @OneToMany(mappedBy = "kind")
+    @JsonIgnoreProperties(value = {
+            "kind",
+            "district",
+            "specialty",
+            "studyCenter"
+    }, allowSetters = true)
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     private Set<Student> studentsKind = new HashSet<>();
 
     @OneToMany(mappedBy = "studyCenter")
+    @JsonIgnoreProperties(value = {
+            "kind",
+            "district",
+            "specialty",
+            "studyCenter"
+    }, allowSetters = true)
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     private Set<Student> studentsStudyCenter = new HashSet<>();
 
