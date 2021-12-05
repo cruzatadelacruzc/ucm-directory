@@ -171,7 +171,7 @@ public class StudentResource {
     @PatchMapping(value = "/students/{id}", consumes = "application/merge-patch+json")
     public ResponseEntity<StudentDTO> updatePersonalData(
             @PathVariable(value = "id", required = false) final UUID id,
-            @NotNull @RequestBody StudentDTO studentDTO
+            @NotNull @Valid @RequestBody StudentDTO studentDTO
     ) {
         if (studentDTO.getId() == null) {
             throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idnull", "idnull");
