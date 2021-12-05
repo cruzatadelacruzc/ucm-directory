@@ -156,7 +156,6 @@ public class WorkPlaceResourceIT {
         employee.setName("Cesar");
         employee.setGender(Gender.Masculino);
         employee.setEmail("admin@mail.com");
-        employee.setAge(29);
         employee.setServiceYears(5);
         employee.setRegisterNumber("asdasdqweqw");
         employee.setRace("Azul");

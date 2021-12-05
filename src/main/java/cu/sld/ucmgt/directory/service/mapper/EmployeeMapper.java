@@ -48,15 +48,6 @@ public interface EmployeeMapper extends EntityMapper<EmployeeDTO, Employee> {
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void partialUpdate(EmployeeDTO dto, @MappingTarget Employee employee);
 
-//    @IterableMapping(elementTargetType = String.class)
-//    Set<String> mapToPhoneToString(Set<Phone> phones);
-//
-//    default String mapPhoneToInteger(Phone phone) {
-//        if (phone == null) {
-//            return null;
-//        }
-//        return phone.getNumber();
-//    }
 
     default Employee fromId(UUID id) {
         if (id == null) {

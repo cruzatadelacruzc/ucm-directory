@@ -1,5 +1,6 @@
 package cu.sld.ucmgt.directory.service.dto;
 
+import com.google.common.base.Objects;
 import lombok.Data;
 
 import javax.validation.constraints.Min;
@@ -46,51 +47,41 @@ public class EmployeeDTO extends PersonDTO {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof EmployeeDTO)) return false;
-
-        return id != null && id.equals(((EmployeeDTO) o).id);
+        if (!super.equals(o)) return false;
+        EmployeeDTO that = (EmployeeDTO) o;
+        return Objects.equal(registerNumber, that.registerNumber) &&
+                Objects.equal(professionalNumber, that.professionalNumber);
     }
 
     @Override
     public int hashCode() {
-        return 31;
+        return Objects.hashCode(super.hashCode(), registerNumber, professionalNumber);
     }
 
     @Override
     public String toString() {
         return "EmployeeDTO{" +
-                "address='" + address + '\'' +
-                ", startDate=" + startDate +
+                "startDate=" + startDate +
                 ", endDate=" + endDate +
                 ", bossWorkPlace=" + bossWorkPlace +
                 ", graduateYears=" + graduateYears +
                 ", isGraduatedBySector=" + isGraduatedBySector +
                 ", serviceYears=" + serviceYears +
+                ", registerNumber='" + registerNumber + '\'' +
+                ", professionalNumber='" + professionalNumber + '\'' +
                 ", workPlaceId=" + workPlaceId +
-                ", specialtyId=" + specialtyId +
                 ", categoryId=" + categoryId +
                 ", scientificDegreeId=" + scientificDegreeId +
                 ", teachingCategoryId=" + teachingCategoryId +
                 ", chargeId=" + chargeId +
-                ", id=" + id +
-                ", ci='" + ci + '\'' +
-                ", name='" + name + '\'' +
-                ", firstLastName='" + firstLastName + '\'' +
-                ", secondLastName='" + secondLastName + '\'' +
-                ", email='" + email + '\'' +
-                ", gender=" + gender +
-                ", age=" + age +
-                ", birthdate=" + birthdate +
-                ", race='" + race + '\'' +
-                ", registerNumber='" + registerNumber + '\'' +
-                ", professionalNumber='" + professionalNumber + '\'' +
                 ", professionId=" + professionId +
-                ", workPlaceName=" + workPlaceName +
-                ", categoryName=" + categoryName +
-                ", scientificDegreeName=" + scientificDegreeName +
-                ", teachingCategoryName=" + teachingCategoryName +
-                ", chargeName=" + chargeName +
-                ", professionName=" + professionName +
                 ", phones=" + phones +
-                '}';
+                ", workPlaceName='" + workPlaceName + '\'' +
+                ", categoryName='" + categoryName + '\'' +
+                ", scientificDegreeName='" + scientificDegreeName + '\'' +
+                ", teachingCategoryName='" + teachingCategoryName + '\'' +
+                ", chargeName='" + chargeName + '\'' +
+                ", professionName='" + professionName + '\'' +
+                "} " + super.toString();
     }
 }

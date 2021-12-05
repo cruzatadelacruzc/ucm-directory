@@ -36,8 +36,6 @@ public abstract class PersonIndex {
     @Enumerated(EnumType.STRING)
     protected Gender gender;
 
-    protected Integer age;
-
     protected String race;
 
     protected String district;
@@ -74,7 +72,6 @@ public abstract class PersonIndex {
                 ", firstLastName='" + firstLastName + '\'' +
                 ", secondLastName='" + secondLastName + '\'' +
                 ", gender=" + gender +
-                ", age=" + age +
                 ", race='" + race + '\'' +
                 ", district='" + district + '\'' +
                 ", specialty='" + specialty + '\'' +

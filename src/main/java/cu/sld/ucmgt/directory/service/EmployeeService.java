@@ -154,7 +154,6 @@ public class EmployeeService extends QueryService<Employee> {
     private Map<String, Object> createEmployeeToEmployeeIndexMap(Employee employee) {
         Map<String, Object> params = new HashMap<>();
         params.put("ci", employee.getCi());
-        params.put("age", employee.getAge());
         params.put("race", employee.getRace());
         params.put("name", employee.getName());
         params.put("email", employee.getEmail());
@@ -383,9 +382,6 @@ public class EmployeeService extends QueryService<Employee> {
                 if (criteria.getCi() != null) {
                     specification = specification.and(buildStringSpecification(criteria.getCi(), Employee_.ci));
                 }
-                if (criteria.getAge() != null) {
-                    specification = specification.and(buildRangeSpecification(criteria.getAge(), Employee_.age));
-                }
                 if (criteria.getName() != null) {
                     specification = specification.and(buildStringSpecification(criteria.getName(), Employee_.name));
                 }
@@ -476,9 +472,6 @@ public class EmployeeService extends QueryService<Employee> {
                 }
                 if (criteria.getCi() != null) {
                     specification = specification.or(buildStringSpecification(criteria.getCi(), Employee_.ci));
-                }
-                if (criteria.getAge() != null) {
-                    specification = specification.or(buildRangeSpecification(criteria.getAge(), Employee_.age));
                 }
                 if (criteria.getName() != null) {
                     specification = specification.or(buildStringSpecification(criteria.getName(), Employee_.name));

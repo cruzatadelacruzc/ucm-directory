@@ -110,7 +110,6 @@ public class EmployeeResourceIT extends PersonIT {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         employee = new Employee();
         employee.setCi(DEFAULT_CI);
-        employee.setAge(DEFAULT_AGE);
         employee.setName(DEFAULT_NAME);
         employee.setRace(DEFAULT_RACE);
         employee.setEmail(DEFAULT_EMAIL);
@@ -158,7 +157,6 @@ public class EmployeeResourceIT extends PersonIT {
 
     private void testEmployeeIsCreated(Employee testEmployee) {
         assertThat(testEmployee.getCi()).isEqualTo(DEFAULT_CI);
-        assertThat(testEmployee.getAge()).isEqualTo(DEFAULT_AGE);
         assertThat(testEmployee.getName()).isEqualTo(DEFAULT_NAME);
         assertThat(testEmployee.getRace()).isEqualTo(DEFAULT_RACE);
         assertThat(testEmployee.getEmail()).isEqualTo(DEFAULT_EMAIL);
@@ -178,7 +176,6 @@ public class EmployeeResourceIT extends PersonIT {
 
     private void testEmployeeIndexIsCreated(EmployeeIndex testEmployeeIndex) {
         assertThat(testEmployeeIndex.getCi()).isEqualTo(DEFAULT_CI);
-        assertThat(testEmployeeIndex.getAge()).isEqualTo(DEFAULT_AGE);
         assertThat(testEmployeeIndex.getName()).isEqualTo(DEFAULT_NAME);
         assertThat(testEmployeeIndex.getRace()).isEqualTo(DEFAULT_RACE);
         assertThat(testEmployeeIndex.getEmail()).isEqualTo(DEFAULT_EMAIL);
@@ -575,25 +572,6 @@ public class EmployeeResourceIT extends PersonIT {
 
     @Test
     @Transactional
-    public void checkServiceYearsCanNotLessThanFourteen() throws Exception {
-        int databaseSizeBeforeCreate = TestUtil.findAll(em, Employee.class).size();
-
-        // Create the Employee, which fails.
-        employee.setAge(13);
-        EmployeeDTO employeeDTO = mapper.toDto(employee);
-
-        restMockMvc.perform(post("/api/employees").with(csrf())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(TestUtil.convertObjectToJsonBytes(employeeDTO)))
-                .andExpect(status().isBadRequest());
-
-        // Validate the Employee in the database
-        List<Employee> employees = TestUtil.findAll(em, Employee.class);
-        assertThat(employees).hasSize(databaseSizeBeforeCreate);
-    }
-
-    @Test
-    @Transactional
     public void updateEmployeeAndEmployeeIndex() throws Exception {
         // clear EmployeeIndex
         employeeSearchRepository.deleteAll();
@@ -632,7 +610,6 @@ public class EmployeeResourceIT extends PersonIT {
 
     private void testUpdatedEmployee(Employee testEmployee) {
         assertThat(testEmployee.getCi()).isEqualTo(UPDATE_CI);
-        assertThat(testEmployee.getAge()).isEqualTo(UPDATE_AGE);
         assertThat(testEmployee.getName()).isEqualTo(UPDATE_NAME);
         assertThat(testEmployee.getRace()).isEqualTo(UPDATE_RACE);
         assertThat(testEmployee.getEmail()).isEqualTo(UPDATE_EMAIL);
@@ -657,7 +634,6 @@ public class EmployeeResourceIT extends PersonIT {
         em.detach(updatedEmployee);
 
         updatedEmployee.setCi(UPDATE_CI);
-        updatedEmployee.setAge(UPDATE_AGE);
         updatedEmployee.setName(UPDATE_NAME);
         updatedEmployee.setRace(UPDATE_RACE);
         updatedEmployee.setEmail(UPDATE_EMAIL);
@@ -730,7 +706,6 @@ public class EmployeeResourceIT extends PersonIT {
 
     private void testEmployeeIndexIsUpdated(EmployeeIndex testEmployeeIndex) {
         assertThat(testEmployeeIndex.getCi()).isEqualTo(UPDATE_CI);
-        assertThat(testEmployeeIndex.getAge()).isEqualTo(UPDATE_AGE);
         assertThat(testEmployeeIndex.getName()).isEqualTo(UPDATE_NAME);
         assertThat(testEmployeeIndex.getRace()).isEqualTo(UPDATE_RACE);
         assertThat(testEmployeeIndex.getEmail()).isEqualTo(UPDATE_EMAIL);
@@ -891,7 +866,6 @@ public class EmployeeResourceIT extends PersonIT {
         em.persist(employee);
         Employee employee2 = new Employee();
         employee2.setCi(UPDATE_CI);
-        employee2.setAge(UPDATE_AGE);
         employee2.setName(UPDATE_NAME);
         employee2.setRace(UPDATE_RACE);
         employee2.setEmail(UPDATE_EMAIL);
@@ -959,7 +933,6 @@ public class EmployeeResourceIT extends PersonIT {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(jsonPath("$.id").value(employee.getId().toString()))
                 .andExpect(jsonPath("$.ci").value(DEFAULT_CI))
-                .andExpect(jsonPath("$.age").value(DEFAULT_AGE))
                 .andExpect(jsonPath("$.name").value(DEFAULT_NAME))
                 .andExpect(jsonPath("$.race").value(DEFAULT_RACE))
                 .andExpect(jsonPath("$.email").value(DEFAULT_EMAIL))
@@ -999,7 +972,6 @@ public class EmployeeResourceIT extends PersonIT {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(jsonPath("$.[*].id").value(hasItem(employee.getId().toString())))
                 .andExpect(jsonPath("$.[*].ci").value(hasItem(DEFAULT_CI)))
-                .andExpect(jsonPath("$.[*].age").value(hasItem(DEFAULT_AGE)))
                 .andExpect(jsonPath("$.[*].name").value(hasItem(DEFAULT_NAME)))
                 .andExpect(jsonPath("$.[*].race").value(hasItem(DEFAULT_RACE)))
                 .andExpect(jsonPath("$.[*].email").value(hasItem(DEFAULT_EMAIL)))
@@ -1026,7 +998,6 @@ public class EmployeeResourceIT extends PersonIT {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(jsonPath("$.[*].id").value(hasItem(employee.getId().toString())))
                 .andExpect(jsonPath("$.[*].ci").value(hasItem(DEFAULT_CI)))
-                .andExpect(jsonPath("$.[*].age").value(hasItem(DEFAULT_AGE)))
                 .andExpect(jsonPath("$.[*].name").value(hasItem(DEFAULT_NAME)))
                 .andExpect(jsonPath("$.[*].race").value(hasItem(DEFAULT_RACE)))
                 .andExpect(jsonPath("$.[*].email").value(hasItem(DEFAULT_EMAIL)))
@@ -1063,7 +1034,6 @@ public class EmployeeResourceIT extends PersonIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.[*].id").value(hasItem(employee.getId().toString())))
                 .andExpect(jsonPath("$.[*].ci").value(hasItem(DEFAULT_CI)))
-                .andExpect(jsonPath("$.[*].age").value(hasItem(DEFAULT_AGE)))
                 .andExpect(jsonPath("$.[*].name").value(hasItem(DEFAULT_NAME)))
                 .andExpect(jsonPath("$.[*].race").value(hasItem(DEFAULT_RACE)))
                 .andExpect(jsonPath("$.[*].email").value(hasItem(DEFAULT_EMAIL)))

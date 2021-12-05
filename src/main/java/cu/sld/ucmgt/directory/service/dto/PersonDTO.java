@@ -4,7 +4,6 @@ import cu.sld.ucmgt.directory.domain.Gender;
 import lombok.Data;
 
 import javax.validation.constraints.Email;
-import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 import java.io.Serializable;
@@ -29,8 +28,6 @@ public abstract class PersonDTO implements Serializable {
     @Email(message = "error:Email")
     protected String email;
     protected Gender gender;
-    @Min(value = 14, message = "error:Min")
-    protected Integer age;
     @NotBlank(message = "error:NotBlank")
     protected String race;
     protected UUID districtId;
@@ -63,7 +60,6 @@ public abstract class PersonDTO implements Serializable {
                 ", secondLastName='" + secondLastName + '\'' +
                 ", email=" + email +
                 ", gender=" + gender +
-                ", age=" + age +
                 ", race='" + race + '\'' +
                 ", districtId=" + districtId +
                 ", districtName=" + districtName +

@@ -295,7 +295,6 @@ public class NomenclatureResourceIT {
         employee.setName("Cesar");
         employee.setGender(Gender.Masculino);
         employee.setEmail("admin@mail.com");
-        employee.setAge(29);
         employee.setServiceYears(5);
         employee.setRegisterNumber("asdasdqweqw");
         employee.setRace("Azul");
@@ -348,7 +347,6 @@ public class NomenclatureResourceIT {
         student.setName("Cesar");
         student.setGender(Gender.Masculino);
         student.setEmail("admin@mail.com");
-        student.setAge(29);
         student.setRace("Azul");
         student.setCi("91061721000");
         student.setAddress("Diente y caja de muela");

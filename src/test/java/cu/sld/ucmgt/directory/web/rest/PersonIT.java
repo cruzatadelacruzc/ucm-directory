@@ -7,9 +7,6 @@ import java.time.ZoneId;
 
 public class PersonIT {
 
-    public static final Integer UPDATE_AGE = 29;
-    public static final Integer DEFAULT_AGE = 28;
-
     public static final String UPDATE_RACE = "Negro";
     public static final String DEFAULT_RACE = "Blanco";
 

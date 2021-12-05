@@ -205,9 +205,6 @@ public class StudentService extends QueryService<Student>{
                 if (criteria.getCi() != null) {
                     specification = specification.and(buildStringSpecification(criteria.getCi(), Student_.ci));
                 }
-                if (criteria.getAge() != null) {
-                    specification = specification.and(buildRangeSpecification(criteria.getAge(), Student_.age));
-                }
                 if (criteria.getName() != null) {
                     specification = specification.and(buildStringSpecification(criteria.getName(), Student_.name));
                 }
@@ -263,9 +260,6 @@ public class StudentService extends QueryService<Student>{
                 }
                 if (criteria.getCi() != null) {
                     specification = specification.or(buildStringSpecification(criteria.getCi(), Student_.ci));
-                }
-                if (criteria.getAge() != null) {
-                    specification = specification.or(buildRangeSpecification(criteria.getAge(), Student_.age));
                 }
                 if (criteria.getName() != null) {
                     specification = specification.or(buildStringSpecification(criteria.getName(), Student_.name));

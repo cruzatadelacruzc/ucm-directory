@@ -2,7 +2,10 @@ package cu.sld.ucmgt.directory.service.criteria;
 
 import cu.sld.ucmgt.directory.domain.Gender;
 import cu.sld.ucmgt.directory.domain.Person;
-import cu.sld.ucmgt.directory.service.filter.*;
+import cu.sld.ucmgt.directory.service.filter.Filter;
+import cu.sld.ucmgt.directory.service.filter.LocalDateFilter;
+import cu.sld.ucmgt.directory.service.filter.StringFilter;
+import cu.sld.ucmgt.directory.service.filter.UUIDFilter;
 import cu.sld.ucmgt.directory.web.rest.EmployeeResource;
 import cu.sld.ucmgt.directory.web.rest.StudentResource;
 import lombok.Data;
@@ -22,7 +25,6 @@ public class PersonCriteria implements Serializable {
 
     protected UUIDFilter id;
     private StringFilter ci;
-    protected IntegerFilter age;
     protected StringFilter name;
     protected StringFilter race;
     protected StringFilter email;
@@ -40,7 +42,6 @@ public class PersonCriteria implements Serializable {
     public PersonCriteria(PersonCriteria criteria) {
         this.id = criteria.id == null ?  null : criteria.id.copy();
         this.ci = criteria.ci == null ?  null : criteria.ci.copy();
-        this.age = criteria.age == null ? null: criteria.age.copy();
         this.race = criteria.race == null ? null: criteria.race.copy();
         this.name  = criteria.name == null ? null: criteria.name.copy();
         this.email = criteria.email == null ? null: criteria.email.copy();
@@ -63,7 +64,6 @@ public class PersonCriteria implements Serializable {
         if (o == null || getClass() != o.getClass()) return false;
         PersonCriteria that = (PersonCriteria) o;
         return id.equals(that.id) &&
-                Objects.equals(age, that.age) &&
                 Objects.equals(ci, that.ci) &&
                 Objects.equals(name, that.name) &&
                 Objects.equals(race, that.race) &&
@@ -81,7 +81,6 @@ public class PersonCriteria implements Serializable {
     public int hashCode() {
         int result = id != null ? id.hashCode() : 0;
         result = 31 * result + (ci != null ? ci.hashCode() : 0);
-        result = 31 * result + (age != null ? age.hashCode() : 0);
         result = 31 * result + (name != null ? name.hashCode() : 0);
         result = 31 * result + (race != null ? race.hashCode() : 0);
         result = 31 * result + (email != null ? email.hashCode() : 0);
@@ -100,7 +99,6 @@ public class PersonCriteria implements Serializable {
         return "PersonCriteria{" +
                 "id=" + id +
                 ", ci=" + ci +
-                ", age=" + age +
                 ", name=" + name +
                 ", race=" + race +
                 ", email=" + email +

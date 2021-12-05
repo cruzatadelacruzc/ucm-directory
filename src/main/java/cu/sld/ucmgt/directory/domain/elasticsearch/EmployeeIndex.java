@@ -45,7 +45,6 @@ public class EmployeeIndex extends PersonIndex {
                 ", firstLastName='" + firstLastName + '\'' +
                 ", secondLastName='" + secondLastName + '\'' +
                 ", gender=" + gender +
-                ", age=" + age +
                 ", race='" + race + '\'' +
                 ", district='" + district + '\'' +
                 ", specialty='" + specialty + '\'' +

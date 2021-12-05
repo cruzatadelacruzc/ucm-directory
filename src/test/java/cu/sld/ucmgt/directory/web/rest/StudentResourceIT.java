@@ -77,7 +77,6 @@ public class StudentResourceIT extends PersonIT {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         student = new Student();
         student.setCi(DEFAULT_CI);
-        student.setAge(DEFAULT_AGE);
         student.setName(DEFAULT_NAME);
         student.setRace(DEFAULT_RACE);
         student.setEmail(DEFAULT_EMAIL);
@@ -115,7 +114,6 @@ public class StudentResourceIT extends PersonIT {
         assertThat(students).hasSize(databaseSizeBeforeCreate + 1);
         Student testStudent = students.get(students.size() -1 );
         assertThat(testStudent.getCi()).isEqualTo(DEFAULT_CI);
-        assertThat(testStudent.getAge()).isEqualTo(DEFAULT_AGE);
         assertThat(testStudent.getName()).isEqualTo(DEFAULT_NAME);
         assertThat(testStudent.getRace()).isEqualTo(DEFAULT_RACE);
         assertThat(testStudent.getEmail()).isEqualTo(DEFAULT_EMAIL);
@@ -333,7 +331,6 @@ public class StudentResourceIT extends PersonIT {
         em.detach(updatedStudent);
 
         updatedStudent.setCi(UPDATE_CI);
-        updatedStudent.setAge(UPDATE_AGE);
         updatedStudent.setName(UPDATE_NAME);
         updatedStudent.setRace(UPDATE_RACE);
         updatedStudent.setEmail(UPDATE_EMAIL);
@@ -358,7 +355,6 @@ public class StudentResourceIT extends PersonIT {
         assertThat(students).hasSize(databaseSizeBeforeUpdate);
         Student testStudent = students.get(students.size() -1);
         assertThat(testStudent.getCi()).isEqualTo(UPDATE_CI);
-        assertThat(testStudent.getAge()).isEqualTo(UPDATE_AGE);
         assertThat(testStudent.getName()).isEqualTo(UPDATE_NAME);
         assertThat(testStudent.getRace()).isEqualTo(UPDATE_RACE);
         assertThat(testStudent.getEmail()).isEqualTo(UPDATE_EMAIL);
@@ -423,7 +419,6 @@ public class StudentResourceIT extends PersonIT {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(jsonPath("$.id").value(student.getId().toString()))
                 .andExpect(jsonPath("$.ci").value(DEFAULT_CI))
-                .andExpect(jsonPath("$.age").value(DEFAULT_AGE))
                 .andExpect(jsonPath("$.name").value(DEFAULT_NAME))
                 .andExpect(jsonPath("$.race").value(DEFAULT_RACE))
                 .andExpect(jsonPath("$.email").value(DEFAULT_EMAIL))
@@ -455,7 +450,6 @@ public class StudentResourceIT extends PersonIT {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(jsonPath("$.[*].id").value(hasItem(student.getId().toString())))
                 .andExpect(jsonPath("$.[*].ci").value(hasItem(DEFAULT_CI)))
-                .andExpect(jsonPath("$.[*].age").value(hasItem(DEFAULT_AGE)))
                 .andExpect(jsonPath("$.[*].name").value(hasItem(DEFAULT_NAME)))
                 .andExpect(jsonPath("$.[*].race").value(hasItem(DEFAULT_RACE)))
                 .andExpect(jsonPath("$.[*].email").value(hasItem(DEFAULT_EMAIL)))
@@ -475,7 +469,6 @@ public class StudentResourceIT extends PersonIT {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(jsonPath("$.[*].id").value(hasItem(student.getId().toString())))
                 .andExpect(jsonPath("$.[*].ci").value(hasItem(DEFAULT_CI)))
-                .andExpect(jsonPath("$.[*].age").value(hasItem(DEFAULT_AGE)))
                 .andExpect(jsonPath("$.[*].name").value(hasItem(DEFAULT_NAME)))
                 .andExpect(jsonPath("$.[*].race").value(hasItem(DEFAULT_RACE)))
                 .andExpect(jsonPath("$.[*].email").value(hasItem(DEFAULT_EMAIL)))
@@ -506,7 +499,6 @@ public class StudentResourceIT extends PersonIT {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(jsonPath("$.[*].id").value(hasItem(student.getId().toString())))
                 .andExpect(jsonPath("$.[*].ci").value(hasItem(DEFAULT_CI)))
-                .andExpect(jsonPath("$.[*].age").value(hasItem(DEFAULT_AGE)))
                 .andExpect(jsonPath("$.[*].name").value(hasItem(DEFAULT_NAME)))
                 .andExpect(jsonPath("$.[*].race").value(hasItem(DEFAULT_RACE)))
                 .andExpect(jsonPath("$.[*].email").value(hasItem(DEFAULT_EMAIL)))
@@ -658,22 +650,6 @@ public class StudentResourceIT extends PersonIT {
         // Get all the studentList where name  equals to CENTER
         defaultStudentShouldBeFoundWithAndOperator("studyCenterName.equals=" + CENTER);
         defaultStudentShouldBeFoundWithOrOperator("studyCenterName.equals=" + CENTER);
-    }
-
-    @Test
-    @Transactional
-    void getAllStudentsByAgeIsEqualShouldWork() throws Exception {
-        // Initialize the database
-        em.persist(student);
-        em.flush();
-
-        // Get all the studentList where age not equals to UPDATE_AGE
-        defaultStudentShouldNotBeFoundWithAndOperator("age.equals=" + UPDATE_AGE);
-        defaultStudentShouldNotBeFoundWithOrOperator("age.equals=" + UPDATE_AGE);
-
-        // Get all the studentList where age equals to DEFAULT_AGE
-        defaultStudentShouldBeFoundWithAndOperator("age.equals=" + DEFAULT_AGE);
-        defaultStudentShouldBeFoundWithOrOperator("age.equals=" + DEFAULT_AGE);
     }
 
     @Test

@@ -49,21 +49,6 @@ public class StudentDTO extends PersonDTO {
                 ", studyCenterId=" + studyCenterId +
                 ", kindName='" + kindName + '\'' +
                 ", studyCenterName='" + studyCenterName + '\'' +
-                ", id=" + id +
-                ", ci='" + ci + '\'' +
-                ", name='" + name + '\'' +
-                ", address='" + address + '\'' +
-                ", firstLastName='" + firstLastName + '\'' +
-                ", secondLastName='" + secondLastName + '\'' +
-                ", email='" + email + '\'' +
-                ", gender=" + gender +
-                ", age=" + age +
-                ", race='" + race + '\'' +
-                ", districtId=" + districtId +
-                ", specialtyId=" + specialtyId +
-                ", birthdate=" + birthdate +
-                ", districtName='" + districtName + '\'' +
-                ", specialtyName='" + specialtyName + '\'' +
                 "} " + super.toString();
     }
 }

@@ -15,7 +15,6 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
 
 import javax.persistence.*;
 import javax.validation.constraints.Email;
-import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 import java.io.Serializable;
@@ -54,9 +53,6 @@ public class Person extends AbstractAuditingEntity implements Serializable {
     @Enumerated(EnumType.STRING)
     protected Gender gender;
 
-    @Min(value = 1)
-    protected Integer age;
-
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     @JsonSerialize(using = LocalDateSerializer.class)
     @JsonDeserialize(using = LocalDateDeserializer.class)
@@ -88,7 +84,6 @@ public class Person extends AbstractAuditingEntity implements Serializable {
                 ", firstLastName='" + firstLastName + '\'' +
                 ", secondLastName='" + secondLastName + '\'' +
                 ", gender=" + gender +
-                ", age=" + age +
                 ", birthdate=" + birthdate +
                 ", race='" + race + '\'' +
                 '}';
