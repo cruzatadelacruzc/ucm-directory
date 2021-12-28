@@ -2,7 +2,8 @@ package cu.sld.ucmgt.directory.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
@@ -13,6 +14,7 @@ import java.util.Objects;
 
 @Data
 @Entity
+@Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
 public class Student extends Person implements Serializable {
 
     @NotBlank

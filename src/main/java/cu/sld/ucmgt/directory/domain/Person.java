@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import lombok.Data;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.GenericGenerator;
 import org.springframework.data.elasticsearch.annotations.DateFormat;
 import org.springframework.data.elasticsearch.annotations.Field;
@@ -24,7 +23,6 @@ import java.util.UUID;
 @Data
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
-@org.hibernate.annotations.Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
 public class Person extends AbstractAuditingEntity implements Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -42,6 +40,8 @@ public class Person extends AbstractAuditingEntity implements Serializable {
 
     @Email
     protected String email;
+
+    protected String avatarUrl;
 
     @NotBlank
     protected String address;
@@ -81,6 +81,7 @@ public class Person extends AbstractAuditingEntity implements Serializable {
                 ", name='" + name + '\'' +
                 ", email='" + email + '\'' +
                 ", address='" + address + '\'' +
+                ", avatarUrl='" + avatarUrl + '\'' +
                 ", firstLastName='" + firstLastName + '\'' +
                 ", secondLastName='" + secondLastName + '\'' +
                 ", gender=" + gender +

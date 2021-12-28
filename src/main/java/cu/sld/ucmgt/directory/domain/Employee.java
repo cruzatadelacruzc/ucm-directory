@@ -9,8 +9,6 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import lombok.Data;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.springframework.data.elasticsearch.annotations.DateFormat;
-import org.springframework.data.elasticsearch.annotations.Field;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Entity;
@@ -27,19 +25,18 @@ import java.util.Set;
 
 @Data
 @Entity
+@Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
 public class Employee extends Person implements Serializable {
 
     @NotNull
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)
-    @Field(format = DateFormat.date_time)
     private LocalDateTime startDate;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)
-    @Field(format = DateFormat.date_time)
     private LocalDateTime endDate;
 
     @Min(value = 0)
