@@ -16,7 +16,7 @@
 
 	<properties>
 		<java.version>11</java.version>
-		<hazelcast.version>3.12.7</hazelcast.version>
+		<hazelcast.version>3.12.9</hazelcast.version>
 		<spring.version>2.2.13.RELEASE</spring.version>
 		<log4j2-mock.version>0.0.2</log4j2-mock.version>
 		<org.zalando.version>0.25.0</org.zalando.version>
