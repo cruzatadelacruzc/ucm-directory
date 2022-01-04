@@ -1,5 +1,6 @@
 package cu.sld.ucmgt.directory.service.utils;
 
+import cu.sld.ucmgt.directory.domain.Person;
 import org.springframework.web.multipart.MultipartFile;
 
 public final class ServiceUtils {
@@ -22,5 +23,16 @@ public final class ServiceUtils {
             return fileName;
         }
         return fileName + "." + extensions[1];
+    }
+
+    /**
+     * Build Avatar name using ContentType of MultipartFile (image/png or image/jpeg)
+     * @param person {@link Person} entity
+     * @return image with extension (avatar.png)
+     */
+    public static String buildAvatarName(Person person) {
+        String fileName = person.getName().replaceAll("[^a-zA-Z0-9_-]","").toLowerCase();
+        fileName = fileName + "@" + person.getId().toString();
+        return fileName;
     }
 }

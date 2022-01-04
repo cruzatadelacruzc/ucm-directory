@@ -102,7 +102,7 @@ public class EmployeeService extends QueryService<Employee> {
     public EmployeeDTO create(EmployeeDTO employeeDTO, MultipartFile avatar) {
         Employee employee = mapper.toEntity(employeeDTO);
         employee = this.save(employee);
-        String fileName = this.buildAvatarName(employee);
+        String fileName = ServiceUtils.buildAvatarName(employee);
         if (avatar != null) {
             fileName = ServiceUtils.getAvatarNameWithExtension(avatar, fileName.toLowerCase());
             employee.setAvatarUrl(fileName);
@@ -125,12 +125,6 @@ public class EmployeeService extends QueryService<Employee> {
         return mapper.toDto(employee);
     }
 
-    private String buildAvatarName(Employee employee ) {
-        String fileName = employee.getName().replaceAll("[^a-zA-Z0-9_-]","").toLowerCase();
-        fileName = fileName + "@" + employee.getId().toString();
-        return fileName;
-    }
-
     /**
      * Update a employee and employee inside phone and workplace.
      *
@@ -142,7 +136,7 @@ public class EmployeeService extends QueryService<Employee> {
         UUID employeeIdToRemove = null;
         UUID workPlaceIdRemoved = null;
         Employee employee = mapper.toEntity(employeeDTO);
-        String newFileName = this.buildAvatarName(employee);
+        String newFileName = ServiceUtils.buildAvatarName(employee);
         if (avatar != null) {
             newFileName = ServiceUtils.getAvatarNameWithExtension(avatar, newFileName);
         }
