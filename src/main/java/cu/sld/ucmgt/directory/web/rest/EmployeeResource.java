@@ -105,7 +105,7 @@ public class EmployeeResource {
      * @param avatar {@link MultipartFile} image
      * @throws BadRequestAlertException if content type of is not JPEG or PNG
      */
-    private void checkMimeType(@RequestPart(value = "avatar", required = false) MultipartFile avatar) {
+    private void checkMimeType(MultipartFile avatar) {
         if (avatar != null && (!MimeTypeUtils.IMAGE_JPEG_VALUE.equalsIgnoreCase(avatar.getContentType()) &&
                 !MimeTypeUtils.IMAGE_PNG_VALUE.equalsIgnoreCase(avatar.getContentType()))) {
             throw new BadRequestAlertException("ContentType not allowed ", ENTITY_NAME, "wrongtype", avatar.getOriginalFilename());
