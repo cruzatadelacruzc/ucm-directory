@@ -83,6 +83,8 @@ application:
       host: localhost
       port: 5000
       queue-size: 512
+  storage:
+    upload-dir: ./upload
   metrics:
     logs: # Reports metrics in the logs
       enabled: true
