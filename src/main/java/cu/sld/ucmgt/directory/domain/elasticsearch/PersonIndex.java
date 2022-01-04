@@ -29,6 +29,8 @@ public abstract class PersonIndex {
 
     protected String address;
 
+    protected String avatarUrl;
+
     protected String firstLastName;
 
     protected String secondLastName;
@@ -69,6 +71,7 @@ public abstract class PersonIndex {
                 ", name='" + name + '\'' +
                 ", email='" + email + '\'' +
                 ", address='" + address + '\'' +
+                ", avatarUrl='" + avatarUrl + '\'' +
                 ", firstLastName='" + firstLastName + '\'' +
                 ", secondLastName='" + secondLastName + '\'' +
                 ", gender=" + gender +

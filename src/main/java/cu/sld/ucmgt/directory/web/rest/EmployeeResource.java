@@ -15,8 +15,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import javax.validation.Valid;
@@ -45,17 +48,21 @@ public class EmployeeResource {
      * and with body the new employeeDTO, or with status {@code 400 (Bad Request)} if the phone has already an ID.
      * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
-    @PostMapping("/employees")
-    public ResponseEntity<EmployeeDTO> createEmployee(@Valid @RequestBody EmployeeDTO employeeDTO) throws URISyntaxException {
-        log.debug("REST request to save Employee : {}", employeeDTO);
+    @PostMapping(value = "/employees", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    public ResponseEntity<EmployeeDTO> createEmployee(@Valid @RequestPart("employee") EmployeeDTO employeeDTO,
+                                                      @RequestPart(value = "avatar", required = false) MultipartFile avatar
+                                                                                                ) throws URISyntaxException {
         if (employeeDTO.getId() != null) {
             throw new BadRequestAlertException("A new employee cannot already have an ID", ENTITY_NAME, "idexists", employeeDTO.getId().toString());
         }
 
+        this.checkMimeType(avatar);
+
         if (employeeDTO.getEndDate() != null && employeeDTO.getStartDate().isAfter(employeeDTO.getEndDate())) {
             throw new BadRequestAlertException("End Date greater than Start Date", ENTITY_NAME, "enddategt", employeeDTO.getEndDate().toString());
         }
-        EmployeeDTO employeeSaved = service.create(employeeDTO);
+
+        EmployeeDTO employeeSaved = service.create(employeeDTO, avatar);
         return ResponseEntity.created(new URI("/api/employees/" + employeeSaved.getId()))
                 .headers(HeaderUtil.createEntityExecutedAlert(applicationName,
                         true, ENTITY_NAME,
@@ -71,23 +78,38 @@ public class EmployeeResource {
      * or with status {@code 400 (Bad Request)} if the employeeDTO is not valid,
      * or with status {@code 500 (Internal Server Error)} if the employeeDTO couldn't be updated.
      */
-    @PutMapping("/employees")
-    public ResponseEntity<EmployeeDTO> updateEmployee(@Valid @RequestBody EmployeeDTO employeeDTO){
+    @PutMapping(value = "/employees", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    public ResponseEntity<EmployeeDTO> updateEmployee(@Valid @RequestPart("employee") EmployeeDTO employeeDTO,
+                                                      @RequestPart(value = "avatar", required = false) MultipartFile avatar) {
         log.debug("REST request to update Employee : {}", employeeDTO);
         if (employeeDTO.getId() == null) {
             throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull", "idnull");
         }
 
+        this.checkMimeType(avatar);
+
         if (employeeDTO.getEndDate() != null && employeeDTO.getStartDate().isAfter(employeeDTO.getEndDate())) {
             throw new BadRequestAlertException("End Date greater than Start Date", ENTITY_NAME, "enddategt",employeeDTO.getEndDate().toString());
         }
 
-        EmployeeDTO employeeSaved = service.update(employeeDTO);
+        EmployeeDTO employeeSaved = service.update(employeeDTO, avatar);
         return ResponseEntity.ok()
                 .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
                         true, ENTITY_NAME,
                         employeeSaved.getName()))
                 .body(employeeSaved);
+    }
+
+    /**
+     * Check if content type of avatar is JPEG of PNG
+     * @param avatar {@link MultipartFile} image
+     * @throws BadRequestAlertException if content type of is not JPEG or PNG
+     */
+    private void checkMimeType(@RequestPart(value = "avatar", required = false) MultipartFile avatar) {
+        if (avatar != null && (!MimeTypeUtils.IMAGE_JPEG_VALUE.equalsIgnoreCase(avatar.getContentType()) &&
+                !MimeTypeUtils.IMAGE_PNG_VALUE.equalsIgnoreCase(avatar.getContentType()))) {
+            throw new BadRequestAlertException("ContentType not allowed ", ENTITY_NAME, "wrongtype", avatar.getOriginalFilename());
+        }
     }
 
     /**
@@ -105,6 +127,18 @@ public class EmployeeResource {
                         true, ENTITY_NAME,
                         uid.toString()))
                 .build();
+    }
+
+
+    /**
+     * {@code DELETE  /employees/avatar/:id} : delete the avatar belong to "id" employee.
+     * @param employeeId identifier
+     * @return the {@link ResponseEntity} with status {@code 200 (NO_CONTENT)} and with body the boolean response.
+     */
+    @DeleteMapping("/employees/avatar/{id}")
+    public ResponseEntity<Boolean> deleteAvatar(@PathVariable(name = "id") UUID employeeId) {
+        Boolean response = service.deleteAvatar(employeeId);
+        return ResponseEntity.ok(response);
     }
 
     /**

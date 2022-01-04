@@ -6,6 +6,8 @@ import cu.sld.ucmgt.directory.repository.EmployeeRepository;
 import cu.sld.ucmgt.directory.repository.NomenclatureRepository;
 import cu.sld.ucmgt.directory.repository.WorkPlaceRepository;
 import cu.sld.ucmgt.directory.repository.search.EmployeeSearchRepository;
+import cu.sld.ucmgt.directory.service.FileService.DeleteFileEvent;
+import cu.sld.ucmgt.directory.service.FileService.SaveFileEvent;
 import cu.sld.ucmgt.directory.service.NomenclatureService.SavedNomenclatureEvent;
 import cu.sld.ucmgt.directory.service.WorkPlaceService.RemovedWorkPlaceIndexEvent;
 import cu.sld.ucmgt.directory.service.WorkPlaceService.SavedWorkPlaceIndexEvent;
@@ -14,11 +16,13 @@ import cu.sld.ucmgt.directory.service.dto.EmployeeDTO;
 import cu.sld.ucmgt.directory.service.mapper.EmployeeIndexMapper;
 import cu.sld.ucmgt.directory.service.mapper.EmployeeMapper;
 import cu.sld.ucmgt.directory.service.mapper.PhoneMapper;
+import cu.sld.ucmgt.directory.service.utils.ServiceUtils;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FilenameUtils;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
@@ -34,6 +38,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.persistence.criteria.JoinType;
 import java.io.IOException;
@@ -60,11 +65,10 @@ public class EmployeeService extends QueryService<Employee> {
     /**
      * Save a employee.
      *
-     * @param employeeDTO the entity to save.
+     * @param employee the entity to save.
      * @return the persisted entity.
      */
-    public Employee save(EmployeeDTO employeeDTO) {
-        Employee employee = mapper.toEntity(employeeDTO);
+    public Employee save(Employee employee) {
         repository.save(employee);
         // find all nomenclatures and workplace to save in elasticsearch
         if (employee.getCategory() != null) {
@@ -92,10 +96,17 @@ public class EmployeeService extends QueryService<Employee> {
      * Create a employee.
      *
      * @param employeeDTO the entity to save.
+     * @param avatar of user
      * @return the persisted entity.
      */
-    public EmployeeDTO create(EmployeeDTO employeeDTO) {
-        Employee employee = save(employeeDTO);
+    public EmployeeDTO create(EmployeeDTO employeeDTO, MultipartFile avatar) {
+        Employee employee = mapper.toEntity(employeeDTO);
+        employee = this.save(employee);
+        String fileName = this.buildAvatarName(employee);
+        if (avatar != null) {
+            fileName = ServiceUtils.getAvatarNameWithExtension(avatar, fileName.toLowerCase());
+            employee.setAvatarUrl(fileName);
+        }
         EmployeeIndex employeeIndex = employeeIndexMapper.toIndex(employee);
         searchRepository.save(employeeIndex);
         // saving the EmployeeIndex belonging to PhoneIndex and WorkPlaceIndex
@@ -104,7 +115,20 @@ public class EmployeeService extends QueryService<Employee> {
                 .params(employeeIndexMap)
                 .build();
         eventPublisher.publishEvent(savedEmployeeIndexEvent);
+        if (avatar != null) {
+            final SaveFileEvent saveFileEvent = SaveFileEvent.builder()
+                    .newFileName(fileName)
+                    .fileInput(avatar)
+                    .build();
+            eventPublisher.publishEvent(saveFileEvent);
+        }
         return mapper.toDto(employee);
+    }
+
+    private String buildAvatarName(Employee employee ) {
+        String fileName = employee.getName().replaceAll("[^a-zA-Z0-9_-]","").toLowerCase();
+        fileName = fileName + "@" + employee.getId().toString();
+        return fileName;
     }
 
     /**
@@ -113,34 +137,62 @@ public class EmployeeService extends QueryService<Employee> {
      * @param employeeDTO the entity to save.
      * @return the persisted entity.
      */
-    public EmployeeDTO update(EmployeeDTO employeeDTO) {
+    public EmployeeDTO update(EmployeeDTO employeeDTO, MultipartFile avatar) {
+        String oldFileName = "";
         UUID employeeIdToRemove = null;
         UUID workPlaceIdRemoved = null;
-        if (employeeDTO.getWorkPlaceId() == null) { //find workplace to save in elasticsearch
+        Employee employee = mapper.toEntity(employeeDTO);
+        String newFileName = this.buildAvatarName(employee);
+        if (avatar != null) {
+            newFileName = ServiceUtils.getAvatarNameWithExtension(avatar, newFileName);
+        }
+
+        Optional<Employee> optionalEmployee = repository.findById(employeeDTO.getId());
+        if (optionalEmployee.isPresent()) {
+            Employee employeeFetched = optionalEmployee.get();
+            // set avatarUrl to the new employee for avoid erase stored data
+            employee.setAvatarUrl(employeeFetched.getAvatarUrl());
+            // case: For renaming or updating a exists avatar
+            if (employeeFetched.getAvatarUrl() != null) {
+                oldFileName = employeeFetched.getAvatarUrl();
+                String extension = Optional.ofNullable(FilenameUtils.getExtension(oldFileName)).orElse("");
+                newFileName = !extension.isBlank() ? newFileName + "." + extension : newFileName;
+            }
+
             // if employee should be removed own workplace
-            Optional<Employee> employeeFetched = repository.findById(employeeDTO.getId());
-            if (employeeFetched.isPresent() && employeeFetched.get().getWorkPlace() != null) {
-                    employeeIdToRemove = employeeFetched.get().getId();
-                     workPlaceIdRemoved = employeeFetched.get().getWorkPlace().getId();
+            if (employeeFetched.getWorkPlace() != null) {
+                employeeIdToRemove = employeeFetched.getId();
+                workPlaceIdRemoved = employeeFetched.getWorkPlace().getId();
             }
         }
 
-        Employee employee = save(employeeDTO);
+        // case: To store new avatar or update a exists avatar
+        if (avatar != null || (!newFileName.equals(oldFileName) && !oldFileName.isBlank())) {
+            employee.setAvatarUrl(newFileName);
+        }
+
+        employee = this.save(employee);
         searchRepository.save(employeeIndexMapper.toIndex(employee));
 
         // updating the EmployeeIndex belonging to PhoneIndex and WorkPlaceIndex
         Map<String, Object> employeeIndexMap = createEmployeeToEmployeeIndexMap(employee);
         if (employeeIdToRemove != null) {
-          final RemovedEmployeeIndexEvent removedEmployeeIndexEvent = RemovedEmployeeIndexEvent.builder()
-                  .workPlaceId(workPlaceIdRemoved)
-                  .removedEmployeeId(employeeIdToRemove)
-                  .build();
-          eventPublisher.publishEvent(removedEmployeeIndexEvent);
+            final RemovedEmployeeIndexEvent removedEmployeeIndexEvent = RemovedEmployeeIndexEvent.builder()
+                    .workPlaceId(workPlaceIdRemoved)
+                    .removedEmployeeId(employeeIdToRemove)
+                    .build();
+            eventPublisher.publishEvent(removedEmployeeIndexEvent);
         }
+        final SaveFileEvent saveFileEvent = SaveFileEvent.builder()
+                .newFileName(newFileName)
+                .oldFileName(oldFileName)
+                .fileInput(avatar)
+                .build();
         final SavedEmployeeIndexEvent savedEmployeeIndexEvent = SavedEmployeeIndexEvent.builder()
                 .employeeId(employee.getId().toString())
                 .params(employeeIndexMap)
                 .build();
+        eventPublisher.publishEvent(saveFileEvent);
         eventPublisher.publishEvent(savedEmployeeIndexEvent);
         return mapper.toDto(employee);
     }
@@ -160,6 +212,7 @@ public class EmployeeService extends QueryService<Employee> {
         params.put("gender", employee.getGender());
         params.put("address", employee.getAddress());
         params.put("id", employee.getId().toString());
+        params.put("avatarUrl", employee.getAvatarUrl());
         params.put("birthdate", employee.getBirthdate());
         params.put("firstLastName", employee.getFirstLastName());
         params.put("registerNumber", employee.getRegisterNumber());
@@ -191,6 +244,7 @@ public class EmployeeService extends QueryService<Employee> {
         repository.findEmployeeWithAssociationsById(uid).ifPresent(employee -> {
             List<UUID> phoneIds = employee.getPhones().stream().map(Phone::getId).collect(Collectors.toList());
             new HashSet<>(employee.getPhones()).forEach(employee::removePhone);
+            String avatar = employee.getAvatarUrl();
             repository.delete(employee);
             EmployeeIndex employeeIndex = searchRepository.findById(employee.getId())
                     .orElseThrow(() -> new NoSuchElementException("EmployeeIndex with ID: " + employee.getId() + " not was found"));
@@ -202,6 +256,11 @@ public class EmployeeService extends QueryService<Employee> {
                     .removedEmployeeId(employeeIndex.getId())
                     .workPlaceId(employee.getWorkPlace() != null ? employee.getWorkPlace().getId() : null)
                     .build();
+            final DeleteFileEvent deleteFileEvent = DeleteFileEvent.builder()
+                    .fileName(avatar)
+                    .build();
+
+            eventPublisher.publishEvent(deleteFileEvent);
             eventPublisher.publishEvent(removedEmployeeIndexEvent);
         });
     }
@@ -563,6 +622,26 @@ public class EmployeeService extends QueryService<Employee> {
     }
 
     /**
+     * Delete avatar of employee
+     * @param employeeId identifier of employee
+     */
+    public Boolean deleteAvatar(UUID employeeId) {
+        Optional<Employee> optionalEmployee =  repository.findById(employeeId);
+        if (optionalEmployee.isPresent()) {
+            String avatar = optionalEmployee.get().getAvatarUrl();
+            optionalEmployee.get().setAvatarUrl(null);
+            repository.save(optionalEmployee.get());
+            final DeleteFileEvent deleteFileEvent = DeleteFileEvent.builder()
+                    .fileName(avatar)
+                    .build();
+            eventPublisher.publishEvent(deleteFileEvent);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
      * Class to register a saved {@link EmployeeIndex} as event
      */
     @Data
@@ -584,12 +663,5 @@ public class EmployeeService extends QueryService<Employee> {
         private EmployeeIndex removedEmployeeIndex;
         private UUID workPlaceId;
         private List<UUID> phoneIds;
-    }
-
-    @Data
-    private static class EmployeeResponseSaved {
-        private UUID employeeIdToRemove;
-        private Employee savedEmployee;
-        private UUID workPlaceId;
     }
 }

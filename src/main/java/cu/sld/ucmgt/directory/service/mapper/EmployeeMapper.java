@@ -13,6 +13,7 @@ import java.util.UUID;
 public interface EmployeeMapper extends EntityMapper<EmployeeDTO, Employee> {
 
     @Mapping(target = "phones", ignore = true)
+    @Mapping(target = "avatarUrl", ignore = true)
     @Mapping(source = "chargeId", target = "charge")
     @Mapping(source = "districtId", target = "district")
     @Mapping(source = "categoryId", target = "category")

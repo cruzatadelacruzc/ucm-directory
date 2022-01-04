@@ -23,6 +23,7 @@ public abstract class PersonDTO implements Serializable {
     protected String name;
     @NotBlank(message = "error:NotBlank")
     protected String address;
+    protected String avatarUrl;
     protected String firstLastName;
     protected String secondLastName;
     @Email(message = "error:Email")
@@ -56,6 +57,7 @@ public abstract class PersonDTO implements Serializable {
                 "id=" + id +
                 ", ci='" + ci + '\'' +
                 ", name='" + name + '\'' +
+                ", avatarUrl='" + avatarUrl + '\'' +
                 ", firstLastName='" + firstLastName + '\'' +
                 ", secondLastName='" + secondLastName + '\'' +
                 ", email=" + email +

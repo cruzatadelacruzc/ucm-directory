@@ -28,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -149,6 +150,32 @@ public class EmployeeResourceIT extends PersonIT {
         Employee testEmployee = employees.get(employees.size() - 1);
         testEmployeeIsCreated(testEmployee);
         assertThat(testEmployee.getDistrict().getId()).isEqualTo(district.getId());
+
+        Iterable<EmployeeIndex> employeeIndices = employeeSearchRepository.findAll();
+        EmployeeIndex testEmployeeIndex = employeeIndices.iterator().next();
+        testEmployeeIndexIsCreated(testEmployeeIndex);
+    }
+
+    @Test
+    @Transactional
+    public void createEmployeeWithWrongContentType() throws Exception {
+        int databaseSizeBeforeCreate = TestUtil.findAll(em, Employee.class).size();
+
+        EmployeeDTO employeeDTO = mapper.toDto(employee);
+        MockMultipartFile multipartFile = new MockMultipartFile("avatar", "test.txt",
+                "text/plain", "Spring Framework".getBytes());
+
+        restMockMvc.perform(multipart("/api/employees")
+                .requestAttr("employee", TestUtil.convertObjectToJsonBytes(employeeDTO))
+                .requestAttr("avatar", multipartFile).with(csrf())
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .content(TestUtil.convertObjectToJsonBytes(employeeDTO)))
+                .andExpect(status().isBadRequest());
+
+        // Validate the Employee in the database
+        List<Employee> employees = TestUtil.findAll(em, Employee.class);
+        assertThat(employees).hasSize(databaseSizeBeforeCreate + 1);
+        Employee testEmployee = employees.get(employees.size() - 1);
 
         Iterable<EmployeeIndex> employeeIndices = employeeSearchRepository.findAll();
         EmployeeIndex testEmployeeIndex = employeeIndices.iterator().next();
@@ -1222,5 +1249,27 @@ public class EmployeeResourceIT extends PersonIT {
 
         // Get all the employeeList where name not equals to DEFAULT_NAME
         defaultEmployeeShouldBeFoundWithOrOperator(filter.replaceAll("paramName", DEFAULT_NAME));
+    }
+
+    @Test
+    @Transactional
+    void deleteEmployeeWithAvatar() throws Exception {
+        System.out.println("not implement yet");
+    }
+
+    @Test
+    @Transactional
+    void createEmployeeWithAvatar() throws Exception {
+        System.out.println("not implement yet");
+    }
+
+    void updateEmployeeWithAvatar() throws Exception {
+        System.out.println("not implement yet");
+    }
+
+    @Test
+    @Transactional
+    void deleteAvatar() throws Exception {
+        System.out.println("not implement yet");
     }
 }
