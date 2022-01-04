@@ -8,9 +8,9 @@
 # ===================================================================
 logging:
   level:
+    ROOT: DEBUG
+    org.hibernate.SQL: DEBUG
     cu.sld.ucmgt.directory: DEBUG
-    org.springframework.security: DEBUG
-    org.springframework.security.oauth2: DEBUG
 
 eureka:
   instance:
@@ -44,7 +44,7 @@ spring:
       pool-name: Hikari
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQL10Dialect
-    show-sql: true
+    show-sql: false
   messages:
     cache-duration: PT1S # 1 second, see the ISO 8601 standard
   thymeleaf:
@@ -66,6 +66,9 @@ spring:
       username: elastic
       password: elastic
       uris: http://192.168.1.10:9200
+  servlet:
+    multipart:
+      file-size-threshold: 2KB
 server:
   port: 8081
 
@@ -86,7 +89,9 @@ application:
     management-center: # Full reference is available at: http://docs.hazelcast.org/docs/management-center/3.9/manual/html/Deploying_and_Starting.html
       enabled: false
       update-interval: 3
-      url: http://localhost:8180/hazelcast-mancenter
+      url: http://192.168.1.10:8180/hazelcast-mancenter
+  storage:
+    upload-dir: /media/cesar/Stuff/Dev/java/ucm/directory/upload/
   metrics:
     logs: # Reports metrics in the logs
       enabled: false

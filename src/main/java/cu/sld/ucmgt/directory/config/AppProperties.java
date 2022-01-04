@@ -23,6 +23,7 @@ public class AppProperties {
     private final Metrics metrics = new Metrics();
     private final Swagger swagger = new Swagger();
     private final Logging logging = new Logging();
+    private final Storage  storage = new Storage();
     private final Security security = new Security();
     private final ClientApp clientApp = new ClientApp();
     private final AuditEvents auditEvents = new AuditEvents();
@@ -65,6 +66,16 @@ public class AppProperties {
                 this.url = url;
                 return this;
             }
+        }
+    }
+
+    @Getter
+    public static class Storage {
+        private String uploadDir = "./upload";
+
+        public Storage setUploadDir(String uploadDir) {
+            this.uploadDir = uploadDir;
+            return this;
         }
     }
 
