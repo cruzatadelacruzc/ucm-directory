@@ -32,7 +32,7 @@ public class Person extends AbstractAuditingEntity implements Serializable {
     @Column(name = "id", updatable = false, nullable = false)
     protected UUID id;
 
-    @Pattern(regexp = "(^[1-9]\\d{10}$)")
+    @Pattern(regexp = "(^[0-9]\\d{10}$)")
     protected String ci;
 
     @NotBlank

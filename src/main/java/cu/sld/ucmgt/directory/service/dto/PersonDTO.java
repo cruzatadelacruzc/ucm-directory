@@ -17,7 +17,7 @@ import java.util.UUID;
 public abstract class PersonDTO implements Serializable {
     protected UUID id;
 
-    @Pattern(regexp = "(^[1-9]\\d{10}$)", /*message = "{validation.ci.malformed}"*/ message = "error:Pattern")
+    @Pattern(regexp = "(^[0-9]\\d{10}$)", message = "error:Pattern")
     protected String ci;
     @NotBlank(message = "error:NotBlank")
     protected String name;
