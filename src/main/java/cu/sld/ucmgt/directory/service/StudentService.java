@@ -13,8 +13,10 @@ import cu.sld.ucmgt.directory.service.criteria.StudentCriteria;
 import cu.sld.ucmgt.directory.service.dto.StudentDTO;
 import cu.sld.ucmgt.directory.service.mapper.StudentIndexMapper;
 import cu.sld.ucmgt.directory.service.mapper.StudentMapper;
+import cu.sld.ucmgt.directory.service.utils.ServiceUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FilenameUtils;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
@@ -23,12 +25,14 @@ import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptType;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.persistence.criteria.JoinType;
 import java.io.IOException;
@@ -48,6 +52,7 @@ public class StudentService extends QueryService<Student>{
     private final RestHighLevelClient highLevelClient;
     private static final String INDEX_NAME = "students";
     private final StudentIndexMapper studentIndexMapper;
+    private final ApplicationEventPublisher eventPublisher;
     private final StudentSearchRepository searchRepository;
     private final NomenclatureRepository nomenclatureRepository;
 
@@ -63,12 +68,10 @@ public class StudentService extends QueryService<Student>{
     /**
      * Save a student.
      *
-     * @param studentDTO the entity to save.
+     * @param student the entity to save.
      * @return the persisted entity.
      */
-    public StudentDTO save(StudentDTO studentDTO) {
-        log.debug("Request to save Student : {}", studentDTO);
-        Student student = mapper.toEntity(studentDTO);
+    public Student save(Student student) {
         repository.save(student);
         if (student.getDistrict() != null) {
             nomenclatureRepository.findById(student.getDistrict().getId()).ifPresent(student::setDistrict);
@@ -82,8 +85,78 @@ public class StudentService extends QueryService<Student>{
         if (student.getKind() != null) {
             nomenclatureRepository.findById(student.getKind().getId()).ifPresent(student::setKind);
         }
+
+        return student;
+    }
+
+    /**
+     * Create a student.
+     *
+     * @param studentDTO information of user to save.
+     * @param avatar of the user
+     * @return the persisted entity.
+     */
+    public StudentDTO create(StudentDTO studentDTO, MultipartFile avatar) {
+        Student student = mapper.toEntity(studentDTO);
+        student =  repository.save(student);
+        String fileName = ServiceUtils.buildAvatarName(student);
+        if (avatar != null) {
+            fileName = ServiceUtils.getAvatarNameWithExtension(avatar, fileName.toLowerCase());
+            student.setAvatarUrl(fileName);
+        }
         StudentIndex studentIndex = studentIndexMapper.toIndex(student);
         searchRepository.save(studentIndex);
+        if (avatar != null) {
+            final FileService.SaveFileEvent saveFileEvent = FileService.SaveFileEvent.builder()
+                    .newFileName(fileName)
+                    .fileInput(avatar)
+                    .build();
+            eventPublisher.publishEvent(saveFileEvent);
+        }
+        return mapper.toDto(student);
+    }
+
+    /**
+     * Update a student
+     * @param studentDTO information of user to save.
+     * @param avatar of user
+     * @return the updated entity.
+     */
+    public StudentDTO update(StudentDTO studentDTO, MultipartFile avatar) {
+        String oldFileName = "";
+        Student student = mapper.toEntity(studentDTO);
+        String newFileName = ServiceUtils.buildAvatarName(student);
+        if (avatar != null) {
+            newFileName = ServiceUtils.getAvatarNameWithExtension(avatar, newFileName);
+        }
+        Optional<Student> studentOptional = repository.findById(studentDTO.getId());
+        if (studentOptional.isPresent()) {
+            Student studentFetched = studentOptional.get();
+            // set avatarUrl to the new student for avoid erase stored data
+            student.setAvatarUrl(studentFetched.getAvatarUrl());
+            // case: For renaming or updating a exists avatar
+            if (studentFetched.getAvatarUrl() != null) {
+                oldFileName = studentFetched.getAvatarUrl();
+                String extension = Optional.ofNullable(FilenameUtils.getExtension(oldFileName)).orElse("");
+                newFileName = !extension.isBlank() ? newFileName + "." + extension : newFileName;
+            }
+        }
+
+        // case: To store new avatar or update a exists avatar
+        if (avatar != null || (!newFileName.equals(oldFileName) && !oldFileName.isBlank())) {
+            student.setAvatarUrl(newFileName);
+        }
+
+        student = this.save(student);
+        StudentIndex studentIndex = studentIndexMapper.toIndex(student);
+        searchRepository.save(studentIndex);
+
+        final FileService.SaveFileEvent saveFileEvent = FileService.SaveFileEvent.builder()
+                .newFileName(newFileName)
+                .oldFileName(oldFileName)
+                .fileInput(avatar)
+                .build();
+        eventPublisher.publishEvent(saveFileEvent);
         return mapper.toDto(student);
     }
 
@@ -93,9 +166,16 @@ public class StudentService extends QueryService<Student>{
      * @param uid the id of the entity.
      */
     public void deleteStudent(UUID uid) {
-        log.debug("Request to delete Student : {}", uid);
-        repository.deleteById(uid);
-        searchRepository.deleteById(uid);
+        repository.findById(uid).ifPresent(student -> {
+            String avatar = student.getAvatarUrl();
+            repository.delete(student);
+            searchRepository.deleteById(uid);
+
+            final FileService.DeleteFileEvent deleteFileEvent = FileService.DeleteFileEvent.builder()
+                    .fileName(avatar)
+                    .build();
+            eventPublisher.publishEvent(deleteFileEvent);
+        });
     }
 
     /**
@@ -313,5 +393,27 @@ public class StudentService extends QueryService<Student>{
             }
         }
         return specification;
+    }
+
+    /**
+     * Delete avatar of student
+     *
+     * @param studentId identifier of student
+     * @return TRUE if avatar was delete FALSE otherwise
+     */
+    public Boolean deleteAvatar(UUID studentId) {
+        Optional<Student> optionalStudent = repository.findById(studentId);
+        if (optionalStudent.isPresent()) {
+            Student studentFetched = optionalStudent.get();
+            String avatar = studentFetched.getAvatarUrl();
+            studentFetched.setAvatarUrl(null);
+            repository.save(studentFetched);
+            final FileService.DeleteFileEvent deleteFileEvent = FileService.DeleteFileEvent.builder()
+                    .fileName(avatar)
+                    .build();
+            eventPublisher.publishEvent(deleteFileEvent);
+            return true;
+        }
+        return false;
     }
 }
