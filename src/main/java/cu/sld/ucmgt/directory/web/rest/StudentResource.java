@@ -183,16 +183,18 @@ public class StudentResource {
      * {@code PATCH  /students/:id} : Partial updates given fields of an existing student, field will ignore if it is null
      *
      * @param id the id of the studentDTO to save.
-     * @param studentDTO the cardDTO to update.
+     * @param studentDTO the information to update.
+     * @param avatar the avatar to update.
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated studentDTO,
      * or with status {@code 400 (Bad Request)} if the studentDTO is not valid,
      * or with status {@code 404 (Not Found)} if the studentDTO is not found,
      * or with status {@code 500 (Internal Server Error)} if the cardDTO couldn't be updated.
      */
-    @PatchMapping(value = "/students/{id}", consumes = "application/merge-patch+json")
+    @PatchMapping(value = "/students/{id}")
     public ResponseEntity<StudentDTO> updatePersonalData(
             @PathVariable(value = "id", required = false) final UUID id,
-            @NotNull @Valid @RequestBody StudentDTO studentDTO
+            @NotNull @RequestPart(name = "student") StudentDTO studentDTO,
+            @RequestPart(name = "avatar", required = false) MultipartFile avatar
     ) {
         if (studentDTO.getId() == null) {
             throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idnull", "idnull");
@@ -202,11 +204,13 @@ public class StudentResource {
             throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid", "idnull");
         }
 
+        this.checkMimeType(avatar);
+
         Boolean exists = service.exists(id);
         if (!exists) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         } else {
-            StudentDTO updatedStudent = service.partialUpdate(studentDTO);
+            StudentDTO updatedStudent = service.partialUpdate(studentDTO, avatar);
             return ResponseEntity.ok()
                     .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
                             true, ENTITY_NAME,

@@ -184,14 +184,43 @@ public class StudentService extends QueryService<Student>{
      * @param studentDto the entity to update partially.
      * @return the persisted entity.
      */
-    public StudentDTO partialUpdate(StudentDTO studentDto){
-        Optional<Student> existingStudent =  repository.findById(studentDto.getId());
-        if (existingStudent.isPresent()) {
-            mapper.partialUpdate(studentDto, existingStudent.get());
-            repository.save(existingStudent.get());
-            StudentIndex studentIndex = studentIndexMapper.toIndex(existingStudent.get());
+    public StudentDTO partialUpdate(StudentDTO studentDto, MultipartFile avatar) {
+        String oldFileName = "";
+        Optional<Student> optionalStudent =  repository.findById(studentDto.getId());
+        if (optionalStudent.isPresent()) {
+            Student existingStudent = optionalStudent.get();
+            String newFileName = ServiceUtils.buildAvatarName(existingStudent);
+
+            if (avatar != null) {
+                newFileName = ServiceUtils.getAvatarNameWithExtension(avatar, newFileName);
+            }
+
+            mapper.partialUpdate(studentDto, existingStudent);
+
+            // case: For renaming or updating a exists avatar
+            if (existingStudent.getAvatarUrl() != null) {
+                oldFileName = existingStudent.getAvatarUrl();
+                String extension = Optional.ofNullable(FilenameUtils.getExtension(oldFileName)).orElse("");
+                newFileName = !extension.isBlank() ? newFileName + "." + extension : newFileName;
+            }
+
+            // case: To store new avatar or update a exists avatar
+            if (avatar != null || (!newFileName.equals(oldFileName) && !oldFileName.isBlank())) {
+                existingStudent.setAvatarUrl(newFileName);
+            }
+
+            repository.save(existingStudent);
+
+            final FileService.SaveFileEvent saveFileEvent = FileService.SaveFileEvent.builder()
+                    .newFileName(newFileName)
+                    .oldFileName(oldFileName)
+                    .fileInput(avatar)
+                    .build();
+            eventPublisher.publishEvent(saveFileEvent);
+
+            StudentIndex studentIndex = studentIndexMapper.toIndex(existingStudent);
             searchRepository.save(studentIndex);
-            return mapper.toDto(existingStudent.get());
+            return mapper.toDto(existingStudent);
         } else {
             return null;
         }

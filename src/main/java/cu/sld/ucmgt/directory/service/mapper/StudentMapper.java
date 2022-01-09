@@ -2,8 +2,7 @@ package cu.sld.ucmgt.directory.service.mapper;
 
 import cu.sld.ucmgt.directory.domain.Student;
 import cu.sld.ucmgt.directory.service.dto.StudentDTO;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
+import org.mapstruct.*;
 
 import java.util.UUID;
 
@@ -14,6 +13,7 @@ import java.util.UUID;
 public interface StudentMapper extends EntityMapper<StudentDTO, Student>{
 
     @Mapping(source = "kindId", target = "kind")
+    @Mapping(target = "avatarUrl", ignore = true)
     @Mapping(source = "districtId", target = "district")
     @Mapping(source = "specialtyId", target = "specialty")
     @Mapping(source = "studyCenterId", target = "studyCenter")
@@ -28,6 +28,14 @@ public interface StudentMapper extends EntityMapper<StudentDTO, Student>{
     @Mapping(source = "specialty.name", target = "specialtyName")
     @Mapping(source = "studyCenter.name", target = "studyCenterName")
     StudentDTO toDto(Student entity);
+
+    @Mapping(source = "kindId", target = "kind")
+    @Mapping(target = "avatarUrl", ignore = true)
+    @Mapping(source = "districtId", target = "district")
+    @Mapping(source = "specialtyId", target = "specialty")
+    @Mapping(source = "studyCenterId", target = "studyCenter")
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    void partialUpdate(StudentDTO dto, @MappingTarget Student student);
 
     default Student fromId(UUID id) {
         if (id == null) {
