@@ -102,9 +102,8 @@ public class EmployeeService extends QueryService<Employee> {
     public EmployeeDTO create(EmployeeDTO employeeDTO, MultipartFile avatar) {
         Employee employee = mapper.toEntity(employeeDTO);
         employee = this.save(employee);
-        String fileName = ServiceUtils.buildAvatarName(employee);
+        String fileName = getFileName(employee, avatar);
         if (avatar != null) {
-            fileName = ServiceUtils.getAvatarNameWithExtension(avatar, fileName.toLowerCase());
             employee.setAvatarUrl(fileName);
         }
         EmployeeIndex employeeIndex = employeeIndexMapper.toIndex(employee);
@@ -136,10 +135,7 @@ public class EmployeeService extends QueryService<Employee> {
         UUID employeeIdToRemove = null;
         UUID workPlaceIdRemoved = null;
         Employee employee = mapper.toEntity(employeeDTO);
-        String newFileName = ServiceUtils.buildAvatarName(employee);
-        if (avatar != null) {
-            newFileName = ServiceUtils.getAvatarNameWithExtension(avatar, newFileName);
-        }
+        String newFileName = getFileName(employee, avatar);
 
         Optional<Employee> optionalEmployee = repository.findById(employeeDTO.getId());
         if (optionalEmployee.isPresent()) {
@@ -167,28 +163,22 @@ public class EmployeeService extends QueryService<Employee> {
 
         employee = this.save(employee);
         searchRepository.save(employeeIndexMapper.toIndex(employee));
-
-        // updating the EmployeeIndex belonging to PhoneIndex and WorkPlaceIndex
-        Map<String, Object> employeeIndexMap = createEmployeeToEmployeeIndexMap(employee);
-        if (employeeIdToRemove != null) {
-            final RemovedEmployeeIndexEvent removedEmployeeIndexEvent = RemovedEmployeeIndexEvent.builder()
-                    .workPlaceId(workPlaceIdRemoved)
-                    .removedEmployeeId(employeeIdToRemove)
-                    .build();
-            eventPublisher.publishEvent(removedEmployeeIndexEvent);
-        }
-        final SaveFileEvent saveFileEvent = SaveFileEvent.builder()
-                .newFileName(newFileName)
-                .oldFileName(oldFileName)
-                .fileInput(avatar)
-                .build();
-        final SavedEmployeeIndexEvent savedEmployeeIndexEvent = SavedEmployeeIndexEvent.builder()
-                .employeeId(employee.getId().toString())
-                .params(employeeIndexMap)
-                .build();
-        eventPublisher.publishEvent(saveFileEvent);
-        eventPublisher.publishEvent(savedEmployeeIndexEvent);
+        this.publishEmployeeEvent(employee, avatar, employeeIdToRemove, workPlaceIdRemoved, oldFileName, newFileName);
         return mapper.toDto(employee);
+    }
+
+    /**
+     *  Set a new File Name
+     * @param employee entity
+     * @param file  avatar with content type image/png or image/jpeg
+     * @return new file name
+     */
+    private String getFileName(Employee employee, MultipartFile file) {
+        String newFileName = ServiceUtils.buildAvatarName(employee);
+        if (file != null) {
+            newFileName = ServiceUtils.getAvatarNameWithExtension(file, newFileName.toLowerCase());
+        }
+        return newFileName.toLowerCase();
     }
 
     /**
@@ -633,6 +623,94 @@ public class EmployeeService extends QueryService<Employee> {
         } else {
             return false;
         }
+    }
+
+    /**
+     * Check if employee exists
+     * @param employeeId of employee
+     * @return True if exists False otherwise
+     */
+    public Boolean exists(UUID employeeId) {
+        return repository.existsById(employeeId);
+    }
+
+    /**
+     * Partially update a employee, only personal data
+     *
+     * @param employeeDTO the entity to update partially.
+     * @return the persisted entity.
+     */
+    public EmployeeDTO partialUpdate(EmployeeDTO employeeDTO, MultipartFile avatar) {
+        String oldFileName = "";
+        UUID employeeIdToRemove = null;
+        UUID workPlaceIdRemoved = null;
+        Optional<Employee> optionalEmployee = repository.findEmployeeWithAssociationsById(employeeDTO.getId());
+        if (optionalEmployee.isPresent()) {
+            Employee employeeFetched = optionalEmployee.get();
+            mapper.partialUpdate(employeeDTO, employeeFetched);
+            String newFileName = getFileName(employeeFetched, avatar);
+
+            // case: For renaming or updating a exists avatar
+            if (employeeFetched.getAvatarUrl() != null) {
+                oldFileName = employeeFetched.getAvatarUrl();
+                String extension = Optional.ofNullable(FilenameUtils.getExtension(oldFileName)).orElse("");
+                newFileName = !extension.isBlank() ? newFileName + "." + extension : newFileName;
+            }
+
+            // if employee should be removed own workplace
+            if (employeeFetched.getWorkPlace() != null) {
+                employeeIdToRemove = employeeFetched.getId();
+                workPlaceIdRemoved = employeeFetched.getWorkPlace().getId();
+            }
+
+            // case: To store new avatar or update a exists avatar
+            if (avatar != null || (!newFileName.equals(oldFileName) && !oldFileName.isBlank())) {
+                employeeFetched.setAvatarUrl(newFileName);
+            }
+
+            repository.save(employeeFetched);
+            searchRepository.save(employeeIndexMapper.toIndex(employeeFetched));
+           this.publishEmployeeEvent(employeeFetched,
+                   avatar, employeeIdToRemove,
+                   workPlaceIdRemoved, oldFileName, newFileName);
+            return mapper.toDto(employeeFetched);
+        }
+        return null;
+    }
+
+    /**
+     *  Publish event of the {@link Employee}
+     * @param employee entity to convert {@link Map}  of {@link Employee} and publish
+     * @param file avatar of the {@link Employee} with content type image/png or image/jpeg
+     * @param employeeIdToRemove identifier of the {@link Employee} to remove inside their associations
+     * @param workPlaceId identifier of the {@link WorkPlace} for removing {@link Employee}
+     * @param oldFileName old file name of avatar
+     * @param newFileName new file name of avatar
+     */
+    private void publishEmployeeEvent(Employee employee, MultipartFile file,
+                                      UUID employeeIdToRemove, UUID workPlaceId,
+                                      String oldFileName, String newFileName) {
+
+        // updating the EmployeeIndex belonging to PhoneIndex and WorkPlaceIndex
+        Map<String, Object> employeeIndexMap = createEmployeeToEmployeeIndexMap(employee);
+        if (employeeIdToRemove != null) {
+            final RemovedEmployeeIndexEvent removedEmployeeIndexEvent = RemovedEmployeeIndexEvent.builder()
+                    .workPlaceId(workPlaceId)
+                    .removedEmployeeId(employeeIdToRemove)
+                    .build();
+            eventPublisher.publishEvent(removedEmployeeIndexEvent);
+        }
+        final SaveFileEvent saveFileEvent = SaveFileEvent.builder()
+                .newFileName(newFileName)
+                .oldFileName(oldFileName)
+                .fileInput(file)
+                .build();
+        final SavedEmployeeIndexEvent savedEmployeeIndexEvent = SavedEmployeeIndexEvent.builder()
+                .employeeId(employee.getId().toString())
+                .params(employeeIndexMap)
+                .build();
+        eventPublisher.publishEvent(saveFileEvent);
+        eventPublisher.publishEvent(savedEmployeeIndexEvent);
     }
 
     /**

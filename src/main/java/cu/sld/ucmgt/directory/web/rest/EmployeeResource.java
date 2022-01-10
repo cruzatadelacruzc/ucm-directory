@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.MimeTypeUtils;
@@ -23,9 +24,11 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -81,10 +84,7 @@ public class EmployeeResource {
     @PutMapping(value = "/employees", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     public ResponseEntity<EmployeeDTO> updateEmployee(@Valid @RequestPart("employee") EmployeeDTO employeeDTO,
                                                       @RequestPart(value = "avatar", required = false) MultipartFile avatar) {
-        log.debug("REST request to update Employee : {}", employeeDTO);
-        if (employeeDTO.getId() == null) {
-            throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull", "idnull");
-        }
+        this.IdNotNull(employeeDTO.getId());
 
         this.checkMimeType(avatar);
 
@@ -194,6 +194,52 @@ public class EmployeeResource {
                 page
         );
         return ResponseEntity.ok().headers(headers).body(page.getContent());
+    }
+
+    /**
+     * {@code PATCH  /employees/:id} : Partial updates given fields of an existing employee, field will ignore if it is null
+     *
+     * @param id          identifier of employee to update.
+     * @param employeeDTO the information to update.
+     * @param avatar      the avatar to update.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated employeeDTO,
+     * or with status {@code 400 (Bad Request)} if the employeeDTO is not valid,
+     * or with status {@code 404 (Not Found)} if the employeeDTO is not found,
+     * or with status {@code 500 (Internal Server Error)} if the employeeDTO couldn't be updated.
+     */
+    @PatchMapping(value = "/employees/{id}")
+    public ResponseEntity<EmployeeDTO> updatePersonalData(
+            @PathVariable(value = "id", required = false) final UUID id,
+            @NotNull @RequestPart(name = "employee") EmployeeDTO employeeDTO,
+            @RequestPart(name = "avatar", required = false) MultipartFile avatar
+    ) {
+
+        this.IdNotNull(employeeDTO.getId());
+        if (!Objects.equals(id, employeeDTO.getId())) {
+            throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid", "idnull");
+        }
+        this.checkMimeType(avatar);
+
+        Boolean exists = service.exists(id);
+        if (!exists) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+        EmployeeDTO updatedEmployee = service.partialUpdate(employeeDTO, avatar);
+        return ResponseEntity.ok()
+                .headers(HeaderUtil.createEntityUpdateAlert(applicationName,
+                        true, ENTITY_NAME,
+                        updatedEmployee.getName()))
+                .body(updatedEmployee);
+    }
+
+    /**
+     * Check if identifier is not null, otherwise throw {@link BadRequestAlertException}
+     * @param uuid identifier
+     */
+    private void IdNotNull(UUID uuid) {
+        if (uuid == null) {
+            throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idnull", "idnull");
+        }
     }
 
 }

@@ -44,8 +44,16 @@ public interface EmployeeMapper extends EntityMapper<EmployeeDTO, Employee> {
     EmployeeDTO toDto(Employee entity);
 
 
-    @Mapping(source = "id", target = "id")
     @Mapping(target = "phones", ignore = true)
+    @Mapping(target = "avatarUrl", ignore = true)
+    @Mapping(source = "chargeId", target = "charge")
+    @Mapping(source = "districtId", target = "district")
+    @Mapping(source = "categoryId", target = "category")
+    @Mapping(source = "workPlaceId", target = "workPlace")
+    @Mapping(source = "specialtyId", target = "specialty")
+    @Mapping(source = "professionId", target = "profession")
+    @Mapping(source = "scientificDegreeId", target = "scientificDegree")
+    @Mapping(source = "teachingCategoryId", target = "teachingCategory")
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void partialUpdate(EmployeeDTO dto, @MappingTarget Employee employee);
 
