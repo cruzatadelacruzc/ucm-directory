@@ -19,11 +19,13 @@ import cu.sld.ucmgt.directory.service.mapper.EmployeeMapper;
 import cu.sld.ucmgt.directory.service.mapper.PhoneMapper;
 import cu.sld.ucmgt.directory.service.mapper.WorkPlaceIndexMapper;
 import cu.sld.ucmgt.directory.service.mapper.WorkPlaceMapper;
+import cu.sld.ucmgt.directory.service.utils.ServiceUtils;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FilenameUtils;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
@@ -38,6 +40,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.*;
@@ -65,15 +68,30 @@ public class WorkPlaceService extends QueryService<WorkPlace>{
     /**
      * Create a WorkPlace entity and index WorkPlace
      * @param workPlaceDTO the request data of the workplace to save
+     * @param avatar of the user
      * @return the persisted entity.
      */
-    public WorkPlaceDTO create(WorkPlaceDTO workPlaceDTO) {
+    public WorkPlaceDTO create(WorkPlaceDTO workPlaceDTO, MultipartFile avatar) {
         WorkPlace workPlace = mapper.toEntity(workPlaceDTO);
 
         // find all employees and phones to saves
         loadAssociations(workPlaceDTO, workPlace);
 
+        String fileName = getFileName(workPlace, avatar);
+        if (avatar != null) {
+            workPlace.setAvatarUrl(fileName);
+        }
+
         repository.save(workPlace);
+
+        if (avatar != null) {
+            final FileService.SaveFileEvent saveFileEvent = FileService.SaveFileEvent.builder()
+                    .newFileName(fileName)
+                    .fileInput(avatar)
+                    .build();
+            eventPublisher.publishEvent(saveFileEvent);
+        }
+
         saveWorkPlaceIndex(workPlace, true);
         return mapper.toDto(workPlace);
     }
@@ -81,41 +99,81 @@ public class WorkPlaceService extends QueryService<WorkPlace>{
     /**
      * Update un WorkPlace and WorkPlaceIndex
      * @param workPlaceDTO the data of the workplace to save
+     * @param file Avatar
      * @return the persisted entity.
      */
-    public WorkPlaceDTO update(WorkPlaceDTO workPlaceDTO) {
-        WorkPlace workPlace = mapper.toEntity(workPlaceDTO);
+    public WorkPlaceDTO update(WorkPlaceDTO workPlaceDTO, MultipartFile file) {
+        String oldFileName = "";
+
+
+        WorkPlace workPlaceFetched = repository.findWorkPlaceWithAssociationsById(workPlaceDTO.getId())
+                .orElseThrow(() -> new NoSuchElementException("WorkPlaceIndex with ID:" + workPlaceDTO.getId() + " not was found"));
+
+        String newFileName = getFileName(workPlaceFetched, file);
+        // case: For renaming or updating a exists avatar
+        if (workPlaceFetched.getAvatarUrl() != null) {
+            oldFileName = workPlaceFetched.getAvatarUrl();
+            String extension = Optional.ofNullable(FilenameUtils.getExtension(oldFileName)).orElse("");
+            newFileName = !extension.isBlank() ? newFileName + "." + extension : newFileName;
+        }
 
         // remove all associations for updating the new associations
         if (!workPlaceDTO.getPhoneIds().isEmpty() || !workPlaceDTO.getEmployeeIds().isEmpty()) {
-            Optional<WorkPlace> workPlaceFetched = repository.findWorkPlaceWithAssociationsById(workPlaceDTO.getId());
-            if (workPlaceFetched.isPresent()) {
-                workPlace = workPlaceFetched.get();
-                if (workPlaceDTO.getEmployeeIds() != null && !workPlaceDTO.getEmployeeIds().isEmpty()) {
-                    new HashSet<>(workPlace.getEmployees()).forEach(workPlace::removeEmployee);
+            if (workPlaceDTO.getEmployeeIds() != null && !workPlaceDTO.getEmployeeIds().isEmpty()) {
+                    new HashSet<>(workPlaceFetched.getEmployees()).forEach(workPlaceFetched::removeEmployee);
                 }
                 if (workPlaceDTO.getPhoneIds() != null && !workPlaceDTO.getPhoneIds().isEmpty()) {
-                    new HashSet<>(workPlace.getPhones()).forEach(workPlace::removePhone);
+                    new HashSet<>(workPlaceFetched.getPhones()).forEach(workPlaceFetched::removePhone);
                 }
             }
-        }
+
 
         // find all employees and phones to saves
-        loadAssociations(workPlaceDTO, workPlace);
+        loadAssociations(workPlaceDTO, workPlaceFetched);
 
-        workPlace.setName(workPlaceDTO.getName());
-        workPlace.setEmail(workPlaceDTO.getEmail());
-        boolean oldStatus = workPlace.getActive();
-        workPlace.setActive(workPlaceDTO.getActive());
-        workPlace.setDescription(workPlaceDTO.getDescription());
-        repository.save(workPlace);
+        workPlaceFetched.setName(workPlaceDTO.getName());
+        workPlaceFetched.setEmail(workPlaceDTO.getEmail());
+        boolean oldStatus = workPlaceFetched.getActive();
+        workPlaceFetched.setActive(workPlaceDTO.getActive());
+        workPlaceFetched.setDescription(workPlaceDTO.getDescription());
+        // case: To store new avatar or update a exists avatar
+        if (file != null || (!newFileName.equals(oldFileName) && !oldFileName.isBlank())) {
+            workPlaceFetched.setAvatarUrl(newFileName);
+        }
+
+        repository.save(workPlaceFetched);
+
+        if (file != null) {
+            final FileService.SaveFileEvent saveFileEvent = FileService.SaveFileEvent.builder()
+                    .newFileName(newFileName)
+                    .oldFileName(oldFileName)
+                    .fileInput(file)
+                    .build();
+            eventPublisher.publishEvent(saveFileEvent);
+        }
 
         if ((workPlaceDTO.getActive() && !oldStatus) || (!workPlaceDTO.getActive() && oldStatus)) {
-            switchStatus(workPlace, workPlaceDTO.getActive());
+            switchStatus(workPlaceFetched, workPlaceDTO.getActive());
         } else {
-            saveWorkPlaceIndex(workPlace, false);
+            saveWorkPlaceIndex(workPlaceFetched, false);
         }
-        return mapper.toDto(workPlace);
+        return mapper.toDto(workPlaceFetched);
+    }
+
+    /**
+     * Set a new File Name
+     * @param workPlace {@link WorkPlace} entity
+     * @param file avatar with content type image/png or image/jpeg
+     * @return new file name
+     */
+    private String getFileName(WorkPlace workPlace, MultipartFile file) {
+        String newFileName = workPlace.getName().replaceAll("[^a-zA-Z0-9_-]","").toLowerCase();
+        newFileName =  newFileName + "@" + workPlace.getId().toString();
+        if (file != null) {
+            newFileName = ServiceUtils.getAvatarNameWithExtension(file, newFileName.toLowerCase());
+        }
+
+        return newFileName.toLowerCase();
     }
 
     /**
@@ -414,6 +472,26 @@ public class WorkPlaceService extends QueryService<WorkPlace>{
             }
         }
         return specification;
+    }
+
+    /**
+     * Delete avatar of workplace
+     * @param workplaceId identifier of {@link WorkPlace}
+     * @return True if avatar was removed False otherwise
+     */
+    public Boolean deleteAvatar(UUID workplaceId) {
+        Optional<WorkPlace> workPlaceOptional = repository.findById(workplaceId);
+        if (workPlaceOptional.isPresent()) {
+            String avatar = workPlaceOptional.get().getAvatarUrl();
+            workPlaceOptional.get().setAvatarUrl(null);
+            repository.save(workPlaceOptional.get());
+            final FileService.DeleteFileEvent deleteFileEvent = FileService.DeleteFileEvent.builder()
+                    .fileName(avatar)
+                    .build();
+            eventPublisher.publishEvent(deleteFileEvent);
+            return true;
+        }
+        return false;
     }
 
     /**

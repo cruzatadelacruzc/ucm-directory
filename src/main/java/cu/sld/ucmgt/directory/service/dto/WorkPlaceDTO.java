@@ -25,6 +25,8 @@ public class WorkPlaceDTO implements Serializable {
 
     private String description;
 
+    private String avatarUrl;
+
     private Set<UUID> employeeIds;
 
     private Set<UUID> phoneIds;
@@ -54,6 +56,7 @@ public class WorkPlaceDTO implements Serializable {
                 ", email='" + email + '\'' +
                 ", active=" + active +
                 ", description='" + description + '\'' +
+                ", avatarUrl='" + avatarUrl + '\'' +
                 ", employeeIds=" + employeeIds +
                 ", phoneIds=" + phoneIds +
                 ", employees=" + employees +

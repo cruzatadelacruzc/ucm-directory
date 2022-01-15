@@ -18,6 +18,7 @@ import java.util.UUID;
 public interface WorkPlaceMapper extends EntityMapper<WorkPlaceDTO, WorkPlace> {
 
     @Mapping(target = "phones", ignore = true)
+    @Mapping(target = "avatarUrl", ignore = true)
     @Mapping(target = "employees", ignore = true)
     WorkPlace toEntity(WorkPlaceDTO dto);
 
