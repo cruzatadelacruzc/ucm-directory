@@ -17,6 +17,8 @@ public class WorkPlaceIndex {
 
     private String email;
 
+    private String avatarUrl;
+
     private String description;
 
     private Set<EmployeeIndex> employees = new HashSet<>();

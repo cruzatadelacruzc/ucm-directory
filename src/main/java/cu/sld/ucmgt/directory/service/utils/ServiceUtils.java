@@ -28,7 +28,7 @@ public final class ServiceUtils {
     /**
      * Build Avatar name using ContentType of MultipartFile (image/png or image/jpeg)
      * @param person {@link Person} entity
-     * @return image with extension (avatar.png)
+     * @return image with generated name (name@Id)
      */
     public static String buildAvatarName(Person person) {
         String fileName = person.getName().replaceAll("[^a-zA-Z0-9_-]","").toLowerCase();

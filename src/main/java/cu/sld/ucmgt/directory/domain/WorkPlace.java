@@ -34,6 +34,8 @@ public class WorkPlace extends AbstractAuditingEntity implements Serializable {
     @Email
     private String email;
 
+    private String avatarUrl;
+
     private String description;
 
     @OneToMany(mappedBy = "workPlace")
@@ -84,6 +86,7 @@ public class WorkPlace extends AbstractAuditingEntity implements Serializable {
                 ", name='" + name + '\'' +
                 ", email=" + email +
                 ", active=" + active +
+                ", avatarUrl=" + avatarUrl +
                 ", description='" + description + '\'' +
                 '}';
     }
