@@ -668,7 +668,7 @@ public class EmployeeService extends QueryService<Employee> {
                 employeeFetched.setAvatarUrl(newFileName);
             }
 
-            repository.save(employeeFetched);
+            this.save(employeeFetched);
             searchRepository.save(employeeIndexMapper.toIndex(employeeFetched));
            this.publishEmployeeEvent(employeeFetched,
                    avatar, employeeIdToRemove,
