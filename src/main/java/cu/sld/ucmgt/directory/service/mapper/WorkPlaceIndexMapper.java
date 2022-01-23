@@ -5,7 +5,7 @@ import cu.sld.ucmgt.directory.domain.WorkPlace;
 import cu.sld.ucmgt.directory.domain.elasticsearch.PhoneIndex;
 import cu.sld.ucmgt.directory.domain.elasticsearch.WorkPlaceIndex;
 import org.mapstruct.Mapper;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.mapstruct.factory.Mappers;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -16,8 +16,7 @@ import java.util.Set;
 @Mapper(componentModel = "spring")
 public abstract class WorkPlaceIndexMapper {
 
-    @Autowired
-    private EmployeeIndexMapper employeeIndexMapper;
+    private final EmployeeIndexMapper employeeIndexMapper = Mappers.getMapper(EmployeeIndexMapper.class);
 
 
     public WorkPlaceIndex toIndex(WorkPlace workPlace) {

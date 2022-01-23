@@ -2,6 +2,8 @@ package cu.sld.ucmgt.directory.domain.elasticsearch;
 
 import lombok.Data;
 import org.springframework.data.elasticsearch.annotations.Document;
+import org.springframework.data.elasticsearch.annotations.Field;
+import org.springframework.data.elasticsearch.annotations.FieldType;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -19,6 +21,7 @@ public class WorkPlaceIndex {
 
     private String avatarUrl;
 
+    @Field(type = FieldType.Text)
     private String description;
 
     private Set<EmployeeIndex> employees = new HashSet<>();
