@@ -209,7 +209,7 @@ public class StudentService extends QueryService<Student>{
                 existingStudent.setAvatarUrl(newFileName);
             }
 
-            repository.save(existingStudent);
+            this.save(existingStudent);
 
             final FileService.SaveFileEvent saveFileEvent = FileService.SaveFileEvent.builder()
                     .newFileName(newFileName)
