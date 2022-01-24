@@ -15,8 +15,10 @@ import cu.sld.ucmgt.directory.service.WorkPlaceService.RemovedWorkPlaceIndexEven
 import cu.sld.ucmgt.directory.service.WorkPlaceService.SavedWorkPlaceIndexEvent;
 import cu.sld.ucmgt.directory.service.criteria.PhoneCriteria;
 import cu.sld.ucmgt.directory.service.dto.PhoneDTO;
+import cu.sld.ucmgt.directory.service.mapper.EmployeeMapper;
 import cu.sld.ucmgt.directory.service.mapper.PhoneIndexMapper;
 import cu.sld.ucmgt.directory.service.mapper.PhoneMapper;
+import cu.sld.ucmgt.directory.service.mapper.WorkPlaceMapper;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -51,6 +53,8 @@ public class PhoneService extends QueryService<Phone> {
 
     private final PhoneMapper mapper;
     private final PhoneRepository repository;
+    private final EmployeeMapper employeeMapper;
+    private final WorkPlaceMapper workPlaceMapper;
     private final PhoneIndexMapper phoneIndexMapper;
     private final RestHighLevelClient highLevelClient;
     private static final String INDEX_NAME = "phones";
@@ -229,8 +233,12 @@ public class PhoneService extends QueryService<Phone> {
      */
     @Transactional(readOnly = true)
     public Optional<PhoneDTO> getPhone(UUID uid) {
-        log.debug("Request to get Phone : {}", uid);
-        return repository.findById(uid).map(mapper::toDto);
+        return repository.findById(uid).map(phone -> {
+            PhoneDTO phoneDTO = mapper.toDto(phone);
+            phoneDTO.setEmployee(employeeMapper.toDto(phone.getEmployee()));
+            phoneDTO.setWorkPlace(workPlaceMapper.toDto(phone.getWorkPlace()));
+            return phoneDTO;
+        });
     }
 
     /**

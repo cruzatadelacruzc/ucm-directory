@@ -27,6 +27,8 @@ public class PhoneDTO implements Serializable {
     private UUID workPlaceId;
     private String workPlaceName;
     private String employeeName;
+    private WorkPlaceDTO workPlace;
+    private EmployeeDTO employee;
 
     @Override
     public boolean equals(Object o) {
@@ -50,6 +52,8 @@ public class PhoneDTO implements Serializable {
                 ", description='" + description + '\'' +
                 ", employeeId=" + employeeId +
                 ", workPlaceId=" + workPlaceId +
+                ", employeeName=" + employeeName +
+                ", workPlaceName=" + workPlaceName +
                 '}';
     }
 }
