@@ -47,6 +47,9 @@ public class Employee extends Person implements Serializable {
     @Min(value = 0)
     private Integer serviceYears;
 
+    @Min(value = 0)
+    private Integer salary;
+
     @NotBlank
     private String registerNumber;
 
@@ -117,6 +120,7 @@ public class Employee extends Person implements Serializable {
                 ", registerNumber='" + registerNumber + '\'' +
                 ", bossWorkPlace=" + bossWorkPlace +
                 ", professionalNumber='" + professionalNumber + '\'' +
+                ", salary='" + salary + '\'' +
                 ", workPlace=" + workPlace +
                 ", category=" + category +
                 ", scientificDegree=" + scientificDegree +

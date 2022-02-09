@@ -27,6 +27,8 @@ public class EmployeeDTO extends PersonDTO {
     private Integer serviceYears;
     @NotBlank(message = "error:NotBlank")
     private String registerNumber;
+    @Min(value = 0, message = "error:Min")
+    private Integer salary;
     private String professionalNumber;
     private UUID workPlaceId;
     private UUID categoryId;
@@ -69,6 +71,7 @@ public class EmployeeDTO extends PersonDTO {
                 ", serviceYears=" + serviceYears +
                 ", registerNumber='" + registerNumber + '\'' +
                 ", professionalNumber='" + professionalNumber + '\'' +
+                ", salary='" + salary + '\'' +
                 ", workPlaceId=" + workPlaceId +
                 ", categoryId=" + categoryId +
                 ", scientificDegreeId=" + scientificDegreeId +

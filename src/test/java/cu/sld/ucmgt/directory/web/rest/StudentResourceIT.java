@@ -749,4 +749,26 @@ public class StudentResourceIT extends PersonIT {
         assertThat(studentIndex.getClassRoom()).isEqualTo(UPDATE_CLASSROOM);
         assertThat(studentIndex.getFirstLastName()).isEqualTo(UPDATE_FIRST_LAST_NAME);
     }
+
+    @Test
+    @Transactional
+    void deleteStudentWithAvatar() throws Exception {
+        System.out.println("not implement yet");
+    }
+
+    @Test
+    @Transactional
+    void createStudentWithAvatar() throws Exception {
+        System.out.println("not implement yet");
+    }
+
+    void updateStudentWithAvatar() throws Exception {
+        System.out.println("not implement yet");
+    }
+
+    @Test
+    @Transactional
+    void deleteAvatar() throws Exception {
+        System.out.println("not implement yet");
+    }
 }

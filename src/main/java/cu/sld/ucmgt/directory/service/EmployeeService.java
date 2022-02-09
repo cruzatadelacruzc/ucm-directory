@@ -422,6 +422,9 @@ public class EmployeeService extends QueryService<Employee> {
                 if (criteria.getId() != null) {
                     specification = specification.and(buildSpecification(criteria.getId(), Employee_.id));
                 }
+                if (criteria.getSalary() != null) {
+                    specification = specification.and(buildSpecification(criteria.getSalary(), Employee_.salary));
+                }
                 if (criteria.getCi() != null) {
                     specification = specification.and(buildStringSpecification(criteria.getCi(), Employee_.ci));
                 }
@@ -512,6 +515,9 @@ public class EmployeeService extends QueryService<Employee> {
             } else {
                 if (criteria.getId() != null) {
                     specification = specification.or(buildSpecification(criteria.getId(), Employee_.id));
+                }
+                if (criteria.getSalary() != null) {
+                    specification = specification.or(buildSpecification(criteria.getSalary(), Employee_.salary));
                 }
                 if (criteria.getCi() != null) {
                     specification = specification.or(buildStringSpecification(criteria.getCi(), Employee_.ci));
