@@ -77,12 +77,12 @@ public class WorkPlaceService extends QueryService<WorkPlace>{
         // find all employees and phones to saves
         loadAssociations(workPlaceDTO, workPlace);
 
+        repository.save(workPlace);
+
         String fileName = getFileName(workPlace, avatar);
         if (avatar != null) {
             workPlace.setAvatarUrl(fileName);
         }
-
-        repository.save(workPlace);
 
         if (avatar != null) {
             final FileService.SaveFileEvent saveFileEvent = FileService.SaveFileEvent.builder()
