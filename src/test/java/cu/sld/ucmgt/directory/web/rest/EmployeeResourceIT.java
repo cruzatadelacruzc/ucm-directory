@@ -1230,7 +1230,7 @@ public class EmployeeResourceIT extends PersonIT {
 
     @Test
     @Transactional
-    void searchAllEmployeesByCIAndNameAndWorkPlaceAndSpecialtyAndRegisterNumberIsIsGreaterThanShouldWork() throws Exception {
+    void searchAllEmployeesByCIAndNameAndWorkPlaceAndSpecialtyAndRegisterNumberContainsSomething() throws Exception {
         // Initialize the database
         Nomenclature specialty =  new Nomenclature();
         specialty.setName("Medicine");
@@ -1251,12 +1251,45 @@ public class EmployeeResourceIT extends PersonIT {
         em.flush();
         String filter = "ci.contains=paramName&registerNumber.contains=paramName&name.contains=paramName" +
                 "&specialtyName.contains=paramName&workPlaceName.contains=paramName&page=0&size=20&sort=name,asc";
-        // Get all the employeeList where ci, registerNumber, name,specialtyName and workPlaceName not equals to UPDATE_NAME
+        // Get all the employeeList where ci, registerNumber, name, specialtyName and workPlaceName contains UPDATE_NAME
         defaultEmployeeShouldNotBeFoundWithOrOperator(filter.replaceAll("paramName", UPDATE_NAME));
 
-        // Get all the employeeList where name not equals to DEFAULT_NAME
+        // Get all the employeeList where ci, registerNumber, name, specialtyName and workPlaceName contains DEFAULT_NAME
         defaultEmployeeShouldBeFoundWithOrOperator(filter.replaceAll("paramName", DEFAULT_NAME));
     }
+
+    @Test
+    @Transactional
+    void getAllEmployeesByNameContainsSomething() throws Exception {
+        // Initialize the database
+        em.persist(employee);
+        em.flush();
+
+        // Get all the employeesList where name contains DEFAULT_NAME
+        defaultEmployeeShouldBeFoundWithAndOperator("name.contains=" + DEFAULT_NAME.concat(" MONCADA"));
+        defaultEmployeeShouldBeFoundWithOrOperator("name.contains=" + DEFAULT_NAME.concat("  RENE"));
+
+        // Zero employees will be obtained with name that containing UPDATE_NAME
+        defaultEmployeeShouldNotBeFoundWithAndOperator("name.contains=" + UPDATE_NAME);
+        defaultEmployeeShouldNotBeFoundWithOrOperator("name.contains=" + UPDATE_NAME);
+    }
+
+    @Test
+    @Transactional
+    void getAllEmployeesByNameNotContainsSomething() throws Exception {
+        // Initialize the database
+        em.persist(employee);
+        em.flush();
+
+        // Zero employees will be obtained with name that containing UPDATE_NAME
+        defaultEmployeeShouldNotBeFoundWithAndOperator("name.doesNotContain=" + DEFAULT_NAME);
+        defaultEmployeeShouldNotBeFoundWithOrOperator("name.doesNotContain=" + DEFAULT_NAME);
+
+        // Get all the employeesList where name does not contain DEFAULT_NAME
+        defaultEmployeeShouldBeFoundWithAndOperator("name.doesNotContain=" + UPDATE_NAME);
+        defaultEmployeeShouldBeFoundWithOrOperator("name.doesNotContain=" + UPDATE_NAME);
+    }
+
 
     @Test
     @Transactional

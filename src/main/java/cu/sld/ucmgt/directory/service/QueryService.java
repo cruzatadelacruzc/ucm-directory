@@ -8,12 +8,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.criteria.CriteriaBuilder.In;
 import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 import javax.persistence.criteria.SetJoin;
 import javax.persistence.metamodel.SetAttribute;
 import javax.persistence.metamodel.SingularAttribute;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.StringTokenizer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Base service for constructing and executing complex queries.
@@ -317,7 +322,12 @@ public class QueryService<E> {
      * @return a {@link Specification} object.
      */
     protected Specification<E> likeUpperSpecification(Function<Root<E>, Expression<String>> metaClassFunction, final String value) {
-        return (root, query, builder) -> builder.like(builder.upper(metaClassFunction.apply(root)), wrapLikeQuery(value));
+        return (root, query, builder) -> {
+            List<String> tokens = getTokensWithCollection(value);
+            return builder.or(tokens.stream()
+                    .map(token -> builder.like(builder.upper(metaClassFunction.apply(root)), wrapLikeQuery(token)))
+                    .toArray(Predicate[]::new));
+        };
     }
 
     /**
@@ -328,7 +338,12 @@ public class QueryService<E> {
      * @return a {@link Specification} object.
      */
     protected Specification<E> doesNotContainSpecification(Function<Root<E>, Expression<String>> metaClassFunction, final String value) {
-        return (root, query, builder) -> builder.not(builder.like(builder.upper(metaClassFunction.apply(root)), wrapLikeQuery(value)));
+        return (root, query, builder) -> {
+            List<String> tokens = getTokensWithCollection(value);
+            return builder.not(builder.or(tokens.stream()
+                                .map(token -> builder.like(builder.upper(metaClassFunction.apply(root)), wrapLikeQuery(token)))
+                                .toArray(Predicate[]::new)));
+        };
     }
 
     /**
@@ -437,5 +452,15 @@ public class QueryService<E> {
      */
     protected String wrapLikeQuery(String txt) {
         return "%" + txt.toUpperCase() + '%';
+    }
+
+    protected List<String> getTokensWithCollection(String str) {
+        return getTokensWithCollection(str, null);
+    }
+
+    protected List<String> getTokensWithCollection(String str, String delim) {
+        return Collections.list(null == delim ? new StringTokenizer(str): new StringTokenizer(str, delim)).stream()
+                .map(token -> (String) token)
+                .collect(Collectors.toList());
     }
 }
