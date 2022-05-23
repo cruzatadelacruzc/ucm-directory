@@ -6,6 +6,7 @@ import cu.sld.ucmgt.directory.domain.Nomenclature_;
 import cu.sld.ucmgt.directory.repository.NomenclatureRepository;
 import cu.sld.ucmgt.directory.service.criteria.NomenclatureCriteria;
 import cu.sld.ucmgt.directory.service.dto.NomenclatureDTO;
+import cu.sld.ucmgt.directory.service.filter.StringFilter;
 import cu.sld.ucmgt.directory.service.mapper.NomenclatureMapper;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,7 +20,6 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.persistence.EntityManager;
 import java.util.*;
 
 @Slf4j
@@ -28,7 +28,6 @@ import java.util.*;
 @RequiredArgsConstructor
 public class NomenclatureService extends QueryService<Nomenclature> {
 
-    private final EntityManager em;
     private final NomenclatureMapper mapper;
     private final NomenclatureRepository repository;
     private final ApplicationEventPublisher eventPublisher;
@@ -173,12 +172,17 @@ public class NomenclatureService extends QueryService<Nomenclature> {
      * Get nomenclatures page given status and discriminator
      *
      * @param discriminator nomenclature discriminator
-     * @param pageable the pagination information.
+     * @param pageable      the pagination information.
      * @return the list of entities.
      */
-    public Page<NomenclatureDTO> getAllByStatusAndDiscriminator(Pageable pageable,NomenclatureType discriminator) {
-        log.debug("Request to get a page of Nomenclature by discriminator {}", discriminator);
-        return repository.findAllByDiscriminator(pageable, discriminator).map(mapper::toDto);
+    public Page<NomenclatureDTO> getAllByStatusAndDiscriminator(String operator_union, NomenclatureCriteria criteria,
+                                                                NomenclatureType discriminator, Pageable pageable) {
+
+        StringFilter stringFilter = new StringFilter();
+        stringFilter.setEquals(discriminator.name());
+        Specification<Nomenclature> specifications = createSpecification(operator_union, criteria);
+        specifications = specifications.and(buildAsStringSpecification(stringFilter, Nomenclature_.discriminator));
+        return repository.findAll(specifications, pageable).map(mapper::toDto);
     }
 
     /**

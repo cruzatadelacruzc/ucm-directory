@@ -546,28 +546,26 @@ public class NomenclatureResourceIT {
 
     @Test
     @Transactional
-    public void getAllByDiscriminator() throws Exception{
+    public void getFilteredNomenclatureByDiscriminatorAndDiscriminatorOrName() throws Exception {
         // Initialize the database
-        repository.deleteAll();
         Nomenclature nomenclatureChild = new Nomenclature();
-        nomenclatureChild.setName(DEFAULT_NAME);
+        nomenclatureChild.setName(DEFAULT_NAME.concat("pepe"));
         nomenclatureChild.setDiscriminator(DEFAULT_DISCRIMINATOR);
         nomenclatureChild.setDescription(DEFAULT_DESCRIPTION);
         repository.saveAndFlush(nomenclatureChild);
-
-        restMockMvc.perform(get("/api/nomenclatures/discriminator/{discriminator}?sort=id,desc",
-                nomenclatureChild.getDiscriminator()))
+        String filter = "name.contains=%s&description.contains=%s".replaceAll("%s", DEFAULT_NAME.concat("pepe"));
+        restMockMvc.perform(get(String.format("/api/nomenclatures/filtered/%s/OR?%s&sort=name,desc", DEFAULT_DISCRIMINATOR, filter)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(jsonPath("$.[*].id").value(nomenclatureChild.getId().toString()))
-                .andExpect(jsonPath("$.[*].name").value(DEFAULT_NAME))
+                .andExpect(jsonPath("$.[*].name").value(DEFAULT_NAME.concat("pepe")))
                 .andExpect(jsonPath("$.[*].discriminator").value(DEFAULT_DISCRIMINATOR.toString()))
                 .andExpect(jsonPath("$.[*].description").value(DEFAULT_DESCRIPTION));
     }
 
     @Test
     @Transactional
-    public void getAllByDiscriminatorUnpaged() throws Exception{
+    public void getFilteredNomenclatureByDiscriminatorAndDiscriminatorOrNameUnpaged() throws Exception {
         // Initialize the database
         repository.deleteAll();
         Nomenclature nomenclatureChild = new Nomenclature();
@@ -576,8 +574,8 @@ public class NomenclatureResourceIT {
         nomenclatureChild.setDescription(DEFAULT_DESCRIPTION);
         repository.saveAndFlush(nomenclatureChild);
 
-        MvcResult resultNomenclature = restMockMvc.perform(get("/api/nomenclatures/discriminator/{discriminator}?unpaged=true",
-                nomenclatureChild.getDiscriminator()))
+        String filter = "name.contains=%s&description.contains=%s".replaceAll("%s", DEFAULT_NAME);
+        MvcResult resultNomenclature = restMockMvc.perform(get(String.format("/api/nomenclatures/filtered/%s/OR?%s&sort=name,desc&unpaged=true", DEFAULT_DISCRIMINATOR, filter)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(jsonPath("$.[*].id").value(nomenclatureChild.getId().toString()))
