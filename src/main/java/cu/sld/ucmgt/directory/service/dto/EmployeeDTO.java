@@ -38,6 +38,13 @@ public class EmployeeDTO extends PersonDTO {
     private UUID professionId;
     private Set<PhoneDTO> phones;
 
+    private NomenclatureDTO category;
+    private NomenclatureDTO scientificDegree;
+    private NomenclatureDTO charge;
+    private NomenclatureDTO profession;
+    private NomenclatureDTO teachingCategory;
+    private WorkPlaceDTO workPlace;
+
     private String workPlaceName;
     private String categoryName;
     private String scientificDegreeName;
@@ -69,9 +76,12 @@ public class EmployeeDTO extends PersonDTO {
                 ", graduateYears=" + graduateYears +
                 ", isGraduatedBySector=" + isGraduatedBySector +
                 ", serviceYears=" + serviceYears +
-                ", registerNumber='" + registerNumber + '\'' +
-                ", professionalNumber='" + professionalNumber + '\'' +
-                ", salary='" + salary + '\'' +
+                ", registerNumber='" + registerNumber +
+                ", professionalNumber='" + professionalNumber +
+                ", salary='" + salary +
+                ", workPlace=" + workPlace +
+                ", category=" + category +
+                ", teachingCategory=" + teachingCategory +
                 ", workPlaceId=" + workPlaceId +
                 ", categoryId=" + categoryId +
                 ", scientificDegreeId=" + scientificDegreeId +
@@ -79,12 +89,12 @@ public class EmployeeDTO extends PersonDTO {
                 ", chargeId=" + chargeId +
                 ", professionId=" + professionId +
                 ", phones=" + phones +
-                ", workPlaceName='" + workPlaceName + '\'' +
-                ", categoryName='" + categoryName + '\'' +
-                ", scientificDegreeName='" + scientificDegreeName + '\'' +
-                ", teachingCategoryName='" + teachingCategoryName + '\'' +
-                ", chargeName='" + chargeName + '\'' +
-                ", professionName='" + professionName + '\'' +
+                ", workPlaceName='" + workPlaceName +
+                ", categoryName='" + categoryName +
+                ", scientificDegreeName='" + scientificDegreeName +
+                ", teachingCategoryName='" + teachingCategoryName +
+                ", chargeName='" + chargeName +
+                ", professionName='" + professionName +
                 "} " + super.toString();
     }
 }
