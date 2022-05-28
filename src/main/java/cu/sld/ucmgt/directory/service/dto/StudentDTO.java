@@ -23,6 +23,9 @@ public class StudentDTO extends PersonDTO {
     private String kindName;
     private String studyCenterName;
 
+    private NomenclatureDTO studyCenter;
+    private NomenclatureDTO kind;
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -49,6 +52,8 @@ public class StudentDTO extends PersonDTO {
                 ", studyCenterId=" + studyCenterId +
                 ", kindName='" + kindName + '\'' +
                 ", studyCenterName='" + studyCenterName + '\'' +
+                ", kind='" + kind + '\'' +
+                ", studyCenter='" + studyCenter + '\'' +
                 "} " + super.toString();
     }
 }

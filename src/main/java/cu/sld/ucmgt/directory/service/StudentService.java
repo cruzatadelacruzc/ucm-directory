@@ -11,6 +11,7 @@ import cu.sld.ucmgt.directory.repository.search.StudentSearchRepository;
 import cu.sld.ucmgt.directory.service.NomenclatureService.SavedNomenclatureEvent;
 import cu.sld.ucmgt.directory.service.criteria.StudentCriteria;
 import cu.sld.ucmgt.directory.service.dto.StudentDTO;
+import cu.sld.ucmgt.directory.service.mapper.NomenclatureMapper;
 import cu.sld.ucmgt.directory.service.mapper.StudentIndexMapper;
 import cu.sld.ucmgt.directory.service.mapper.StudentMapper;
 import cu.sld.ucmgt.directory.service.utils.ServiceUtils;
@@ -50,6 +51,7 @@ public class StudentService extends QueryService<Student>{
     private final StudentMapper mapper;
     private final StudentRepository repository;
     private final RestHighLevelClient highLevelClient;
+    private final NomenclatureMapper nomenclatureMapper;
     private static final String INDEX_NAME = "students";
     private final StudentIndexMapper studentIndexMapper;
     private final ApplicationEventPublisher eventPublisher;
@@ -234,8 +236,14 @@ public class StudentService extends QueryService<Student>{
      */
     @Transactional(readOnly = true)
     public Optional<StudentDTO> getStudent(UUID uid) {
-        log.debug("Request to get Student : {}", uid);
-        return repository.findById(uid).map(mapper::toDto);
+        return repository.findById(uid).map(student -> {
+            StudentDTO studentDTO = mapper.toDto(student);
+            studentDTO.setKind(nomenclatureMapper.toDto(student.getKind()));
+            studentDTO.setDistrict(nomenclatureMapper.toDto(student.getDistrict()));
+            studentDTO.setSpecialty(nomenclatureMapper.toDto(student.getSpecialty()));
+            studentDTO.setStudyCenter(nomenclatureMapper.toDto(student.getStudyCenter()));
+            return studentDTO;
+        });
     }
 
     /**
