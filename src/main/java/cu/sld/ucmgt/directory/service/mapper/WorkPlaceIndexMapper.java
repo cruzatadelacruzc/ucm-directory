@@ -28,8 +28,9 @@ public abstract class WorkPlaceIndexMapper {
 
         workPlaceIndex.setId( workPlace.getId() );
         workPlaceIndex.setName( workPlace.getName() );
-        workPlaceIndex.setEmail( workPlace.getEmail() );
-        workPlaceIndex.setDescription( workPlace.getDescription() );
+        workPlaceIndex.setEmail(workPlace.getEmail());
+        workPlaceIndex.setAvatarUrl(workPlace.getAvatarUrl());
+        workPlaceIndex.setDescription(workPlace.getDescription());
         workPlaceIndex.setEmployees( employeeIndexMapper.toIndices( workPlace.getEmployees() ) );
         workPlaceIndex.setPhones( mapPhonesToPhoneIndices( workPlace.getPhones() ) );
 

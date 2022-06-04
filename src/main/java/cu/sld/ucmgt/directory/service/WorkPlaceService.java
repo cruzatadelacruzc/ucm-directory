@@ -232,6 +232,7 @@ public class WorkPlaceService extends QueryService<WorkPlace>{
         workPlaceIndexMap.put("id", workPlaceIndex.getId().toString());
         workPlaceIndexMap.put("name", workPlaceIndex.getName());
         workPlaceIndexMap.put("email", workPlaceIndex.getEmail());
+        workPlaceIndexMap.put("avatarUrl", workPlaceIndex.getAvatarUrl());
         workPlaceIndexMap.put("description", workPlaceIndex.getDescription());
         return workPlaceIndexMap;
     }
