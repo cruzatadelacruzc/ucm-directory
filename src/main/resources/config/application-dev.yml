@@ -24,6 +24,15 @@ management:
     elasticsearch:
       enabled: false
 
+#Object Storage Service
+minio:
+  bucket:
+    name: directory
+  access:
+    key: minio
+    secret: miniostorage
+  url: http://192.168.1.10:9000
+
 spring:
   profiles:
     active: dev
