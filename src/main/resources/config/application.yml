@@ -119,7 +119,7 @@ spring:
             provider: keycloak
             client-id: internal
             client-secret: internal
-            scope: openid,profile,email
+            scope: openid,profile,email,offline_access
         provider:
           keycloak:
             issuer-uri: http://keycloak:9080/realms/jhipster
