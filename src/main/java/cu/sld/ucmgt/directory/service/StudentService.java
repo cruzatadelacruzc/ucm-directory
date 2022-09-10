@@ -101,9 +101,8 @@ public class StudentService extends QueryService<Student>{
     public StudentDTO create(StudentDTO studentDTO, MultipartFile avatar) {
         Student student = mapper.toEntity(studentDTO);
         student =  repository.save(student);
-        String fileName = ServiceUtils.buildAvatarName(student);
+        String fileName = getFileName(student, avatar);
         if (avatar != null) {
-            fileName = ServiceUtils.getAvatarNameWithExtension(avatar, fileName.toLowerCase());
             student.setAvatarUrl(fileName);
         }
         StudentIndex studentIndex = studentIndexMapper.toIndex(student);
@@ -127,10 +126,7 @@ public class StudentService extends QueryService<Student>{
     public StudentDTO update(StudentDTO studentDTO, MultipartFile avatar) {
         String oldFileName = "";
         Student student = mapper.toEntity(studentDTO);
-        String newFileName = ServiceUtils.buildAvatarName(student);
-        if (avatar != null) {
-            newFileName = ServiceUtils.getAvatarNameWithExtension(avatar, newFileName);
-        }
+        String newFileName = getFileName(student, avatar);
         Optional<Student> studentOptional = repository.findById(studentDTO.getId());
         if (studentOptional.isPresent()) {
             Student studentFetched = studentOptional.get();
@@ -191,13 +187,8 @@ public class StudentService extends QueryService<Student>{
         Optional<Student> optionalStudent =  repository.findById(studentDto.getId());
         if (optionalStudent.isPresent()) {
             Student existingStudent = optionalStudent.get();
-            String newFileName = ServiceUtils.buildAvatarName(existingStudent);
-
-            if (avatar != null) {
-                newFileName = ServiceUtils.getAvatarNameWithExtension(avatar, newFileName);
-            }
-
             mapper.partialUpdate(studentDto, existingStudent);
+            String newFileName = getFileName(existingStudent, avatar);
 
             // case: For renaming or updating a exists avatar
             if (existingStudent.getAvatarUrl() != null) {
@@ -226,6 +217,21 @@ public class StudentService extends QueryService<Student>{
         } else {
             return null;
         }
+    }
+
+    /**
+     * Set a new File Name
+     *
+     * @param student entity
+     * @param file    avatar with content type image/png or image/jpeg
+     * @return new file name
+     */
+    private String getFileName(Student student, MultipartFile file) {
+        String newFileName = ServiceUtils.buildAvatarName(student);
+        if (file != null) {
+            newFileName = ServiceUtils.getAvatarNameWithExtension(file, newFileName.toLowerCase());
+        }
+        return newFileName.toLowerCase();
     }
 
     /**
