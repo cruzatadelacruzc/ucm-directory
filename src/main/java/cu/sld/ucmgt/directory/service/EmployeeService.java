@@ -227,7 +227,9 @@ public class EmployeeService extends QueryService<Employee> {
     public void deleteEmployee(UUID uid) {
         repository.findEmployeeWithAssociationsById(uid).ifPresent(employee -> {
             List<UUID> phoneIds = employee.getPhones().stream().map(Phone::getId).collect(Collectors.toList());
-            employee.getWorkPlace().removeEmployee(employee);
+            if (employee.getWorkPlace() != null) {
+                employee.getWorkPlace().removeEmployee(employee);
+            }
             new HashSet<>(employee.getPhones()).forEach(employee::removePhone);
             String avatar = employee.getAvatarUrl();
             repository.delete(employee);
