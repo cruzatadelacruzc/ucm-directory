@@ -105,17 +105,8 @@ public class WorkPlaceService extends QueryService<WorkPlace>{
     public WorkPlaceDTO update(WorkPlaceDTO workPlaceDTO, MultipartFile file) {
         String oldFileName = "";
 
-
         WorkPlace workPlaceFetched = repository.findWorkPlaceWithAssociationsById(workPlaceDTO.getId())
                 .orElseThrow(() -> new NoSuchElementException("WorkPlaceIndex with ID:" + workPlaceDTO.getId() + " not was found"));
-
-        String newFileName = getFileName(workPlaceFetched, file);
-        // case: For renaming or updating a exists avatar
-        if (workPlaceFetched.getAvatarUrl() != null) {
-            oldFileName = workPlaceFetched.getAvatarUrl();
-            String extension = Optional.ofNullable(FilenameUtils.getExtension(oldFileName)).orElse("");
-            newFileName = !extension.isBlank() ? newFileName + "." + extension : newFileName;
-        }
 
         // remove all associations for updating the new associations
         if (!workPlaceDTO.getPhoneIds().isEmpty() || !workPlaceDTO.getEmployeeIds().isEmpty()) {
@@ -136,6 +127,15 @@ public class WorkPlaceService extends QueryService<WorkPlace>{
         boolean oldStatus = workPlaceFetched.getActive();
         workPlaceFetched.setActive(workPlaceDTO.getActive());
         workPlaceFetched.setDescription(workPlaceDTO.getDescription());
+
+        String newFileName = getFileName(workPlaceFetched, file);
+        // case: For renaming or updating a exists avatar
+        if (workPlaceFetched.getAvatarUrl() != null) {
+            oldFileName = workPlaceFetched.getAvatarUrl();
+            String extension = Optional.ofNullable(FilenameUtils.getExtension(oldFileName)).orElse("");
+            newFileName = !extension.isBlank() ? newFileName + "." + extension : newFileName;
+        }
+
         // case: To store new avatar or update a exists avatar
         if (file != null || (!newFileName.equals(oldFileName) && !oldFileName.isBlank())) {
             workPlaceFetched.setAvatarUrl(newFileName);
@@ -143,14 +143,13 @@ public class WorkPlaceService extends QueryService<WorkPlace>{
 
         repository.save(workPlaceFetched);
 
-        if (file != null) {
-            final FileService.SaveFileEvent saveFileEvent = FileService.SaveFileEvent.builder()
+
+        final FileService.SaveFileEvent saveFileEvent = FileService.SaveFileEvent.builder()
                     .newFileName(newFileName)
                     .oldFileName(oldFileName)
                     .fileInput(file)
                     .build();
             eventPublisher.publishEvent(saveFileEvent);
-        }
 
         if ((workPlaceDTO.getActive() && !oldStatus) || (!workPlaceDTO.getActive() && oldStatus)) {
             switchStatus(workPlaceFetched, workPlaceDTO.getActive());
