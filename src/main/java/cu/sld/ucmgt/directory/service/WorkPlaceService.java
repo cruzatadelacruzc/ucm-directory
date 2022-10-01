@@ -109,14 +109,12 @@ public class WorkPlaceService extends QueryService<WorkPlace>{
                 .orElseThrow(() -> new NoSuchElementException("WorkPlaceIndex with ID:" + workPlaceDTO.getId() + " not was found"));
 
         // remove all associations for updating the new associations
-        if (!workPlaceDTO.getPhoneIds().isEmpty() || !workPlaceDTO.getEmployeeIds().isEmpty()) {
-            if (workPlaceDTO.getEmployeeIds() != null && !workPlaceDTO.getEmployeeIds().isEmpty()) {
-                    new HashSet<>(workPlaceFetched.getEmployees()).forEach(workPlaceFetched::removeEmployee);
-                }
-                if (workPlaceDTO.getPhoneIds() != null && !workPlaceDTO.getPhoneIds().isEmpty()) {
-                    new HashSet<>(workPlaceFetched.getPhones()).forEach(workPlaceFetched::removePhone);
-                }
-            }
+        if (workPlaceDTO.getEmployeeIds() != null) {
+            new HashSet<>(workPlaceFetched.getEmployees()).forEach(workPlaceFetched::removeEmployee);
+        }
+        if (workPlaceDTO.getPhoneIds() != null) {
+            new HashSet<>(workPlaceFetched.getPhones()).forEach(workPlaceFetched::removePhone);
+        }
 
 
         // find all employees and phones to saves
