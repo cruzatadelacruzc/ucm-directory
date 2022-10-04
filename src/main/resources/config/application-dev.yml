@@ -24,15 +24,6 @@ management:
     elasticsearch:
       enabled: false
 
-#Object Storage Service
-minio:
-  bucket:
-    name: directory
-  access:
-    key: minio
-    secret: miniostorage
-  url: http://192.168.1.10:9000
-
 spring:
   profiles:
     active: dev
@@ -93,8 +84,6 @@ application:
       enabled: false
       update-interval: 3
       url: http://192.168.1.10:8180/hazelcast-mancenter
-  storage:
-    upload-dir: /media/cesar/Stuff/Dev/java/ucm/directory/upload/
   metrics:
     logs: # Reports metrics in the logs
       enabled: false
