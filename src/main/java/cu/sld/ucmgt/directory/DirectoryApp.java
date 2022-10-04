@@ -2,13 +2,11 @@ package cu.sld.ucmgt.directory;
 
 import cu.sld.ucmgt.directory.config.AppProperties;
 import cu.sld.ucmgt.directory.config.Constants;
-import cu.sld.ucmgt.directory.service.FileService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 import org.springframework.data.elasticsearch.repository.config.EnableElasticsearchRepositories;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
@@ -31,11 +29,9 @@ import java.util.Map;
 public class DirectoryApp {
 
 	private final Environment env;
-	private final FileService fileService;
 
-	public DirectoryApp(Environment env, FileService fileService) {
+	public DirectoryApp(Environment env) {
 		this.env = env;
-		this.fileService = fileService;
 	}
 
 	/**
@@ -65,13 +61,6 @@ public class DirectoryApp {
 		logApplicationStartup(env);
 	}
 
-	/**
-	 * Create storage directory to store files into server
-	 */
-	@Bean
-	public void sepUpStorageDirectory() {
-		fileService.init();
-	}
 
 	/**
 	 * Set a default to use when no profile is configured.
