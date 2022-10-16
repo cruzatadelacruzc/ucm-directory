@@ -189,14 +189,12 @@ public class Nomenclature extends AbstractAuditingEntity implements Serializable
         if (this == o) return true;
         if (!(o instanceof Nomenclature)) return false;
         Nomenclature that = (Nomenclature) o;
-        return Objects.equal(id, that.id) &&
-                Objects.equal(name, that.name) &&
-                discriminator == that.discriminator;
+        return id != null && Objects.equal(id, that.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(id, name, discriminator);
+        return Objects.hashCode(id);
     }
 
     @Override
