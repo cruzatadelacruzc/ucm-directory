@@ -56,6 +56,9 @@ public class EmployeeResourceIT extends PersonIT {
     private static final Integer UPDATE_SERVICE_YEAR = 5;
     private static final Integer DEFAULT_SERVICE_YEAR = 4;
 
+    private static final Integer UPDATE_SALARY = 45;
+    private static final Integer DEFAULT_SALARY = 40;
+
     private static final Integer UPDATE_GRADUATE_YEAR = 29;
     private static final Integer DEFAULT_GRADUATE_YEAR = 28;
 
@@ -114,6 +117,7 @@ public class EmployeeResourceIT extends PersonIT {
         employee.setName(DEFAULT_NAME);
         employee.setRace(DEFAULT_RACE);
         employee.setEmail(DEFAULT_EMAIL);
+        employee.setSalary(DEFAULT_SALARY);
         employee.setGender(DEFAULT_GENDER);
         employee.setAddress(DEFAULT_ADDRESS);
         employee.setEndDate(DEFAULT_END_DATE);
@@ -187,6 +191,7 @@ public class EmployeeResourceIT extends PersonIT {
         assertThat(testEmployee.getName()).isEqualTo(DEFAULT_NAME);
         assertThat(testEmployee.getRace()).isEqualTo(DEFAULT_RACE);
         assertThat(testEmployee.getEmail()).isEqualTo(DEFAULT_EMAIL);
+        assertThat(testEmployee.getSalary()).isEqualTo(DEFAULT_SALARY);
         assertThat(testEmployee.getGender()).isEqualTo(DEFAULT_GENDER);
         assertThat(testEmployee.getAddress()).isEqualTo(DEFAULT_ADDRESS);
         assertThat(testEmployee.getEndDate()).isEqualTo(DEFAULT_END_DATE);
@@ -640,6 +645,7 @@ public class EmployeeResourceIT extends PersonIT {
         assertThat(testEmployee.getName()).isEqualTo(UPDATE_NAME);
         assertThat(testEmployee.getRace()).isEqualTo(UPDATE_RACE);
         assertThat(testEmployee.getEmail()).isEqualTo(UPDATE_EMAIL);
+        assertThat(testEmployee.getSalary()).isEqualTo(UPDATE_SALARY);
         assertThat(testEmployee.getGender()).isEqualTo(UPDATE_GENDER);
         assertThat(testEmployee.getAddress()).isEqualTo(UPDATE_ADDRESS);
         assertThat(testEmployee.getEndDate()).isEqualTo(UPDATE_END_DATE);
@@ -665,6 +671,7 @@ public class EmployeeResourceIT extends PersonIT {
         updatedEmployee.setRace(UPDATE_RACE);
         updatedEmployee.setEmail(UPDATE_EMAIL);
         updatedEmployee.setGender(UPDATE_GENDER);
+        updatedEmployee.setSalary(UPDATE_SALARY);
         updatedEmployee.setAddress(UPDATE_ADDRESS);
         updatedEmployee.setEndDate(UPDATE_END_DATE);
         updatedEmployee.setBirthdate(UPDATE_BIRTHDATE);
@@ -1223,7 +1230,7 @@ public class EmployeeResourceIT extends PersonIT {
 
     @Test
     @Transactional
-    void searchAllEmployeesByCIAndNameAndWorkPlaceAndSpecialtyAndRegisterNumberIsIsGreaterThanShouldWork() throws Exception {
+    void searchAllEmployeesByCIAndNameAndWorkPlaceAndSpecialtyAndRegisterNumberContainsSomething() throws Exception {
         // Initialize the database
         Nomenclature specialty =  new Nomenclature();
         specialty.setName("Medicine");
@@ -1244,12 +1251,45 @@ public class EmployeeResourceIT extends PersonIT {
         em.flush();
         String filter = "ci.contains=paramName&registerNumber.contains=paramName&name.contains=paramName" +
                 "&specialtyName.contains=paramName&workPlaceName.contains=paramName&page=0&size=20&sort=name,asc";
-        // Get all the employeeList where ci, registerNumber, name,specialtyName and workPlaceName not equals to UPDATE_NAME
+        // Get all the employeeList where ci, registerNumber, name, specialtyName and workPlaceName contains UPDATE_NAME
         defaultEmployeeShouldNotBeFoundWithOrOperator(filter.replaceAll("paramName", UPDATE_NAME));
 
-        // Get all the employeeList where name not equals to DEFAULT_NAME
+        // Get all the employeeList where ci, registerNumber, name, specialtyName and workPlaceName contains DEFAULT_NAME
         defaultEmployeeShouldBeFoundWithOrOperator(filter.replaceAll("paramName", DEFAULT_NAME));
     }
+
+    @Test
+    @Transactional
+    void getAllEmployeesByNameContainsSomething() throws Exception {
+        // Initialize the database
+        em.persist(employee);
+        em.flush();
+
+        // Get all the employeesList where name contains DEFAULT_NAME
+        defaultEmployeeShouldBeFoundWithAndOperator("name.contains=" + DEFAULT_NAME.concat(" MONCADA"));
+        defaultEmployeeShouldBeFoundWithOrOperator("name.contains=" + DEFAULT_NAME.concat("  RENE"));
+
+        // Zero employees will be obtained with name that containing UPDATE_NAME
+        defaultEmployeeShouldNotBeFoundWithAndOperator("name.contains=" + UPDATE_NAME);
+        defaultEmployeeShouldNotBeFoundWithOrOperator("name.contains=" + UPDATE_NAME);
+    }
+
+    @Test
+    @Transactional
+    void getAllEmployeesByNameNotContainsSomething() throws Exception {
+        // Initialize the database
+        em.persist(employee);
+        em.flush();
+
+        // Zero employees will be obtained with name that containing UPDATE_NAME
+        defaultEmployeeShouldNotBeFoundWithAndOperator("name.doesNotContain=" + DEFAULT_NAME);
+        defaultEmployeeShouldNotBeFoundWithOrOperator("name.doesNotContain=" + DEFAULT_NAME);
+
+        // Get all the employeesList where name does not contain DEFAULT_NAME
+        defaultEmployeeShouldBeFoundWithAndOperator("name.doesNotContain=" + UPDATE_NAME);
+        defaultEmployeeShouldBeFoundWithOrOperator("name.doesNotContain=" + UPDATE_NAME);
+    }
+
 
     @Test
     @Transactional
@@ -1270,6 +1310,12 @@ public class EmployeeResourceIT extends PersonIT {
     @Test
     @Transactional
     void deleteAvatar() throws Exception {
+        System.out.println("not implement yet");
+    }
+
+    @Test
+    @Transactional
+    void updatePersonalDataWithAvatar() throws Exception {
         System.out.println("not implement yet");
     }
 }

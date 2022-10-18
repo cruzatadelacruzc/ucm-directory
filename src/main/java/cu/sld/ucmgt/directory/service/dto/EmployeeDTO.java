@@ -27,6 +27,8 @@ public class EmployeeDTO extends PersonDTO {
     private Integer serviceYears;
     @NotBlank(message = "error:NotBlank")
     private String registerNumber;
+    @Min(value = 0, message = "error:Min")
+    private Integer salary;
     private String professionalNumber;
     private UUID workPlaceId;
     private UUID categoryId;
@@ -35,6 +37,13 @@ public class EmployeeDTO extends PersonDTO {
     private UUID chargeId;
     private UUID professionId;
     private Set<PhoneDTO> phones;
+
+    private NomenclatureDTO category;
+    private NomenclatureDTO scientificDegree;
+    private NomenclatureDTO charge;
+    private NomenclatureDTO profession;
+    private NomenclatureDTO teachingCategory;
+    private WorkPlaceDTO workPlace;
 
     private String workPlaceName;
     private String categoryName;
@@ -67,8 +76,12 @@ public class EmployeeDTO extends PersonDTO {
                 ", graduateYears=" + graduateYears +
                 ", isGraduatedBySector=" + isGraduatedBySector +
                 ", serviceYears=" + serviceYears +
-                ", registerNumber='" + registerNumber + '\'' +
-                ", professionalNumber='" + professionalNumber + '\'' +
+                ", registerNumber='" + registerNumber +
+                ", professionalNumber='" + professionalNumber +
+                ", salary='" + salary +
+                ", workPlace=" + workPlace +
+                ", category=" + category +
+                ", teachingCategory=" + teachingCategory +
                 ", workPlaceId=" + workPlaceId +
                 ", categoryId=" + categoryId +
                 ", scientificDegreeId=" + scientificDegreeId +
@@ -76,12 +89,12 @@ public class EmployeeDTO extends PersonDTO {
                 ", chargeId=" + chargeId +
                 ", professionId=" + professionId +
                 ", phones=" + phones +
-                ", workPlaceName='" + workPlaceName + '\'' +
-                ", categoryName='" + categoryName + '\'' +
-                ", scientificDegreeName='" + scientificDegreeName + '\'' +
-                ", teachingCategoryName='" + teachingCategoryName + '\'' +
-                ", chargeName='" + chargeName + '\'' +
-                ", professionName='" + professionName + '\'' +
+                ", workPlaceName='" + workPlaceName +
+                ", categoryName='" + categoryName +
+                ", scientificDegreeName='" + scientificDegreeName +
+                ", teachingCategoryName='" + teachingCategoryName +
+                ", chargeName='" + chargeName +
+                ", professionName='" + professionName +
                 "} " + super.toString();
     }
 }

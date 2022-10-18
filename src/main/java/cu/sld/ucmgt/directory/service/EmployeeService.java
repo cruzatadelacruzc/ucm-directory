@@ -13,9 +13,7 @@ import cu.sld.ucmgt.directory.service.WorkPlaceService.RemovedWorkPlaceIndexEven
 import cu.sld.ucmgt.directory.service.WorkPlaceService.SavedWorkPlaceIndexEvent;
 import cu.sld.ucmgt.directory.service.criteria.EmployeeCriteria;
 import cu.sld.ucmgt.directory.service.dto.EmployeeDTO;
-import cu.sld.ucmgt.directory.service.mapper.EmployeeIndexMapper;
-import cu.sld.ucmgt.directory.service.mapper.EmployeeMapper;
-import cu.sld.ucmgt.directory.service.mapper.PhoneMapper;
+import cu.sld.ucmgt.directory.service.mapper.*;
 import cu.sld.ucmgt.directory.service.utils.ServiceUtils;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -53,6 +51,8 @@ public class EmployeeService extends QueryService<Employee> {
 
     private final EmployeeMapper mapper;
     private final PhoneMapper phoneMapper;
+    private final WorkPlaceMapper workPlaceMapper;
+    private final NomenclatureMapper nomenclatureMapper;
     private final EmployeeRepository repository;
     private final RestHighLevelClient highLevelClient;
     private static final String INDEX_NAME = "employees";
@@ -227,6 +227,9 @@ public class EmployeeService extends QueryService<Employee> {
     public void deleteEmployee(UUID uid) {
         repository.findEmployeeWithAssociationsById(uid).ifPresent(employee -> {
             List<UUID> phoneIds = employee.getPhones().stream().map(Phone::getId).collect(Collectors.toList());
+            if (employee.getWorkPlace() != null) {
+                employee.getWorkPlace().removeEmployee(employee);
+            }
             new HashSet<>(employee.getPhones()).forEach(employee::removePhone);
             String avatar = employee.getAvatarUrl();
             repository.delete(employee);
@@ -313,6 +316,14 @@ public class EmployeeService extends QueryService<Employee> {
         return repository.findEmployeeWithAssociationsById(uid).map(employee -> {
             EmployeeDTO employeeDTO = mapper.toDto(employee);
             employeeDTO.setPhones(phoneMapper.toDtos(employee.getPhones()));
+            employeeDTO.setSpecialty(nomenclatureMapper.toDto(employee.getSpecialty()));
+            employeeDTO.setDistrict(nomenclatureMapper.toDto(employee.getDistrict()));
+            employeeDTO.setCategory(nomenclatureMapper.toDto(employee.getCategory()));
+            employeeDTO.setCharge(nomenclatureMapper.toDto(employee.getCharge()));
+            employeeDTO.setScientificDegree(nomenclatureMapper.toDto(employee.getScientificDegree()));
+            employeeDTO.setProfession(nomenclatureMapper.toDto(employee.getProfession()));
+            employeeDTO.setWorkPlace(workPlaceMapper.toDto(employee.getWorkPlace()));
+            employeeDTO.setTeachingCategory(nomenclatureMapper.toDto(employee.getTeachingCategory()));
             return employeeDTO;
         });
     }
@@ -422,6 +433,9 @@ public class EmployeeService extends QueryService<Employee> {
                 if (criteria.getId() != null) {
                     specification = specification.and(buildSpecification(criteria.getId(), Employee_.id));
                 }
+                if (criteria.getSalary() != null) {
+                    specification = specification.and(buildSpecification(criteria.getSalary(), Employee_.salary));
+                }
                 if (criteria.getCi() != null) {
                     specification = specification.and(buildStringSpecification(criteria.getCi(), Employee_.ci));
                 }
@@ -512,6 +526,9 @@ public class EmployeeService extends QueryService<Employee> {
             } else {
                 if (criteria.getId() != null) {
                     specification = specification.or(buildSpecification(criteria.getId(), Employee_.id));
+                }
+                if (criteria.getSalary() != null) {
+                    specification = specification.or(buildSpecification(criteria.getSalary(), Employee_.salary));
                 }
                 if (criteria.getCi() != null) {
                     specification = specification.or(buildStringSpecification(criteria.getCi(), Employee_.ci));

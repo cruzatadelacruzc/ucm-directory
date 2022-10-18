@@ -2,24 +2,23 @@ package cu.sld.ucmgt.directory.service;
 
 import cu.sld.ucmgt.directory.config.AppProperties;
 import cu.sld.ucmgt.directory.service.error.StorageException;
-import cu.sld.ucmgt.directory.service.error.StorageFileNotFoundException;
+import io.minio.*;
+import io.minio.errors.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.FilenameUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.PostConstruct;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.nio.file.*;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -31,25 +30,35 @@ import java.util.Optional;
 public class FileService {
 
     private final Path rootLocation;
+    private final MinioClient minioClient;
+    @Value("${minio.bucket.name}")
+    private String bucketName;
 
-    public FileService(AppProperties appProperties) {
+    public FileService(AppProperties appProperties, MinioClient minioClient) {
         this.rootLocation = Paths.get(appProperties.getStorage().getUploadDir()).toAbsolutePath().normalize();
+        this.minioClient = minioClient;
     }
 
-    /**
-     *  To create files directory
-     */
     @PostConstruct
-    public void init() {
+    public void initS3() {
         try {
-            if (!Files.exists(this.rootLocation)) {
-                Path path = Files.createDirectories(this.rootLocation);
-                log.info("Create directory at the path : " + path.normalize().toString());
+            boolean bucketExists = minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build());
+            if (bucketExists) {
+                log.info(String.format("Using existing Bucket [%s]", bucketName));
             } else {
-                log.info("A directory already exists at the path : " + this.rootLocation.normalize().toString());
+                minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
+                log.info(String.format("Create Bucket %s", bucketName));
             }
-        } catch (IOException e) {
-            throw new StorageException("Could not initialize storage", e);
+        } catch (InvalidKeyException |
+                IOException |
+                InsufficientDataException |
+                ServerException |
+                InvalidResponseException |
+                ErrorResponseException |
+                NoSuchAlgorithmException |
+                InternalException |
+                XmlParserException e) {
+            e.printStackTrace();
         }
     }
 
@@ -79,10 +88,15 @@ public class FileService {
                 }
                 // Copy file to the target location (Replacing existing file with the same name)
                 try (InputStream inputStream = file.get().getInputStream()) {
-                    Files.copy(inputStream, this.rootLocation.resolve(filename), StandardCopyOption.REPLACE_EXISTING);
+                    minioClient.putObject(PutObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(filename)
+                            .stream(inputStream, fileInput.getSize(), -1)
+                            .contentType(fileInput.getContentType())
+                            .build());
                 }
                 return filename;
-            } catch (IOException e) {
+            } catch (Exception e) {
                 throw new StorageException("Failed to store file " + filename, e);
             }
         } else {
@@ -96,15 +110,21 @@ public class FileService {
      * @return True if the file was deleted, False otherwise
      */
     public Boolean delete(String filename) {
-        boolean result = false;
         try {
-            result = Files.deleteIfExists(rootLocation.resolve(filename));
-        } catch (NoSuchFileException e) {
-            log.warn("No such file exists with name: " + filename);
-        } catch (IOException exception) {
+            minioClient.removeObject(RemoveObjectArgs.builder().bucket(bucketName).object(filename).build());
+            return true;
+        } catch (IOException
+                | NoSuchAlgorithmException
+                | InvalidKeyException
+                | InvalidResponseException
+                | InsufficientDataException
+                | ServerException
+                | InternalException
+                | XmlParserException
+                | ErrorResponseException exception) {
             log.error("Could not delete file", exception);
         }
-        return result;
+        return false;
     }
 
     /**
@@ -150,18 +170,27 @@ public class FileService {
     public void renameAvatar(SaveFileEvent saveFileEvent) {
         if (!saveFileEvent.getNewFileName().isBlank() && !saveFileEvent.getOldFileName().isBlank()) {
             try {
-                File fileToMove = rootLocation.resolve(saveFileEvent.getOldFileName()).toFile();
-                String extension = FilenameUtils.getExtension(fileToMove.getName());
-                String target = rootLocation.resolve(saveFileEvent.getNewFileName()).normalize().toString();
-                if (extension.isBlank()) {
-                    target = rootLocation.resolve(saveFileEvent.getNewFileName()).normalize().toString() + "." + extension;
-                }
-                boolean isMoved = fileToMove.renameTo(new File(target));
-                if (!isMoved) {
-                    throw new FileSystemException(target);
-                }
-            } catch (SecurityException | FileSystemException exception) {
-                throw new StorageException("Could not rename file: " + saveFileEvent.getOldFileName(), exception);
+                minioClient.copyObject(CopyObjectArgs.builder()
+                        .bucket(bucketName)
+                        .object(saveFileEvent.getNewFileName())
+                        .source(
+                                CopySource.builder()
+                                        .bucket(bucketName)
+                                        .object(saveFileEvent.getOldFileName())
+                                        .build()
+                        )
+                        .build());
+                minioClient.removeObject(RemoveObjectArgs.builder().bucket(bucketName).object(saveFileEvent.oldFileName).build());
+            } catch (ErrorResponseException
+                    | InsufficientDataException
+                    | InternalException
+                    | InvalidKeyException
+                    | InvalidResponseException
+                    | IOException
+                    | NoSuchAlgorithmException
+                    | ServerException
+                    | XmlParserException e) {
+                throw new StorageException("Could not rename file: " + saveFileEvent.getOldFileName(), e);
             }
         }
     }
@@ -175,38 +204,6 @@ public class FileService {
     public void deleteAvatar(DeleteFileEvent deleteFileEvent) {
         if (!deleteFileEvent.getFileName().isBlank()) {
             delete(deleteFileEvent.getFileName().toLowerCase());
-        }
-    }
-
-    /**
-     * Load the stored filename
-     * @param filename Resource name
-     * @return Resource The stored resource
-     */
-    public Optional<Resource> loadAsResource(String filename) {
-        try {
-            Path file = rootLocation.resolve(filename).normalize();
-            Resource resource = new UrlResource(file.toUri());
-            if (resource.exists() || resource.isReadable()) {
-                return Optional.of(resource);
-            }
-            return Optional.empty();
-        } catch (MalformedURLException e) {
-            throw new StorageFileNotFoundException("Could not read file: " + filename, e);
-        }
-    }
-
-    /**
-     * Load the stored filename
-     * @param filename Resource name
-     * @return byte Array The stored resource
-     */
-    public byte[] loadAsBytes(String filename) {
-        try {
-            FileInputStream inputStream = new FileInputStream(rootLocation.resolve(filename).normalize().toString());
-            return inputStream.readAllBytes();
-        } catch (IOException e) {
-            throw new StorageException("Could not read file: " + filename, e);
         }
     }
 

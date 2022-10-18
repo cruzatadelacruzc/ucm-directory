@@ -1,5 +1,5 @@
 # ===================================================================
-# Spring Boot configuration for the "dev" profile.
+# Spring Boot configuration for the "ucm" profile.
 # This configuration overrides the application.yml file.
 # ===================================================================
 # Standard Spring Boot properties.
@@ -17,16 +17,25 @@ eureka:
     prefer-ip-address: true
   client:
     service-url:
-      defaultZone: http://admin:${application.registry-config.password}@192.168.1.10:8761/eureka/
+      defaultZone: http://admin:${application.registry-config.password}@172.16.0.13:8761/eureka/
 
 management:
   health:
     elasticsearch:
       enabled: false
 
+#Object Storage Service
+minio:
+  bucket:
+    name: directory
+  access:
+    key: minio
+    secret: miniostorage
+  url: http://172.16.0.13:9000
+
 spring:
   profiles:
-    active: dev
+    active: ucm
   devtools:
     restart:
       enabled: true
@@ -36,7 +45,7 @@ spring:
       indent-output: true
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
-    url: jdbc:postgresql://192.168.1.10:5432/directory
+    url: jdbc:postgresql://172.16.0.13:5432/directory
     username: postgres
     password: postgres
     hikari:
@@ -54,12 +63,12 @@ spring:
       client:
         provider:
           keycloak:
-            issuer-uri: http://keycloak.ucmgt.cu:9080/realms/jhipster
+            issuer-uri: http://keycloak.ucmgt.cu:9080/auth/realms/jhipster
   elasticsearch:
     rest:
       username: elastic
       password: elastic
-      uris: http://192.168.1.10:9200
+      uris: http://172.16.0.13:9200
   servlet:
     multipart:
       file-size-threshold: 2KB
@@ -70,20 +79,22 @@ server:
 # App specific properties
 # ===================================================================
 application:
-#  cors:
-#    allowed-origins: 'http://localhost:3000'
-#    allowed-methods: '*'
-#    allowed-headers: '*'
-#    exposed-headers: 'Authorization,Link,X-Total-Count,X-${application.clientApp.name}-alert,X-${application.clientApp.name}-error,X-${application.clientApp.name}-params'
-#    allow-credentials: true
-#    max-age: 1800
+  #  cors:
+  #    allowed-origins: 'http://localhost:3000'
+  #    allowed-methods: '*'
+  #    allowed-headers: '*'
+  #    exposed-headers: 'Authorization,Link,X-Total-Count,X-${application.clientApp.name}-alert,X-${application.clientApp.name}-error,X-${application.clientApp.name}-params'
+  #    allow-credentials: true
+  #    max-age: 1800
   cache: # Cache configuration
     time-to-live-seconds: 3600
     backup-count: 1
     management-center: # Full reference is available at: http://docs.hazelcast.org/docs/management-center/3.9/manual/html/Deploying_and_Starting.html
       enabled: false
       update-interval: 3
-      url: http://192.168.1.10:8180/hazelcast-mancenter
+      url: http://172.16.0.13:8180/hazelcast-mancenter
+  storage:
+    upload-dir: /media/cesar/Stuff/Dev/java/ucm/directory/upload/
   metrics:
     logs: # Reports metrics in the logs
       enabled: false

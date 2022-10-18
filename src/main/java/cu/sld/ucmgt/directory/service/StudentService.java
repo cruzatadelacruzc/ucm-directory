@@ -11,6 +11,7 @@ import cu.sld.ucmgt.directory.repository.search.StudentSearchRepository;
 import cu.sld.ucmgt.directory.service.NomenclatureService.SavedNomenclatureEvent;
 import cu.sld.ucmgt.directory.service.criteria.StudentCriteria;
 import cu.sld.ucmgt.directory.service.dto.StudentDTO;
+import cu.sld.ucmgt.directory.service.mapper.NomenclatureMapper;
 import cu.sld.ucmgt.directory.service.mapper.StudentIndexMapper;
 import cu.sld.ucmgt.directory.service.mapper.StudentMapper;
 import cu.sld.ucmgt.directory.service.utils.ServiceUtils;
@@ -50,6 +51,7 @@ public class StudentService extends QueryService<Student>{
     private final StudentMapper mapper;
     private final StudentRepository repository;
     private final RestHighLevelClient highLevelClient;
+    private final NomenclatureMapper nomenclatureMapper;
     private static final String INDEX_NAME = "students";
     private final StudentIndexMapper studentIndexMapper;
     private final ApplicationEventPublisher eventPublisher;
@@ -99,9 +101,8 @@ public class StudentService extends QueryService<Student>{
     public StudentDTO create(StudentDTO studentDTO, MultipartFile avatar) {
         Student student = mapper.toEntity(studentDTO);
         student =  repository.save(student);
-        String fileName = ServiceUtils.buildAvatarName(student);
+        String fileName = getFileName(student, avatar);
         if (avatar != null) {
-            fileName = ServiceUtils.getAvatarNameWithExtension(avatar, fileName.toLowerCase());
             student.setAvatarUrl(fileName);
         }
         StudentIndex studentIndex = studentIndexMapper.toIndex(student);
@@ -125,10 +126,7 @@ public class StudentService extends QueryService<Student>{
     public StudentDTO update(StudentDTO studentDTO, MultipartFile avatar) {
         String oldFileName = "";
         Student student = mapper.toEntity(studentDTO);
-        String newFileName = ServiceUtils.buildAvatarName(student);
-        if (avatar != null) {
-            newFileName = ServiceUtils.getAvatarNameWithExtension(avatar, newFileName);
-        }
+        String newFileName = getFileName(student, avatar);
         Optional<Student> studentOptional = repository.findById(studentDTO.getId());
         if (studentOptional.isPresent()) {
             Student studentFetched = studentOptional.get();
@@ -189,13 +187,8 @@ public class StudentService extends QueryService<Student>{
         Optional<Student> optionalStudent =  repository.findById(studentDto.getId());
         if (optionalStudent.isPresent()) {
             Student existingStudent = optionalStudent.get();
-            String newFileName = ServiceUtils.buildAvatarName(existingStudent);
-
-            if (avatar != null) {
-                newFileName = ServiceUtils.getAvatarNameWithExtension(avatar, newFileName);
-            }
-
             mapper.partialUpdate(studentDto, existingStudent);
+            String newFileName = getFileName(existingStudent, avatar);
 
             // case: For renaming or updating a exists avatar
             if (existingStudent.getAvatarUrl() != null) {
@@ -209,7 +202,7 @@ public class StudentService extends QueryService<Student>{
                 existingStudent.setAvatarUrl(newFileName);
             }
 
-            repository.save(existingStudent);
+            this.save(existingStudent);
 
             final FileService.SaveFileEvent saveFileEvent = FileService.SaveFileEvent.builder()
                     .newFileName(newFileName)
@@ -227,6 +220,21 @@ public class StudentService extends QueryService<Student>{
     }
 
     /**
+     * Set a new File Name
+     *
+     * @param student entity
+     * @param file    avatar with content type image/png or image/jpeg
+     * @return new file name
+     */
+    private String getFileName(Student student, MultipartFile file) {
+        String newFileName = ServiceUtils.buildAvatarName(student);
+        if (file != null) {
+            newFileName = ServiceUtils.getAvatarNameWithExtension(file, newFileName.toLowerCase());
+        }
+        return newFileName.toLowerCase();
+    }
+
+    /**
      * Get one student by uid.
      *
      * @param uid the id of the entity.
@@ -234,8 +242,14 @@ public class StudentService extends QueryService<Student>{
      */
     @Transactional(readOnly = true)
     public Optional<StudentDTO> getStudent(UUID uid) {
-        log.debug("Request to get Student : {}", uid);
-        return repository.findById(uid).map(mapper::toDto);
+        return repository.findById(uid).map(student -> {
+            StudentDTO studentDTO = mapper.toDto(student);
+            studentDTO.setKind(nomenclatureMapper.toDto(student.getKind()));
+            studentDTO.setDistrict(nomenclatureMapper.toDto(student.getDistrict()));
+            studentDTO.setSpecialty(nomenclatureMapper.toDto(student.getSpecialty()));
+            studentDTO.setStudyCenter(nomenclatureMapper.toDto(student.getStudyCenter()));
+            return studentDTO;
+        });
     }
 
     /**

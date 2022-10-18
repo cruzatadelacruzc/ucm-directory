@@ -119,10 +119,7 @@ spring:
             provider: keycloak
             client-id: internal
             client-secret: internal
-            scope: openid,profile,email
-        provider:
-          keycloak:
-            issuer-uri: http://keycloak:9080/auth/realms/jhipster
+            scope: openid,profile,email,offline_access
   elasticsearch:
     rest:
       username: elastic
@@ -131,6 +128,15 @@ spring:
 logging:
   file:
     name: target/directory.log
+
+#Object Storage Service
+minio:
+  bucket:
+    name: directory
+  access:
+    key: minio
+    secret: miniostorage
+  url: http://192.168.1.10:9000
 
 server:
   servlet:

@@ -16,10 +16,18 @@ eureka:
     appname: directory
     instanceId: directory:${spring.application.instance-id:${random.value}}
 
+minio:
+  bucket:
+    name: test
+  access:
+    key: minio
+    secret: miniostorage
+  url: http://192.168.1.10:9000
+
 spring:
   profiles:
     # Uncomment the following line to enable tests against production database type rather than H2, using Testcontainers
-   #active: testcontainers
+    #active: testcontainers
     active: test
   application:
     name: directory

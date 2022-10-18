@@ -24,6 +24,8 @@ public interface PhoneMapper extends EntityMapper<PhoneDTO, Phone>{
     @Mapping(source = "workPlace.id", target = "workPlaceId")
     @Mapping(source = "employee.name", target = "employeeName")
     @Mapping(source = "workPlace.name", target = "workPlaceName")
+    @Mapping(target = "workPlace", ignore = true)
+    @Mapping(target = "employee", ignore = true)
     PhoneDTO toDto(Phone phone);
 
     default Phone fromId(UUID id){

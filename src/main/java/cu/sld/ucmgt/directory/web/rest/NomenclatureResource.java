@@ -140,17 +140,29 @@ public class NomenclatureResource {
     }
 
     /**
-     * {@code GET  /nomenclatures/:discriminator} : get a page of nomenclature by status and discriminator
+     * {@code GET  /nomenclatures/filtered/:type/:join} : get a page of filtered nomenclature and discriminator
      *
-     * @param discriminator nomenclature discriminator
-     * @param pageable the pagination information.
+     * @param discriminator as type nomenclature discriminator
+     * @param join          union operator
+     * @param criteria      search criteria to filter
+     * @param pageable      the pagination information.
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of nomenclatures in body.
      */
-    @GetMapping("/nomenclatures/discriminator/{discriminator}")
-    public ResponseEntity<List<NomenclatureDTO>> getAllByDiscriminator(Pageable pageable,
-          @PathVariable NomenclatureType discriminator, @RequestParam(name = "unpaged", required = false) boolean unpaged) {
-        log.debug("REST request to get a page of Nomenclature by discriminator {}", discriminator);
-        Page<NomenclatureDTO> page = service.getAllByStatusAndDiscriminator(unpaged ? Pageable.unpaged(): pageable, discriminator);
+    @GetMapping("/nomenclatures/filtered/{type}/{join}")
+    public ResponseEntity<List<NomenclatureDTO>> getAllByDiscriminator(
+            @PathVariable(name = "type") NomenclatureType discriminator,
+            @ApiParam(value = "Logical operators (AND-OR) for join expressions") @PathVariable String join,
+            NomenclatureCriteria criteria, Pageable pageable,
+            @RequestParam(name = "unpaged", required = false) boolean unpaged) {
+        if (!(join.equalsIgnoreCase("AND") || join.equalsIgnoreCase("OR"))) {
+            throw new BadRequestAlertException("Wrong logical operator", ENTITY_NAME, "badoperatorjoin", join);
+        }
+        Page<NomenclatureDTO> page = service.getAllByStatusAndDiscriminator(
+                join,
+                criteria,
+                discriminator,
+                unpaged ? Pageable.unpaged() : pageable
+        );
         HttpHeaders headers = PaginationUtil.generatePaginationHeaders(
                 ServletUriComponentsBuilder.fromCurrentRequest(),
                 page

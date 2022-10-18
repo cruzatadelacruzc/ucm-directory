@@ -32,4 +32,6 @@ public interface EntityMapper<D,E> {
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void partialUpdate(D dto, @MappingTarget E entity);
 
+
+
 }

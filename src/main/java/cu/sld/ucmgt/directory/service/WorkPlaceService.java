@@ -77,12 +77,12 @@ public class WorkPlaceService extends QueryService<WorkPlace>{
         // find all employees and phones to saves
         loadAssociations(workPlaceDTO, workPlace);
 
+        repository.save(workPlace);
+
         String fileName = getFileName(workPlace, avatar);
         if (avatar != null) {
             workPlace.setAvatarUrl(fileName);
         }
-
-        repository.save(workPlace);
 
         if (avatar != null) {
             final FileService.SaveFileEvent saveFileEvent = FileService.SaveFileEvent.builder()
@@ -105,27 +105,16 @@ public class WorkPlaceService extends QueryService<WorkPlace>{
     public WorkPlaceDTO update(WorkPlaceDTO workPlaceDTO, MultipartFile file) {
         String oldFileName = "";
 
-
         WorkPlace workPlaceFetched = repository.findWorkPlaceWithAssociationsById(workPlaceDTO.getId())
                 .orElseThrow(() -> new NoSuchElementException("WorkPlaceIndex with ID:" + workPlaceDTO.getId() + " not was found"));
 
-        String newFileName = getFileName(workPlaceFetched, file);
-        // case: For renaming or updating a exists avatar
-        if (workPlaceFetched.getAvatarUrl() != null) {
-            oldFileName = workPlaceFetched.getAvatarUrl();
-            String extension = Optional.ofNullable(FilenameUtils.getExtension(oldFileName)).orElse("");
-            newFileName = !extension.isBlank() ? newFileName + "." + extension : newFileName;
-        }
-
         // remove all associations for updating the new associations
-        if (!workPlaceDTO.getPhoneIds().isEmpty() || !workPlaceDTO.getEmployeeIds().isEmpty()) {
-            if (workPlaceDTO.getEmployeeIds() != null && !workPlaceDTO.getEmployeeIds().isEmpty()) {
-                    new HashSet<>(workPlaceFetched.getEmployees()).forEach(workPlaceFetched::removeEmployee);
-                }
-                if (workPlaceDTO.getPhoneIds() != null && !workPlaceDTO.getPhoneIds().isEmpty()) {
-                    new HashSet<>(workPlaceFetched.getPhones()).forEach(workPlaceFetched::removePhone);
-                }
-            }
+        if (workPlaceDTO.getEmployeeIds() != null) {
+            new HashSet<>(workPlaceFetched.getEmployees()).forEach(workPlaceFetched::removeEmployee);
+        }
+        if (workPlaceDTO.getPhoneIds() != null) {
+            new HashSet<>(workPlaceFetched.getPhones()).forEach(workPlaceFetched::removePhone);
+        }
 
 
         // find all employees and phones to saves
@@ -136,6 +125,15 @@ public class WorkPlaceService extends QueryService<WorkPlace>{
         boolean oldStatus = workPlaceFetched.getActive();
         workPlaceFetched.setActive(workPlaceDTO.getActive());
         workPlaceFetched.setDescription(workPlaceDTO.getDescription());
+
+        String newFileName = getFileName(workPlaceFetched, file);
+        // case: For renaming or updating a exists avatar
+        if (workPlaceFetched.getAvatarUrl() != null) {
+            oldFileName = workPlaceFetched.getAvatarUrl();
+            String extension = Optional.ofNullable(FilenameUtils.getExtension(oldFileName)).orElse("");
+            newFileName = !extension.isBlank() ? newFileName + "." + extension : newFileName;
+        }
+
         // case: To store new avatar or update a exists avatar
         if (file != null || (!newFileName.equals(oldFileName) && !oldFileName.isBlank())) {
             workPlaceFetched.setAvatarUrl(newFileName);
@@ -143,14 +141,13 @@ public class WorkPlaceService extends QueryService<WorkPlace>{
 
         repository.save(workPlaceFetched);
 
-        if (file != null) {
-            final FileService.SaveFileEvent saveFileEvent = FileService.SaveFileEvent.builder()
+
+        final FileService.SaveFileEvent saveFileEvent = FileService.SaveFileEvent.builder()
                     .newFileName(newFileName)
                     .oldFileName(oldFileName)
                     .fileInput(file)
                     .build();
             eventPublisher.publishEvent(saveFileEvent);
-        }
 
         if ((workPlaceDTO.getActive() && !oldStatus) || (!workPlaceDTO.getActive() && oldStatus)) {
             switchStatus(workPlaceFetched, workPlaceDTO.getActive());
@@ -232,6 +229,7 @@ public class WorkPlaceService extends QueryService<WorkPlace>{
         workPlaceIndexMap.put("id", workPlaceIndex.getId().toString());
         workPlaceIndexMap.put("name", workPlaceIndex.getName());
         workPlaceIndexMap.put("email", workPlaceIndex.getEmail());
+        workPlaceIndexMap.put("avatarUrl", workPlaceIndex.getAvatarUrl());
         workPlaceIndexMap.put("description", workPlaceIndex.getDescription());
         return workPlaceIndexMap;
     }

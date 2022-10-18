@@ -35,6 +35,9 @@ public abstract class PersonDTO implements Serializable {
     protected UUID specialtyId;
     protected LocalDate birthdate;
 
+    private NomenclatureDTO district;
+    private NomenclatureDTO specialty;
+
     protected String districtName;
     protected String specialtyName;
 
@@ -64,6 +67,9 @@ public abstract class PersonDTO implements Serializable {
                 ", gender=" + gender +
                 ", race='" + race + '\'' +
                 ", districtId=" + districtId +
+                ", district=" + district +
+                ", specialty=" + specialty +
+                ", specialtyId=" + specialtyId +
                 ", districtName=" + districtName +
                 ", specialtyName=" + specialtyName +
                 '}';

@@ -94,33 +94,24 @@ public class CacheConfiguration {
                     log.debug("Adding Hazelcast (dev) cluster member {}", clusterMember);
                     config.getNetworkConfig().getJoin().getTcpIpConfig().addMember(clusterMember);
                 }
-        } else { // Production configuration, one host per instance all using port 5701
+            } else { // Production configuration, one host per instance all using port 5701
                 config.getNetworkConfig().setPort(5701);
                 config.getNetworkConfig().getJoin().getTcpIpConfig().setEnabled(true);
                 for (ServiceInstance instance : discoveryClient.getInstances(serviceId)) {
                     String clusterMember = instance.getHost() + ":5701";
-                    log.debug("Adding Hazelcast (prod) cluster member {}", clusterMember);
+                    log.info("Adding Hazelcast (prod) cluster member {}", clusterMember);
                     config.getNetworkConfig().getJoin().getTcpIpConfig().addMember(clusterMember);
                 }
             }
-    }
-        config.getMapConfigs().put("default", initializeDefaultMapConfig(properties));
-        // Full reference is available at: https://docs.hazelcast.org/docs/management-center/3.9/manual/html/Deploying_and_Starting.html
-        config.setManagementCenterConfig(initializeDefaultManagementCenterConfig(properties));
-        config.getMapConfigs().put("cu.sld.ucmgt.directory.domain.*", initializeDomainMapConfig(properties));
+        }
+        config.setManagementCenterConfig(new ManagementCenterConfig());
+        config.addMapConfig(initializeDefaultMapConfig(properties));
+        config.addMapConfig(initializeDomainMapConfig(properties));
         return Hazelcast.newHazelcastInstance(config);
     }
 
-    private ManagementCenterConfig initializeDefaultManagementCenterConfig(AppProperties properties) {
-        ManagementCenterConfig managementCenterConfig = new ManagementCenterConfig();
-        managementCenterConfig.setEnabled(properties.getCache().getManagementCenter().isEnabled());
-        managementCenterConfig.setUrl(properties.getCache().getManagementCenter().getUrl());
-        managementCenterConfig.setUpdateInterval(properties.getCache().getManagementCenter().getUpdateInterval());
-        return managementCenterConfig;
-    }
-
     private MapConfig initializeDefaultMapConfig(AppProperties properties) {
-        MapConfig mapConfig = new MapConfig();
+        MapConfig mapConfig = new MapConfig("default");
 
         /*
         Number of backups. If 1 is set as the backup-count for example,
@@ -150,7 +141,7 @@ public class CacheConfiguration {
     }
 
     private MapConfig initializeDomainMapConfig(AppProperties properties) {
-        MapConfig mapConfig = new MapConfig();
+        MapConfig mapConfig = new MapConfig("cu.sld.ucmgt.directory.domain.*");
         mapConfig.setTimeToLiveSeconds(properties.getCache().getTimeToLiveSeconds());
         return mapConfig;
     }

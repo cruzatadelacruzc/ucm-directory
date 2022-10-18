@@ -23,6 +23,7 @@ public class EmployeeCriteria extends PersonCriteria {
 
     private static final long serialVersionUID = 1L;
 
+    private IntegerFilter salary;
     private UUIDFilter workPlaceId;
     private StringFilter chargeName;
     private IntegerFilter serviceYears;
@@ -43,6 +44,7 @@ public class EmployeeCriteria extends PersonCriteria {
 
     public EmployeeCriteria(EmployeeCriteria criteria) {
         super(criteria);
+        this.salary = criteria.salary == null ? null : criteria.salary.copy();
         this.endDate = criteria.endDate == null ? null : criteria.endDate.copy();
         this.startDate = criteria.startDate == null ? null : criteria.startDate.copy();
         this.chargeName = criteria.chargeName == null ? null : criteria.chargeName.copy();
@@ -71,6 +73,7 @@ public class EmployeeCriteria extends PersonCriteria {
         if (!super.equals(o)) return false;
         EmployeeCriteria that = (EmployeeCriteria) o;
         return endDate.equals(that.endDate) &&
+                Objects.equals(salary, that.salary) &&
                 Objects.equals(startDate, that.startDate) &&
                 Objects.equals(chargeName, that.chargeName) &&
                 Objects.equals(workPlaceId, that.workPlaceId) &&
@@ -90,6 +93,7 @@ public class EmployeeCriteria extends PersonCriteria {
     @Override
     public int hashCode() {
         int result = super.hashCode();
+        result = 31 * result + (salary != null ? salary.hashCode() : 0);
         result = 31 * result + (endDate != null ? endDate.hashCode() : 0);
         result = 31 * result + (chargeName != null ? chargeName.hashCode() : 0);
         result = 31 * result + (workPlaceId != null ? workPlaceId.hashCode() : 0);
@@ -112,6 +116,7 @@ public class EmployeeCriteria extends PersonCriteria {
     public String toString() {
         return "EmployeeCriteria{" +
                 "endDate=" + endDate +
+                ", salary=" + salary +
                 ", chargeName=" + chargeName +
                 ", startDate=" + startDate +
                 ", workPlaceId=" + workPlaceId +

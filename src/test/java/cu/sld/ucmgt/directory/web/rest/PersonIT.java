@@ -10,8 +10,8 @@ public class PersonIT {
     public static final String UPDATE_RACE = "Negro";
     public static final String DEFAULT_RACE = "Blanco";
 
-    public static final String DEFAULT_NAME = "CESAR";
-    public static final String UPDATE_NAME = "MANUEL";
+    public static final String DEFAULT_NAME = "CESAR MANUEL";
+    public static final String UPDATE_NAME = "ARIEL BENITO";
 
     public static final String UPDATE_CI = "86082221001";
     public static final String DEFAULT_CI = "91061721000";

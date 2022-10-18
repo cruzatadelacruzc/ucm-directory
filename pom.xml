@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
 		<groupId>org.springframework.boot</groupId>
@@ -8,7 +8,7 @@
 		<version>2.2.13.RELEASE</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>cu.sld.ucmgt</groupId>
+	<groupId>cu.sld.cu</groupId>
 	<artifactId>directory</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>directory</name>
@@ -16,21 +16,23 @@
 
 	<properties>
 		<java.version>11</java.version>
-		<hazelcast.version>3.12.9</hazelcast.version>
+		<hazelcast.version>3.12.13</hazelcast.version>
 		<spring.version>2.2.13.RELEASE</spring.version>
 		<log4j2-mock.version>0.0.2</log4j2-mock.version>
-		<org.zalando.version>0.25.0</org.zalando.version>
+		<org.zalando.version>0.25.2</org.zalando.version>
 		<spring-cloud.version>Hoxton.SR9</spring-cloud.version>
 		<archunit-junit5.version>0.12.0</archunit-junit5.version>
-		<org.mapstruct.version>1.4.2.Final</org.mapstruct.version>
+		<org.mapstruct.version>1.5.2.Final</org.mapstruct.version>
 		<springfox.swagger.version>3.0.0</springfox.swagger.version>
 		<org.projectlombok.version>1.18.8</org.projectlombok.version>
 		<maven-clean-plugin.version>3.1.0</maven-clean-plugin.version>
 		<git-commit-id-plugin.version>4.0.0</git-commit-id-plugin.version>
 		<maven-javadoc-plugin.version>3.2.0</maven-javadoc-plugin.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<jhipster-dependencies.version>3.9.0</jhipster-dependencies.version>
 		<maven-surefire-plugin.version>3.0.0-M4</maven-surefire-plugin.version>
 		<maven-failsafe-plugin.version>3.0.0-M4</maven-failsafe-plugin.version>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<hibernate-jpamodelgen.version>5.4.22.Final</hibernate-jpamodelgen.version>
 		<junit.itReportFolder>${project.build.directory}/test-results</junit.itReportFolder>
 	</properties>
@@ -61,6 +63,7 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-elasticsearch</artifactId>
+			<version>2.7.3</version>
 		</dependency>
 		<!--Cache dependencies-->
 		<dependency>
@@ -89,6 +92,28 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-oauth2-client</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>org.springframework.security</groupId>
+					<artifactId>spring-security-oauth2-jose</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.nimbusds</groupId>
+					<artifactId>oauth2-oidc-sdk</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<!-- https://github.com/jhipster/jhipster-control-center/issues/174 -->
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-oauth2-jose</artifactId>
+			<version>5.4.7</version>
+		</dependency>
+		<dependency>
+			<groupId>com.nimbusds</groupId>
+			<artifactId>oauth2-oidc-sdk</artifactId>
+			<version>9.19</version>
+			<scope>runtime</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -104,26 +129,37 @@
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-starter-openfeign</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-starter-circuitbreaker-resilience4j</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.retry</groupId>
-			<artifactId>spring-retry</artifactId>
-		</dependency>
-		<!--Utils dependencies-->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-configuration-processor</artifactId>
-			<optional>true</optional>
-		</dependency>
-		<dependency>
-			<groupId>org.mapstruct</groupId>
-			<artifactId>mapstruct</artifactId>
-			<version>${org.mapstruct.version}</version>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-circuitbreaker-resilience4j</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.retry</groupId>
+            <artifactId>spring-retry</artifactId>
+        </dependency>
+        <!--        Object Storage MinIO-->
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>8.4.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>4.9.3</version>
+        </dependency>
+        <!--Utils dependencies-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+            <version>${org.mapstruct.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.mapstruct</groupId>
@@ -314,32 +350,6 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-failsafe-plugin</artifactId>
 				<version>${maven-failsafe-plugin.version}</version>
-				<configuration>
-					<!-- Due to spring-boot repackage, without adding this property test classes are not found
-                         See https://github.com/spring-projects/spring-boot/issues/6254 -->
-					<classesDirectory>${project.build.outputDirectory}</classesDirectory>
-					<!-- Force alphabetical order to have a reproducible build -->
-					<runOrder>alphabetical</runOrder>
-					<reportsDirectory>${junit.itReportFolder}</reportsDirectory>
-					<includes>
-						<include>**/*IT*</include>
-						<include>**/*IntTest*</include>
-					</includes>
-				</configuration>
-				<executions>
-					<execution>
-						<id>integration-test</id>
-						<goals>
-							<goal>integration-test</goal>
-						</goals>
-					</execution>
-					<execution>
-						<id>verify</id>
-						<goals>
-							<goal>verify</goal>
-						</goals>
-					</execution>
-				</executions>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -413,6 +423,40 @@
 				</dependency>
 			</dependencies>
 			<build>
+				<pluginManagement>
+					<plugins>
+						<plugin>
+							<groupId>org.apache.maven.plugins</groupId>
+							<artifactId>maven-failsafe-plugin</artifactId>
+							<version>${maven-failsafe-plugin.version}</version>
+							<configuration>
+								<!-- Due to spring-boot repackage, without adding this property test classes are not found
+                                      See https://github.com/spring-projects/spring-boot/issues/6254 -->
+								<classesDirectory>${project.build.outputDirectory}</classesDirectory>
+								<!-- Force alphabetical order to have a reproducible build -->
+								<runOrder>alphabetical</runOrder>
+								<includes>
+									<include>**/*IT*</include>
+									<include>**/*IntTest*</include>
+								</includes>
+							</configuration>
+							<executions>
+								<execution>
+									<id>integration-test</id>
+									<goals>
+										<goal>integration-test</goal>
+									</goals>
+								</execution>
+								<execution>
+									<id>verify</id>
+									<goals>
+										<goal>verify</goal>
+									</goals>
+								</execution>
+							</executions>
+						</plugin>
+					</plugins>
+				</pluginManagement>
 				<plugins>
 					<plugin>
 						<artifactId>maven-clean-plugin</artifactId>
@@ -441,6 +485,10 @@
 					</plugin>
 				</plugins>
 			</build>
+			<properties>
+				<!-- default Spring profiles -->
+				<spring.profiles.active>prod</spring.profiles.active>
+			</properties>
 		</profile>
 	</profiles>
 </project>
