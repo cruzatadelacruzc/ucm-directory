@@ -24,8 +24,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
-import org.springframework.data.elasticsearch.core.query.SearchQuery;
+import org.springframework.data.elasticsearch.core.query.Query;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
@@ -283,11 +285,11 @@ public class NomenclatureResourceIT {
         assertThat(testNomenclature.getDescription()).isEqualTo(UPDATE_DESCRIPTION);
         assertThat(testNomenclature.getDiscriminator()).isEqualTo(DEFAULT_DISCRIMINATOR);
 
-        SearchQuery query = new NativeSearchQueryBuilder()
+        Query query = new NativeSearchQueryBuilder()
                 .withQuery(QueryBuilders.matchAllQuery()).build();
-        List<EmployeeIndex> employees = elasticsearchOperations.queryForList(query, EmployeeIndex.class);
-        EmployeeIndex testEmployeeIndexNomenclature = employees.get(employees.size() - 1);
-        assertThat(testEmployeeIndexNomenclature.getDistrict()).isEqualTo(UPDATE_NAME);
+        SearchHits<EmployeeIndex> employees = elasticsearchOperations.search(query, EmployeeIndex.class);
+        SearchHit<EmployeeIndex> testEmployeeIndexNomenclature = employees.getSearchHit(((int) employees.getTotalHits()) - 1);
+        assertThat(testEmployeeIndexNomenclature.getContent().getDistrict()).isEqualTo(UPDATE_NAME);
     }
 
     private Employee getEmployee() {
@@ -335,11 +337,11 @@ public class NomenclatureResourceIT {
                 .content(TestUtil.convertObjectToJsonBytes(nomenclatureDTO)))
                 .andExpect(status().isOk());
 
-        SearchQuery query = new NativeSearchQueryBuilder()
+        Query query = new NativeSearchQueryBuilder()
                 .withQuery(QueryBuilders.matchAllQuery()).build();
-        List<StudentIndex> studentIndices = elasticsearchOperations.queryForList(query, StudentIndex.class);
-        StudentIndex testStudentIndexNomenclature = studentIndices.get(studentIndices.size() - 1);
-        assertThat(testStudentIndexNomenclature.getDistrict()).isEqualTo(UPDATE_NAME);
+        SearchHits<StudentIndex> studentIndices = elasticsearchOperations.search(query, StudentIndex.class);
+        SearchHit<StudentIndex> testStudentIndexNomenclature = studentIndices.getSearchHit(((int) studentIndices.getTotalHits()) - 1);
+        assertThat(testStudentIndexNomenclature.getContent().getDistrict()).isEqualTo(UPDATE_NAME);
     }
 
     private Student getStudent() {
@@ -418,14 +420,14 @@ public class NomenclatureResourceIT {
         Nomenclature testNomenclature = nomenclatures.get(nomenclatures.size() - 1);
         assertThat(testNomenclature.getName()).isEqualTo(UPDATE_NAME);
         assertThat(testNomenclature.getDescription()).isEqualTo(UPDATE_DESCRIPTION);
-        SearchQuery query = new NativeSearchQueryBuilder()
+        Query query = new NativeSearchQueryBuilder()
                 .withQuery(QueryBuilders.matchAllQuery()).build();
-        List<StudentIndex> studentIndices = elasticsearchOperations.queryForList(query, StudentIndex.class);
-        List<EmployeeIndex> employeeIndices = elasticsearchOperations.queryForList(query, EmployeeIndex.class);
-        EmployeeIndex testEmployeeIndex = employeeIndices.get(employeeIndices.size() -1);
-        assertThat(testEmployeeIndex.getSpecialty()).isEqualTo(UPDATE_NAME);
-        StudentIndex testStudentIndex = studentIndices.get(studentIndices.size() -1);
-        assertThat(testStudentIndex.getSpecialty()).isEqualTo(UPDATE_NAME);
+        SearchHits<StudentIndex> studentIndices = elasticsearchOperations.search(query, StudentIndex.class);
+        SearchHits<EmployeeIndex> employeeIndices = elasticsearchOperations.search(query, EmployeeIndex.class);
+        SearchHit<EmployeeIndex> testEmployeeIndex = employeeIndices.getSearchHit(((int) employeeIndices.getTotalHits()) - 1);
+        assertThat(testEmployeeIndex.getContent().getSpecialty()).isEqualTo(UPDATE_NAME);
+        SearchHit<StudentIndex> testStudentIndex = studentIndices.getSearchHit(((int) studentIndices.getTotalHits()) - 1);
+        assertThat(testStudentIndex.getContent().getSpecialty()).isEqualTo(UPDATE_NAME);
     }
 
     @Test
@@ -467,15 +469,15 @@ public class NomenclatureResourceIT {
         List<Nomenclature> nomenclatures = repository.findAll();
         assertThat(nomenclatures).hasSize(databaseSizeBeforeUpdate - 1);
         // Validate that StudentIndex and EmployeeIndex contains the district attribute with null value
-        SearchQuery query = new NativeSearchQueryBuilder()
+        Query query = new NativeSearchQueryBuilder()
                 .withQuery(QueryBuilders.matchAllQuery()).build();
-        List<StudentIndex> studentIndices = elasticsearchOperations.queryForList(query, StudentIndex.class);
-        List<EmployeeIndex> employeeIndices = elasticsearchOperations.queryForList(query, EmployeeIndex.class);
-        EmployeeIndex testEmployeeIndex = employeeIndices.get(employeeIndices.size() -1);
-        assertThat(testEmployeeIndex.getDistrict()).isNull();
-        StudentIndex testStudentIndex = studentIndices.get(studentIndices.size() -1);
-        assertThat(testStudentIndex.getDistrict()).isNull();
-        
+        SearchHits<StudentIndex> studentIndices = elasticsearchOperations.search(query, StudentIndex.class);
+        SearchHits<EmployeeIndex> employeeIndices = elasticsearchOperations.search(query, EmployeeIndex.class);
+        SearchHit<EmployeeIndex> testEmployeeIndex = employeeIndices.getSearchHit(((int) employeeIndices.getTotalHits()) - 1);
+        assertThat(testEmployeeIndex.getContent().getDistrict()).isNull();
+        SearchHit<StudentIndex> testStudentIndex = studentIndices.getSearchHit(((int) studentIndices.getTotalHits()) - 1);
+        assertThat(testStudentIndex.getContent().getDistrict()).isNull();
+
     }
 
     @Test

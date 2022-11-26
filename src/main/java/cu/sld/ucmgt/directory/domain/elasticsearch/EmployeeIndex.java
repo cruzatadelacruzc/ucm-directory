@@ -8,7 +8,7 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-@Document(indexName = "employees", type = "employees")
+@Document(indexName = "employees")
 public class EmployeeIndex extends PersonIndex {
 
     @Field(type = FieldType.Text)
