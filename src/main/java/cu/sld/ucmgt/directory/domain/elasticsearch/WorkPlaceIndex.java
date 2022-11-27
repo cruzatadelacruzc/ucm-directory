@@ -10,7 +10,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Data
-@Document(indexName = "workplaces", type = "workplaces")
+@Document(indexName = "workplaces")
 public class WorkPlaceIndex {
 
     private UUID id;

@@ -4,7 +4,7 @@
 # ===================================================================
 application:
   registry-config:
-    password: admin
+    password: 100preLamismajhipster.*
 
 spring:
   application:
