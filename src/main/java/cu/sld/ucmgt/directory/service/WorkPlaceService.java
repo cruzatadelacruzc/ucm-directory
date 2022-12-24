@@ -236,18 +236,16 @@ public class WorkPlaceService extends QueryService<WorkPlace>{
 
     @EventListener(condition = "#employeeIndexEvent.getParams().get(\"workPlace\") != null")
     public void saveEmployeeIntoWorkPlaceIndex(SavedEmployeeIndexEvent employeeIndexEvent) {
-        log.debug("Listening SavedEmployeeIndexEvent event to save EmployeeIndex with ID: {} in WorkPlaceIndex",
-                employeeIndexEvent.getEmployeeId());
         Object workPlaceMap = employeeIndexEvent.getParams().get("workPlace");
             try {
                 String workPlaceId = (String) ((HashMap) workPlaceMap).get("id");
                 // avoid redundant data, employee.workplace equals current workplace
                 employeeIndexEvent.getParams().replace("workPlace", null);
-                String updateCode = "params.remove(\"ctx\");ctx._source.employees.add(params)";
+                String updateCode = "ctx._source.employees.add(params)";
                 if (employeeIndexEvent.getEmployeeId() != null) {
                     updateCode = "def targets = ctx._source.employees.findAll(employee " +
                             "-> employee.id == \"" + employeeIndexEvent.getEmployeeId() + "\" ); " +
-                            "if (targets.length == 0) {params.remove(\"ctx\");ctx._source.employees.add(params)}" +
+                            "if (targets.length == 0) {ctx._source.employees.add(params)}" +
                             "else { for (employee in targets) { for (entry in params.entrySet()) { if (entry.getKey() != \"ctx\") {" +
                             "employee[entry.getKey()] = entry.getValue() }}}}";
                 }
