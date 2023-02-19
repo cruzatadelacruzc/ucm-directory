@@ -287,12 +287,11 @@ public class EmployeeService extends QueryService<Employee> {
      */
     @EventListener(condition = "#workPlaceIndexEvent.getWorkplaceId() == null && !#workPlaceIndexEvent.getEmployeeIds().isEmpty()")
     public void createWorkPlaceInEmployeeIndex(SavedWorkPlaceIndexEvent workPlaceIndexEvent) {
-        log.debug("Listening SavedWorkPlaceIndexEvent event to create WorkPlace in EmployeeIndex with WorkPlaceIndex");
         try {
             BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
             workPlaceIndexEvent.getEmployeeIds().forEach(employeeId -> boolQueryBuilder
                     .should(QueryBuilders.matchQuery("id", employeeId.toString())));
-            String updateCode = "params.remove(\"ctx\");ctx._source.workPlace=params;";
+            String updateCode = "ctx._source.workPlace=params;";
             UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(INDEX_NAME)
                     .setRefresh(true)
                     .setAbortOnVersionConflict(true)
