@@ -36,3 +36,20 @@ jobs:
         registry: quay.io
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Executing remote ssh to deploy to Docker on the server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          script: |
+            docker pull quay.io/gsi_cesar/ucm/directory:latest
+            docker stop directory || true
+            docker rm directory || true
+            docker run -d --name directory -p 8081:8081 quay.io/gsi_cesar/ucm/directory:latest
+
