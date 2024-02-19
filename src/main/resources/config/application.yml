@@ -129,15 +129,6 @@ logging:
   file:
     name: target/directory.log
 
-#Object Storage Service
-minio:
-  bucket:
-    name: directory
-  access:
-    key: minio
-    secret: miniostorage
-  url: http://192.168.1.10:9000
-
 server:
   servlet:
     session:

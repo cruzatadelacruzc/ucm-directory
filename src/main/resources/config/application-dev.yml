@@ -17,7 +17,7 @@ eureka:
     prefer-ip-address: true
   client:
     service-url:
-      defaultZone: http://admin:${application.registry-config.password}@192.168.1.10:8761/eureka/
+      defaultZone: http://admin:${application.registry-config.password}@eureka.dev:8761/eureka/
 
 management:
   health:
@@ -36,7 +36,7 @@ spring:
       indent-output: true
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
-    url: jdbc:postgresql://192.168.1.10:5432/directory
+    url: jdbc:postgresql://postgresql.dev:5432/directory
     username: postgres
     password: postgres
     hikari:
@@ -54,17 +54,26 @@ spring:
       client:
         provider:
           keycloak:
-            issuer-uri: http://keycloak.ucmgt.cu:9080/realms/jhipster
+            issuer-uri: http://keycloak.dev:9080/realms/jhipster
   elasticsearch:
     rest:
       username: elastic
       password: elastic
-      uris: http://192.168.1.10:9200
+      uris: http://elasticsearch.dev:9200
   servlet:
     multipart:
       file-size-threshold: 2KB
 server:
   port: 8081
+
+#Object Storage Service
+minio:
+  bucket:
+    name: directory
+  access:
+    key: minio
+    secret: cesarmanuel20
+  url: http://minio.dev:9000  
 
 # ===================================================================
 # App specific properties
@@ -83,7 +92,7 @@ application:
     management-center: # Full reference is available at: http://docs.hazelcast.org/docs/management-center/3.9/manual/html/Deploying_and_Starting.html
       enabled: false
       update-interval: 3
-      url: http://192.168.1.10:8180/hazelcast-mancenter
+      url: http://management-center.dev:8180/hazelcast-mancenter
   metrics:
     logs: # Reports metrics in the logs
       enabled: false
